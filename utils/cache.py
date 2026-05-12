@@ -37,6 +37,8 @@ CACHE_PREFIX_LLM_RESPONSE = "llm_response"
 CACHE_PREFIX_RATE_LIMIT = "rate_limit"
 CACHE_PREFIX_INTERVIEW_PREP = "interview_prep"
 CACHE_PREFIX_INTERVIEW_PREP_GENERATING = "interview_prep_generating"
+CACHE_PREFIX_CV_OPTIMIZATION = "cv_optimization"
+CACHE_PREFIX_CV_OPTIMIZATION_RUNNING = "cv_optimization_running"
 CACHE_PREFIX_TOOL_RESULT = "tool_result"
 CACHE_PREFIX_COMPUTE_LOCK = "computing"
 
@@ -49,6 +51,8 @@ TTL_LLM_RESPONSE = 60 * 60  # 1 hour
 TTL_RATE_LIMIT = 60  # 1 minute
 TTL_INTERVIEW_PREP = 60 * 60 * 24 * 7  # 7 days
 TTL_INTERVIEW_PREP_GENERATING = 60 * 10  # 10 minutes — auto-expires if background task crashes
+TTL_CV_OPTIMIZATION = 60 * 60 * 24  # 24 hours
+TTL_CV_OPTIMIZATION_RUNNING = 60 * 30  # 30 minutes — auto-expires if background task crashes
 TTL_TOOL_RESULT = 60 * 60  # 1 hour
 TTL_COMPUTE_LOCK = 60  # 1 minute — prevents stampede, auto-expires if compute crashes
 
@@ -63,6 +67,7 @@ _CACHE_REQUIRED_FIELDS: Dict[str, List[str]] = {
     CACHE_PREFIX_WORKFLOW_STATE: [],
     CACHE_PREFIX_LLM_RESPONSE: ["response"],
     CACHE_PREFIX_INTERVIEW_PREP: [],
+    CACHE_PREFIX_CV_OPTIMIZATION: [],
     CACHE_PREFIX_TOOL_RESULT: [],
 }
 
@@ -928,6 +933,138 @@ async def is_interview_prep_generating(session_id: str) -> bool:
         return value is not None
     except Exception as e:
         logger.warning(f"Failed to check interview_prep generating flag: {e}")
+        return False
+
+
+# =============================================================================
+# CV OPTIMIZATION CACHE
+# =============================================================================
+
+
+def _get_cv_optimization_cache_key(session_id: str) -> str:
+    """Generate versioned cache key for CV optimization results."""
+    return f"{CACHE_VERSION}:{CACHE_PREFIX_CV_OPTIMIZATION}:{session_id}"
+
+
+async def get_cached_cv_optimization(session_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get cached CV optimization result.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        Cached optimization data or None
+    """
+    key = _get_cv_optimization_cache_key(session_id)
+    t0 = perf_counter()
+    cached = await cache_get(key)
+    latency_ms = (perf_counter() - t0) * 1000
+    if cached:
+        _metrics.record_hit(CACHE_PREFIX_CV_OPTIMIZATION, latency_ms)
+        structured_logger.log_cache_hit("cv_optimization", session_id[:8])
+        return cached
+    _metrics.record_miss(CACHE_PREFIX_CV_OPTIMIZATION, latency_ms)
+    structured_logger.log_cache_miss("cv_optimization", session_id[:8])
+    return None
+
+
+async def cache_cv_optimization(session_id: str, data: Dict[str, Any]) -> bool:
+    """
+    Cache CV optimization result.
+
+    Args:
+        session_id: Workflow session ID
+        data: Optimization result data
+
+    Returns:
+        True if cached successfully
+    """
+    key = _get_cv_optimization_cache_key(session_id)
+    return await cache_set(key, data, TTL_CV_OPTIMIZATION)
+
+
+async def invalidate_cv_optimization(session_id: str) -> bool:
+    """
+    Invalidate CV optimization cache (allows re-run).
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if deleted successfully
+    """
+    key = _get_cv_optimization_cache_key(session_id)
+    return await cache_delete(key)
+
+
+async def set_cv_optimization_running(session_id: str) -> bool:
+    """
+    Atomically mark CV optimization as in-progress for a session.
+
+    Uses Redis SET NX so only the first caller succeeds; subsequent callers
+    get False, indicating another task is already running (return 409).
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if the flag was claimed (caller should proceed),
+        False if another task is already running.
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return True  # Fail open so a Redis outage doesn't block the feature
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_CV_OPTIMIZATION_RUNNING}:{session_id}"
+        was_set = await redis.set(key, "1", nx=True, ex=TTL_CV_OPTIMIZATION_RUNNING)
+        return was_set is not None
+    except Exception as e:
+        logger.warning(f"Failed to set cv_optimization running flag: {e}")
+        return True
+
+
+async def clear_cv_optimization_running(session_id: str) -> bool:
+    """
+    Clear the in-progress flag for CV optimization.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if flag was cleared
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return False
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_CV_OPTIMIZATION_RUNNING}:{session_id}"
+        await redis.delete(key)
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to clear cv_optimization running flag: {e}")
+        return False
+
+
+async def is_cv_optimization_running(session_id: str) -> bool:
+    """
+    Check whether CV optimization is currently in progress.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if optimization is in progress
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return False
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_CV_OPTIMIZATION_RUNNING}:{session_id}"
+        value = await redis.get(key)
+        return value is not None
+    except Exception as e:
+        logger.warning(f"Failed to check cv_optimization running flag: {e}")
         return False
 
 

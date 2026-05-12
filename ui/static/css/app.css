@@ -806,3 +806,11 @@
         color: black;
     }
 }
+
+.clipboard-offscreen {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
+}

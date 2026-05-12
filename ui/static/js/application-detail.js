@@ -184,7 +184,13 @@
 
         // Page tab navigation
         document.querySelectorAll('.page-tab').forEach(btn => {
-            btn.addEventListener('click', () => switchTab(/** @type {HTMLElement} */ (btn).dataset.tab));
+            btn.addEventListener('click', () => {
+                const tabId = /** @type {HTMLElement} */ (btn).dataset.tab;
+                switchTab(tabId);
+                if (tabId === 'optimize' && typeof window.initCvOptimizerTab === 'function') {
+                    window.initCvOptimizerTab(currentSessionId);
+                }
+            });
         });
 
         // Sub-tab navigation

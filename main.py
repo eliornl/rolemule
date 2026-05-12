@@ -34,6 +34,7 @@ from api.applications import router as applications_router
 from api.workflow import router as workflow_router
 from api.websocket import router as websocket_router
 from api.interview_prep import router as interview_prep_router
+from api.cv_optimizer import router as cv_optimizer_router
 from api.tools import router as tools_router
 from api.extension_autofill import router as extension_autofill_router
 from api.admin import router as admin_router
@@ -603,6 +604,9 @@ def include_routers(app: FastAPI):
     app.include_router(workflow_router, prefix=f"{API_V1_PREFIX}/workflow", tags=["Workflow"])
     app.include_router(
         interview_prep_router, prefix=f"{API_V1_PREFIX}/interview-prep", tags=["Interview Prep"]
+    )
+    app.include_router(
+        cv_optimizer_router, prefix=f"{API_V1_PREFIX}/cv-optimizer", tags=["CV Optimizer"]
     )
     app.include_router(
         tools_router, prefix=f"{API_V1_PREFIX}/tools", tags=["Career Tools"]

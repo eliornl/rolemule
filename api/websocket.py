@@ -6,7 +6,7 @@ Provides instant push notifications for workflow status changes instead of polli
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, Set
+from typing import Dict, Any, List, Optional, Set
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Request, Depends, status
@@ -685,6 +685,127 @@ async def broadcast_interview_prep_error(
     """
     payload = {
         "type": "interview_prep_error",
+        "session_id": session_id,
+        "data": {"error": error_message},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+# =============================================================================
+# CV OPTIMIZATION BROADCASTS
+# =============================================================================
+
+
+async def broadcast_cv_optimization_started(
+    user_id: str,
+    session_id: str,
+) -> None:
+    """
+    Broadcast that CV optimization loop has started.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+    """
+    payload = {
+        "type": "cv_optimization_started",
+        "session_id": session_id,
+        "data": {},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_cv_optimization_iteration(
+    user_id: str,
+    session_id: str,
+    iteration: int,
+    score: float,
+    strengths: List[str],
+    gaps: List[str],
+    action_items: List[str],
+) -> None:
+    """
+    Broadcast the result of one optimization iteration.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+        iteration: Current iteration number (0-indexed)
+        score: Hiring manager score for this iteration (0-10)
+        strengths: List of CV strengths identified
+        gaps: List of CV gaps identified
+        action_items: Specific improvement actions taken/suggested
+    """
+    payload = {
+        "type": "cv_optimization_iteration",
+        "session_id": session_id,
+        "data": {
+            "iteration": iteration,
+            "score": score,
+            "strengths": strengths,
+            "gaps": gaps,
+            "action_items": action_items,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_cv_optimization_complete(
+    user_id: str,
+    session_id: str,
+    final_score: float,
+    stop_reason: str,
+    iteration_count: int,
+) -> None:
+    """
+    Broadcast that CV optimization has completed successfully.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+        final_score: Best score achieved across all iterations
+        stop_reason: Why the loop stopped (score_threshold/score_decrease/score_plateau/max_iterations)
+        iteration_count: Total number of iterations run
+    """
+    payload = {
+        "type": "cv_optimization_complete",
+        "session_id": session_id,
+        "data": {
+            "final_score": final_score,
+            "stop_reason": stop_reason,
+            "iteration_count": iteration_count,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_cv_optimization_error(
+    user_id: str,
+    session_id: str,
+    error_message: str,
+) -> None:
+    """
+    Broadcast that CV optimization has failed.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+        error_message: Description of the failure
+    """
+    payload = {
+        "type": "cv_optimization_error",
         "session_id": session_id,
         "data": {"error": error_message},
         "timestamp": datetime.now(timezone.utc).isoformat(),

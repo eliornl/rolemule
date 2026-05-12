@@ -3608,6 +3608,10 @@
                         <i class="fas fa-chalkboard-teacher"></i>
                         <span>Interview</span>
                     </button>
+                    <button class="page-tab" data-tab="optimize">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Optimize CV</span>
+                    </button>
                 </div>
 
                 <!-- Tab Content -->
@@ -3655,6 +3659,131 @@
                             <div id="interviewRegenBtn"></div>
                         </div>
                     </div>
+                    <div class="tab-pane" id="pane-optimize">
+                        <div id="cvOptimizeContent">
+                            <!-- Setup card: shown when no result and not running -->
+                            <div id="cvo-setup" class="cvo-section">
+                                <div class="cvo-setup-card">
+                                    <h3 class="cvo-setup-title"><i class="fas fa-chart-line"></i> Optimize Your CV</h3>
+                                    <p class="cvo-setup-desc">
+                                        Run an AI-powered optimization loop: an AI Hiring Manager evaluates your CV
+                                        against the job description, an AI Applicant revises it based on the feedback,
+                                        and the cycle repeats until the fit score converges. Requires your Gemini API key.
+                                    </p>
+
+                                    <!-- BYOK warning (shown when no API key detected) -->
+                                    <div id="cvo-byok-warning" class="cvo-byok-warning is-hidden">
+                                        <i class="fas fa-key"></i>
+                                        <span>This feature requires a Gemini API key.
+                                            <a href="/dashboard/settings?tab=ai-setup" class="cvo-settings-link">Add your key in Settings → AI Setup</a>
+                                        </span>
+                                    </div>
+
+                                    <div class="cvo-config-row">
+                                        <label class="cvo-config-label" for="cvo-max-iterations">Max Iterations
+                                            <span class="cvo-config-hint">(1–7)</span>
+                                        </label>
+                                        <select id="cvo-max-iterations" class="cvo-config-select">
+                                            <option value="3">3</option>
+                                            <option value="5" selected>5 (recommended)</option>
+                                            <option value="7">7</option>
+                                        </select>
+                                    </div>
+                                    <div class="cvo-config-row">
+                                        <label class="cvo-config-label" for="cvo-score-threshold">Stop at score
+                                            <span class="cvo-config-hint">(7.0–9.5)</span>
+                                        </label>
+                                        <input id="cvo-score-threshold" type="number"
+                                            class="cvo-config-input" value="8.5"
+                                            min="7.0" max="9.5" step="0.5">
+                                    </div>
+
+                                    <button id="cvo-start-btn" class="cvo-start-btn" data-action="startCvOptimization">
+                                        <i class="fas fa-play"></i> Start Optimization
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Progress view: shown while running -->
+                            <div id="cvo-progress" class="cvo-section is-hidden">
+                                <div class="cvo-progress-header">
+                                    <span class="cvo-progress-label"><i class="fas fa-spinner fa-spin"></i> Optimizing…</span>
+                                    <span id="cvo-iteration-counter" class="cvo-iteration-counter">Iteration 0</span>
+                                </div>
+                                <div id="cvo-score-display" class="cvo-score-display">
+                                    <span class="cvo-score-value" id="cvo-current-score">–</span>
+                                    <span class="cvo-score-label">/ 10</span>
+                                </div>
+                                <div id="cvo-iteration-log" class="cvo-iteration-log"></div>
+                            </div>
+
+                            <!-- Results view: shown when complete -->
+                            <div id="cvo-results" class="cvo-section is-hidden">
+                                <div class="cvo-results-header">
+                                    <div class="cvo-score-badge">
+                                        <span class="cvo-score-value" id="cvo-final-score">–</span>
+                                        <span class="cvo-score-label">Best Score</span>
+                                    </div>
+                                    <span id="cvo-stop-reason-badge" class="cvo-stop-badge"></span>
+                                    <button class="cvo-rerun-btn" data-action="clearCvOptimization">
+                                        <i class="fas fa-redo"></i> Re-run
+                                    </button>
+                                </div>
+
+                                <!-- Score progression -->
+                                <div class="cvo-score-progression">
+                                    <h4 class="cvo-section-heading">Score Progression</h4>
+                                    <div id="cvo-score-chart" class="cvo-score-chart"></div>
+                                </div>
+
+                                <!-- Optimized CV -->
+                                <div class="cvo-artifact-section">
+                                    <div class="cvo-artifact-header">
+                                        <h4 class="cvo-section-heading">Optimized CV</h4>
+                                        <button class="cvo-copy-btn" data-action="copyOptimizedCv">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <pre id="cvo-optimized-cv" class="cvo-artifact-text"></pre>
+                                </div>
+
+                                <!-- Cover Letter -->
+                                <div class="cvo-artifact-section">
+                                    <div class="cvo-artifact-header">
+                                        <h4 class="cvo-section-heading">Cover Letter</h4>
+                                        <button class="cvo-copy-btn" data-action="copyCvoCoverLetter">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <pre id="cvo-cover-letter" class="cvo-artifact-text"></pre>
+                                </div>
+
+                                <!-- Gap Analysis -->
+                                <div class="cvo-artifact-section">
+                                    <h4 class="cvo-section-heading">Gap Analysis</h4>
+                                    <p class="cvo-gap-intro">These gaps could not be resolved through rephrasing alone:</p>
+                                    <ul id="cvo-gap-list" class="cvo-gap-list"></ul>
+                                </div>
+
+                                <!-- Iteration History accordion -->
+                                <div class="cvo-artifact-section">
+                                    <h4 class="cvo-section-heading">Iteration History</h4>
+                                    <div id="cvo-history-accordion" class="cvo-history-accordion"></div>
+                                </div>
+                            </div>
+
+                            <!-- Error view -->
+                            <div id="cvo-error" class="cvo-section is-hidden">
+                                <div class="cvo-error-card">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <p id="cvo-error-message" class="cvo-error-message">An error occurred during optimization.</p>
+                                    <button class="cvo-start-btn" data-action="resetCvOptimization">
+                                        <i class="fas fa-redo"></i> Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -3662,4 +3791,5 @@
 {% block page_scripts %}
 <script src="{{ asset_url('js/profile-completion-sync.js') }}"></script>
 <script src="{{ asset_url('js/application-detail.js') }}"></script>
+<script src="{{ asset_url('js/cv-optimizer.js') }}"></script>
 {% endblock %}
