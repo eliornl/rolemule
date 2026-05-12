@@ -470,7 +470,7 @@
 
   /**
    * Render the completed optimization result.
-   * @param {Object} result
+   * @param {Record<string,any>} result
    */
   function _renderResults(result) {
     _optimizedCv = result.optimized_cv || '';
@@ -490,18 +490,27 @@
       stopBadge.className = `cvo-stop-badge cvo-stop-${escapeHtml(result.stop_reason || '')}`;
     }
 
-    // Score chart (simple text-based progression)
+    // Score chart (simple bar chart — heights set via JS, not style= attr, to satisfy CSP)
     const chartEl = _el('cvo-score-chart');
     if (chartEl && Array.isArray(result.iteration_history)) {
-      const bars = result.iteration_history.map(r => {
+      const chart = document.createElement('div');
+      chart.className = 'cvo-chart';
+      result.iteration_history.forEach(r => {
         const pct = Math.round((r.score / 10) * 100);
-        const cls = _scoreClass(r.score);
-        return `<div class="cvo-chart-bar-wrap">
-          <div class="cvo-chart-bar ${cls}" style="height:${pct}%"></div>
-          <span class="cvo-chart-label">${typeof r.score === 'number' ? r.score.toFixed(1) : '–'}</span>
-        </div>`;
-      }).join('');
-      chartEl.innerHTML = `<div class="cvo-chart">${bars}</div>`;
+        const wrap = document.createElement('div');
+        wrap.className = 'cvo-chart-bar-wrap';
+        const bar = document.createElement('div');
+        bar.className = `cvo-chart-bar ${_scoreClass(r.score)}`;
+        bar.style.height = `${pct}%`;
+        const label = document.createElement('span');
+        label.className = 'cvo-chart-label';
+        label.textContent = typeof r.score === 'number' ? r.score.toFixed(1) : '–';
+        wrap.appendChild(bar);
+        wrap.appendChild(label);
+        chart.appendChild(wrap);
+      });
+      chartEl.innerHTML = '';
+      chartEl.appendChild(chart);
     }
 
     // Optimized CV
