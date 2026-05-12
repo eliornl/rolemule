@@ -6,14 +6,20 @@ Uses the user's BYOK Gemini API key when set, otherwise falls back to the
 server key configured in .env (GEMINI_API_KEY).
 """
 
-import uuid
+import asyncio
+import io
 import logging
 import os
+import shutil
+import subprocess
+import tempfile
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from fastapi.exceptions import HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,6 +78,34 @@ MIN_ITERATIONS_LIMIT: int = 1
 MAX_SCORE_THRESHOLD: float = 9.5
 MIN_SCORE_THRESHOLD: float = 7.0
 
+ODT_LIBREOFFICE_TIMEOUT_SECONDS: int = 90
+
+CV_TO_HTML_SYSTEM_CONTEXT: str = """You are a professional CV/résumé document designer. Convert the provided markdown CV into clean, professional HTML that renders beautifully when imported into a word processor via LibreOffice.
+
+Use ONLY inline CSS — no <style> tags, no external stylesheets, no classes.
+
+Design rules:
+- Font everywhere: font-family:Arial,Helvetica,sans-serif
+- Candidate name <h1>: font-size:24px; font-weight:bold; margin:0 0 4px 0; color:#111
+- Professional title <p> directly after name: font-size:13px; color:#555; margin:0 0 2px 0
+- Contact line <p>: font-size:11px; color:#666; margin:0 0 20px 0
+- Section headings <h2>: font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid #444; padding-bottom:3px; margin:18px 0 8px 0; color:#111
+- Role/institution headings <h3>: font-size:12px; font-weight:bold; margin:10px 0 1px 0; color:#111
+- Date/location line <p> after h3: font-size:11px; font-style:italic; color:#555; margin:0 0 4px 0
+- Body paragraphs and <li>: font-size:11px; line-height:1.5; color:#222; margin:2px 0
+- <ul>: margin:4px 0 8px 20px; padding:0
+- <body>: font-family:Arial,Helvetica,sans-serif; max-width:720px; margin:0 auto; padding:40px 48px; background:#fff; color:#222
+
+No decorative colors, gradients, shadows, or icons. Professional, clean, ATS-friendly.
+Return ONLY the complete HTML document starting with <!DOCTYPE html>. No explanation, no markdown fences."""
+
+CV_TO_HTML_PROMPT_TEMPLATE: str = """Convert this markdown CV to professional HTML following your design instructions exactly.
+
+## MARKDOWN CV
+{cv_markdown}
+
+Return only the complete HTML document."""
+
 
 # =============================================================================
 # REQUEST / RESPONSE MODELS
@@ -124,6 +158,105 @@ class CvOptimizationResultResponse(BaseModel):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
+
+async def _markdown_cv_to_odt(cv_markdown: str, user_api_key: Optional[str]) -> bytes:
+    """
+    Convert a markdown CV to ODT bytes via Gemini HTML generation + LibreOffice.
+
+    Gemini produces professionally styled HTML with inline CSS; LibreOffice
+    headless converts that HTML to ODT.
+
+    Args:
+        cv_markdown: Markdown-formatted CV text
+        user_api_key: BYOK Gemini API key, or None to use the server key
+
+    Returns:
+        ODT file contents as bytes
+
+    Raises:
+        ValueError: If Gemini returns unusable output or LibreOffice fails
+    """
+    from utils.llm_client import get_gemini_client
+
+    gemini_client = await get_gemini_client()
+    prompt = CV_TO_HTML_PROMPT_TEMPLATE.format(cv_markdown=cv_markdown[:12000])
+
+    response = await gemini_client.generate(
+        prompt=prompt,
+        system=CV_TO_HTML_SYSTEM_CONTEXT,
+        temperature=0.2,
+        max_tokens=16000,
+        user_api_key=user_api_key,
+    )
+
+    if response.get("filtered"):
+        raise ValueError("HTML generation was blocked by the content filter")
+
+    html_content = response.get("response", "").strip()
+
+    # Strip markdown fences if the model wrapped the HTML anyway
+    if html_content.startswith("```"):
+        lines = html_content.splitlines()
+        html_content = "\n".join(
+            line for line in lines if not line.strip().startswith("```")
+        ).strip()
+
+    # Find the start of actual HTML
+    lower = html_content.lower()
+    start = lower.find("<!doctype")
+    if start == -1:
+        start = lower.find("<html")
+    if start == -1 or not html_content:
+        raise ValueError("Gemini did not return valid HTML for document conversion")
+    html_content = html_content[start:]
+
+    tmpdir = tempfile.mkdtemp(prefix="cvo_odt_")
+    try:
+        html_path = os.path.join(tmpdir, "cv.html")
+        odt_path = os.path.join(tmpdir, "cv.odt")
+
+        with open(html_path, "w", encoding="utf-8") as fh:
+            fh.write(html_content)
+
+        loop = asyncio.get_event_loop()
+        # HOME is set to tmpdir so each invocation gets an isolated
+        # LibreOffice user-profile directory; avoids cross-request conflicts.
+        lo_env = {**os.environ, "HOME": tmpdir}
+        proc = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    [
+                        "soffice",
+                        "--headless",
+                        "--norestore",
+                        "--convert-to", "odt",
+                        "--outdir", tmpdir,
+                        html_path,
+                    ],
+                    capture_output=True,
+                    timeout=60,
+                    env=lo_env,
+                ),
+            ),
+            timeout=ODT_LIBREOFFICE_TIMEOUT_SECONDS,
+        )
+
+        if proc.returncode != 0:
+            logger.error(
+                "LibreOffice ODT conversion failed: %s",
+                proc.stderr.decode(errors="replace"),
+            )
+            raise ValueError("LibreOffice document conversion failed")
+
+        if not os.path.exists(odt_path):
+            raise ValueError("LibreOffice did not produce an output file")
+
+        with open(odt_path, "rb") as fh:
+            return fh.read()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
@@ -439,6 +572,82 @@ async def get_cv_optimization_status(
             "Failed to get CV optimization status for session %s: %s", session_id, e, exc_info=True
         )
         raise internal_error("Failed to get CV optimization status")
+
+
+@router.get("/{session_id}/download-cv")
+async def download_optimized_cv_odt(
+    session_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database),
+) -> StreamingResponse:
+    """
+    Download the optimized CV as a professionally formatted ODT file.
+
+    Gemini converts the stored markdown CV to professional HTML, then
+    LibreOffice headless renders it to ODT.
+
+    Args:
+        session_id: Workflow session ID
+        current_user: Authenticated user from JWT
+        db: Database session
+
+    Returns:
+        ODT file attachment
+
+    Raises:
+        APIError: 404 if session or optimization result not found, 500 on
+                  conversion failure
+    """
+    try:
+        user_id = _get_user_uuid(current_user)
+        user_api_key = await _get_user_api_key(db, user_id)
+
+        # Prefer cache, fall back to DB
+        cached = await get_cached_cv_optimization(session_id)
+        if cached:
+            optimization = cached
+        else:
+            result = await db.execute(
+                select(WorkflowSession).where(
+                    and_(
+                        WorkflowSession.session_id == session_id,
+                        WorkflowSession.user_id == user_id,
+                    )
+                )
+            )
+            workflow_session = result.scalar_one_or_none()
+            if not workflow_session:
+                raise not_found_error("Workflow session not found")
+            optimization = workflow_session.cv_optimization
+
+        if not optimization:
+            raise not_found_error(
+                "No optimization result found. Run CV optimization first."
+            )
+
+        # Support both flat and nested {"data": {...}} shapes
+        opt_data = optimization.get("data") or optimization
+        cv_markdown = opt_data.get("optimized_cv") or ""
+        if not cv_markdown:
+            raise not_found_error("Optimized CV text not found in result")
+
+        odt_bytes = await _markdown_cv_to_odt(cv_markdown, user_api_key)
+
+        buffer = io.BytesIO(odt_bytes)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.oasis.opendocument.text",
+            headers={"Content-Disposition": "attachment; filename=optimized-cv.odt"},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to generate ODT for session %s: %s", session_id, e, exc_info=True
+        )
+        raise internal_error("Failed to generate ODT document")
 
 
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)

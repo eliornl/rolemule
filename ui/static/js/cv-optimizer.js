@@ -165,6 +165,7 @@
       else if (action === 'resetCvOptimization') _handleReset();
       else if (action === 'copyOptimizedCv') _clipboardWrite(_optimizedCv, 'Optimized CV copied!');
       else if (action === 'copyCvoCoverLetter') _clipboardWrite(_coverLetter, 'Cover letter copied!');
+      else if (action === 'downloadOptimizedCvOdt') _handleDownloadOdt();
     });
   }
 
@@ -363,6 +364,57 @@
     _coverLetter = '';
     _resetProgressView();
     _showSection('cvo-setup');
+  }
+
+  async function _handleDownloadOdt() {
+    if (!_sessionId) return;
+
+    const btn = /** @type {HTMLButtonElement|null} */ (_el('cvo-download-odt-btn'));
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    }
+
+    try {
+      const res = await fetch(
+        `/api/v1/cv-optimizer/${encodeURIComponent(_sessionId)}/download-cv`,
+        {
+          credentials: 'same-origin',
+          headers: { 'Authorization': `Bearer ${_getAuthToken()}` },
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = (body.message || body.detail) || `Error ${res.status}`;
+        if (typeof window.showToast === 'function') {
+          // @ts-ignore
+          window.showToast(decodeEntities(msg), 'error');
+        }
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'optimized-cv.odt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[cv-optimizer] ODT download failed', err);
+      if (typeof window.showToast === 'function') {
+        // @ts-ignore
+        window.showToast('Failed to download ODT. Please try again.', 'error');
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-alt"></i> Download ODT';
+      }
+    }
   }
 
   // =============================================================================

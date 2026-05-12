@@ -3505,6 +3505,40 @@
                 }
             }
 
+            /* ── CV Optimizer artifact action buttons ── */
+            .cvo-artifact-actions {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .cvo-download-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.35rem 0.75rem;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                font-size: 0.78rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+
+            .cvo-download-btn:hover:not(:disabled) {
+                background: var(--accent-primary);
+                color: #fff;
+                border-color: var(--accent-primary);
+            }
+
+            .cvo-download-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
             /* ── Print Styles (minimal — no export button) ── */
             @media print {
                 .navbar, .page-tabs { display: none !important; }
@@ -3740,9 +3774,14 @@
                                 <div class="cvo-artifact-section">
                                     <div class="cvo-artifact-header">
                                         <h4 class="cvo-section-heading">Optimized CV</h4>
-                                        <button class="cvo-copy-btn" data-action="copyOptimizedCv">
-                                            <i class="fas fa-copy"></i> Copy
-                                        </button>
+                                        <div class="cvo-artifact-actions">
+                                            <button class="cvo-copy-btn" data-action="copyOptimizedCv">
+                                                <i class="fas fa-copy"></i> Copy
+                                            </button>
+                                            <button class="cvo-download-btn" id="cvo-download-odt-btn" data-action="downloadOptimizedCvOdt">
+                                                <i class="fas fa-file-alt"></i> Download ODT
+                                            </button>
+                                        </div>
                                     </div>
                                     <pre id="cvo-optimized-cv" class="cvo-artifact-text"></pre>
                                 </div>
