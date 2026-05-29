@@ -7,13 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.0.0] - 2026-05-29
 
 ### Added
 
-#### Chrome Extension — Form autofill ("Match Form To Profile")
+#### Chrome Extension v2.0.0 — Hybrid form autofill ("Match Form To Profile")
 
-**`POST /api/v1/extension/autofill/map`** returns profile-backed field mappings for visible forms. New **`form-autofill.js`** content script (serialize + apply), popup **Match Form To Profile** flow, API integration tests in **`tests/test_api/`**, and rate-limit header forwarding on **`APIError.to_response`**. Extension popup and landing mockup copy polish; device-local extras UI removed from the popup.
+**`POST /api/v1/extension/autofill/map`** maps visible application fields to profile data using an LLM, then merges **`api/extension_autofill_rules.py`** deterministic assignments that override the model on known labels (name, email, phone, country, location, work authorization, visa sponsorship, screening Yes/No, work-location acknowledgements, education blocks, consent checkboxes, and more). Cached responses are re-merged on replay so rules stay authoritative.
+
+**`extension/lib/form-autofill.js`** deep-scrolls long application pages, serializes combobox options, re-scans and rematches by label before apply, and uses dedicated paths for Yes/No comboboxes, acknowledgement dropdowns, and applicant location fields. The popup can attach a stored resume file after text fields are filled. Integration tests in **`tests/test_api/test_extension_autofill.py`**.
+
+#### Profile — work authorization, visa sponsorship, stored resume
+
+Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbox), contact fields, and resume upload persisted for extension autofill (**`utils/user_resume_storage.py`**). Migrations **`021`** / **`022`**. Degree alias helper for education combobox matching (**`utils/degree_aliases.py`**).
+
+### Changed
+
+- Chrome extension **manifest**, popup footer, and landing mockup version → **2.0.0**.
+
+---
+
+## [Unreleased]
+
+### Added
 
 #### Chrome Extension — Shared page content extraction
 

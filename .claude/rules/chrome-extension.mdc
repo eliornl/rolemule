@@ -75,7 +75,7 @@ The popup (`popup.html` / `popup.css`) mirrors the main app's design system exac
 5. "Analyze This Job" gradient button (full width, bolt icon)
 6. Hint text: "Extracts page content and sends it to AI for analysis"
 7. Quick links grid (4 cols): Dashboard / Settings / Help / Logout
-8. Footer: `v1.1.0`
+8. Footer: `v2.0.0` (must match `manifest.json` `version` and `popup.html` footer)
 
 ### Inline notification bar — `#popupNotification`
 
@@ -148,9 +148,13 @@ The popup and context menu inject **`lib/extract-page-content.js`**, then call *
 
 ## Form autofill — `extension/lib/form-autofill.js` + `POST /api/v1/extension/autofill/map`
 
-- **Popup:** **Match Form To Profile** injects `lib/form-autofill.js`, calls `window.__jaaSerializeAutofillFields()`, then POSTs JSON `{ fields, page_url }` with `Authorization: Bearer`. On success, response `assignments` are applied immediately via `window.__jaaApplyAutofillAssignments()` (script re-injected as needed); the user reviews and submits on the host page.
-- **MVP scope:** main `document` only (no iframes/shadow roots). The popup does not send **`extras`**; `POST /extension/autofill/map` still accepts optional **`extras`** for other clients or future profile-backed fields.
-- **Errors:** treat `CFG_6001` like other extension flows (Settings → AI Setup). **403** → finish profile setup on the dashboard.
+- **Popup:** **Match Form To Profile** injects `lib/form-autofill.js`, runs async serialize (`__jaaSerializeAutofillFieldsAsync` when available — deep-scroll for long application pages), then POSTs JSON `{ fields, page_url }` with `Authorization: Bearer`. On success, `assignments` are applied via `__jaaApplyAutofillAssignmentsWithRematchAsync` (re-scan + label rematch before apply; script re-injected as needed). User reviews and submits on the host page.
+- **Server:** `api/extension_autofill.py` calls Gemini, then `_finalize_autofill_response()` merges **`api/extension_autofill_rules.py`** overlay (wins on duplicate `field_uid`; preserves `label_text` for client rematch). Same merge on Redis cache replay.
+- **Deterministic rules (never mention specific job sites in user-facing copy):** name/email/phone, country vs city location, work authorization, visa sponsorship, acknowledgements, education degree/discipline/school, website/portfolio, consent checkboxes, NYC commute screening, etc. Profile fields: `work_authorization`, `requires_visa_sponsorship`, `country`, education JSONB, stored resume via `utils/user_resume_storage.py`.
+- **Client apply paths:** `applyYesNoComboboxAsync` (exact Yes/No only), `applyAcknowledgementComboboxAsync` (long “Yes, I acknowledge…” options), `applyLocationCityComboboxAsync`, education block expand + sort order, `assignmentUidStillValid` / `findFieldUidForAssignment` to avoid cross-wiring screening UIDs.
+- **MVP scope:** main `document` only (no iframes/shadow roots). Popup does not send **`extras`**; endpoint still accepts optional **`extras`** for other clients.
+- **Errors:** `CFG_6001` → Settings → AI Setup. **403** → complete profile setup (work authorization required for extension map).
+- **Docs:** `extension/README.md`, `USER_GUIDE.md` Chrome Extension section, `CHANGELOG.md` [Unreleased], Help FAQ — keep user-facing text generic (“any job site”, “application forms”), no third-party job board names.
 
 ## Submitting to Backend
 
@@ -160,7 +164,7 @@ The extension POSTs `FormData` with only `job_text` — never `detected_title` o
 const formData = new FormData();
 formData.append('job_text', extractedText);
 // Do NOT send detected_title / detected_company — page titles are unreliable
-// (e.g. "(5) LinkedIn"). The dashboard shows skeleton shimmers while the
+// (e.g. a noisy browser tab title). The dashboard shows skeleton shimmers while the
 // Job Analyzer extracts the correct title and company from the job text.
 
 const response = await fetch(`${CONFIG.API_BASE_URL}/workflow/start`, {

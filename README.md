@@ -228,7 +228,7 @@ AI features require a key from Google AI Studio.
 3. Click **Load unpacked**
 4. Select the `extension/` folder from this repo
 
-The extension appears in your Chrome toolbar. Browse jobs naturally. When you find one you like, use **Analyze This Job** to send the posting to your dashboard for the full AI workflow, or use **Match Form To Profile** to suggest values into open fields.
+The extension appears in your Chrome toolbar. Browse jobs naturally. When you find one you like, use **Analyze This Job** to send the posting to your dashboard for the full AI workflow, or use **Match Form To Profile** to fill application forms from your profile (AI mapping plus deterministic rules for screening and contact fields — always review before submit).
 
 ---
 

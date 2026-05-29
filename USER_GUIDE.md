@@ -115,7 +115,12 @@ The app stores an empty work history when that box is checked so **Complete Setu
 | Company Sizes | Startup (1–10), Small (11–50), Medium (51–200), Large (201–1000), Enterprise (1000+) |
 | Work Arrangements | Onsite, Remote, Hybrid |
 | Maximum Travel | No travel (0%), Minimal (up to 25%), Moderate (up to 50%), Frequent (up to 75%), Extensive (up to 100%) |
+| Work authorization | Required — choose the status that applies to you today (used for screening questions on application forms) |
 | Additional Options | Willing to relocate, Needs visa sponsorship, Has security clearance |
+
+**Work authorization** and **visa sponsorship** drive how **Match Form To Profile** answers employer screening questions (for example “authorized to work” and “require sponsorship”). Set them accurately; the extension uses these values before any AI guess.
+
+Your uploaded **resume** (PDF, DOCX, or TXT on the first setup step) can be attached automatically to resume file fields when you use the extension.
 
 Click **Complete Setup** to finish.
 
@@ -248,12 +253,17 @@ After any code change, click the ↺ refresh icon on the extension card.
 
 1. Browse to an application form with visible fields (main page only in the current release)
 2. Click the ApplyPilot icon in the toolbar
-3. Click **Match Form To Profile** — field labels and values are sent to the server with your profile; suggested values are applied on the page for you to edit before you submit
-4. Requires the same login, completed profile, and API access as dashboard analyses
+3. Click **Match Form To Profile** — the extension scrolls long forms to reveal hidden questions, scans labels and dropdown options, and sends them to the server with your profile
+4. The server returns field assignments: an AI map merged with **deterministic profile rules** (name, contact, work authorization, visa sponsorship, country, location, education, and common screening questions). Values are written into the page for you to review and edit before you submit
+5. Requires the same login, **completed profile** (including work authorization), and API access as dashboard analyses. If some fields fail, the popup shows how many succeeded and failed — always review before submitting
+
+**Reliable without AI guesswork:** full name, email, phone, work authorization Yes/No, visa sponsorship Yes/No, country, and many acknowledgement dropdowns — when your profile has the matching data.
+
+**Resume file fields:** if you uploaded a resume during Profile Setup, the extension attempts to attach it after text fields are filled.
 
 ### Supported Sites
 
-The extension has optimized content selectors for many ATS platforms and generic job pages. For any unrecognized site it falls back to the page's main content area — this works on virtually any company careers page.
+The extension has optimized content selectors for many employer career sites and application platforms. For any unrecognized site it falls back to the page's main content area — this works on virtually any company careers page.
 
 ### Tips
 
@@ -261,6 +271,8 @@ The extension has optimized content selectors for many ATS platforms and generic
 - You must be logged into the web app for the extension to work — it uses the same account
 - Analyzed jobs appear in your dashboard immediately
 - **Match Form To Profile** runs on the main document only; nested iframes are not scanned in the current release
+- After updating the extension code, reload it at `chrome://extensions` before testing again
+- Open DevTools on the application tab and filter the console for `ApplyPilot` to see scan/apply debug details when troubleshooting
 
 ---
 
