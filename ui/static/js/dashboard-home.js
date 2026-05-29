@@ -1265,7 +1265,7 @@
                 const completed = Boolean(data.completion_status?.profile_completed);
                 localStorage.setItem('profile_completed', completed ? 'true' : 'false');
                 if (!completed) {
-                    window.location.href = '/profile/setup';
+                    window.location.href = '/profile/setup?edit=true';
                     return false;
                 }
                 const fullName   = data.user_info?.full_name || 'User';
@@ -1282,7 +1282,7 @@
                 logout();
                 return false;
             } else if (response.status === 404) {
-                window.location.href = '/profile/setup';
+                window.location.href = '/profile/setup?edit=true';
                 return false;
             }
             return false;

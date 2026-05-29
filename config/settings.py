@@ -186,6 +186,12 @@ class Settings(BaseSettings):
     log_redact_sensitive: bool = True
     slow_request_threshold_ms: float = 5000.0  # 5 seconds
 
+    # User resume files (on-disk; relative paths stored in user_resume_assets)
+    user_resume_storage_dir: str = Field(
+        default="data/user_resumes",
+        description="Directory for persisted resume uploads (created automatically).",
+    )
+
     # Session Configuration
     session_timeout: int = 3600
     session_cookie_name: str = "job_assistant_session"

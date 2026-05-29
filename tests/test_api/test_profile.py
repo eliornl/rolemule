@@ -8,6 +8,8 @@ Endpoints:
   PUT    /api/v1/profile/education
   PUT    /api/v1/profile/skills-qualifications
   PUT    /api/v1/profile/career-preferences
+  GET    /api/v1/profile/resume
+  DELETE /api/v1/profile/resume
   GET    /api/v1/profile/status
   GET    /api/v1/profile/api-key/status
   POST   /api/v1/profile/api-key
@@ -93,7 +95,10 @@ class TestUpdateBasicInfo:
                 "country": "USA",
                 "professional_title": "Senior Engineer",
                 "years_experience": 5,
+                "is_student": False,
                 "summary": "Experienced software engineer with 5 years in FastAPI and Python.",
+                "phone": "+1 415 555 0100",
+                "linkedin_url": "https://example.com/in/testuser",
             },
         )
         assert resp.status_code in (200, 201, 204)
@@ -105,6 +110,7 @@ class TestUpdateBasicInfo:
             json={
                 "city": "NYC", "state": "NY", "country": "USA",
                 "professional_title": "Dev", "years_experience": -1,
+                "is_student": False,
                 "summary": "Summary here.",
             },
         )
@@ -416,3 +422,22 @@ class TestParseResumeFormatValidation:
         assert resp.status_code in (400, 422)
         msg = resp.json().get("message", "").lower()
         assert "legacy" in msg and "not supported" in msg
+
+
+# ---------------------------------------------------------------------------
+# GET/DELETE /profile/resume
+# ---------------------------------------------------------------------------
+
+
+class TestProfileStoredResume:
+    """GET/DELETE /api/v1/profile/resume"""
+
+    @pytest.mark.asyncio
+    async def test_get_resume_404_when_none(self, authed_client_with_user):
+        resp = await authed_client_with_user.get(f"{BASE}/resume")
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_delete_resume_404_when_none(self, authed_client_with_user):
+        resp = await authed_client_with_user.delete(f"{BASE}/resume")
+        assert resp.status_code == 404

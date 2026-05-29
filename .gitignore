@@ -33,6 +33,9 @@ env/
 .env.local
 # .env.local.example should be committed — it contains only placeholders
 
+# User-uploaded resume files (local dev)
+data/user_resumes/
+
 # Certificate and private key files
 *.pem
 *.key

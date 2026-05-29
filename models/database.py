@@ -12,6 +12,7 @@ from sqlalchemy import (
     String,
     Boolean,
     Integer,
+    BigInteger,
     Float,
     DateTime,
     Text,
@@ -179,6 +180,13 @@ class User(Base):
         lazy="noload",
         cascade="all, delete-orphan",
     )
+    resume_asset: Mapped[Optional["UserResumeAsset"]] = relationship(
+        "UserResumeAsset",
+        back_populates="user",
+        uselist=False,
+        lazy="noload",
+        cascade="all, delete-orphan",
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert user to dictionary for API responses."""
@@ -234,6 +242,12 @@ class UserProfile(Base):
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_student: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Contact & application links (autofill, employer forms)
+    phone: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    linkedin_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    github_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    portfolio_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
     # Profile Sections (JSONB for flexibility) - use None as default, not mutable objects
     work_experience: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
         JSONB, nullable=True, default=None
@@ -260,6 +274,9 @@ class UserProfile(Base):
     )
     willing_to_relocate: Mapped[bool] = mapped_column(Boolean, default=False)
     requires_visa_sponsorship: Mapped[bool] = mapped_column(Boolean, default=False)
+    work_authorization: Mapped[Optional[str]] = mapped_column(
+        String(40), nullable=True, default=None
+    )
     has_security_clearance: Mapped[bool] = mapped_column(Boolean, default=False)
     max_travel_preference: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True
@@ -288,6 +305,10 @@ class UserProfile(Base):
             "years_experience": self.years_experience,
             "summary": self.summary,
             "is_student": self.is_student,
+            "phone": self.phone,
+            "linkedin_url": self.linkedin_url,
+            "github_url": self.github_url,
+            "portfolio_url": self.portfolio_url,
             "work_experience": self.work_experience or [],
             "education": self.education or [],
             "skills": self.skills or [],
@@ -297,8 +318,56 @@ class UserProfile(Base):
             "work_arrangements": self.work_arrangements or [],
             "willing_to_relocate": self.willing_to_relocate,
             "requires_visa_sponsorship": self.requires_visa_sponsorship,
+            "work_authorization": self.work_authorization,
             "has_security_clearance": self.has_security_clearance,
             "max_travel_preference": self.max_travel_preference,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class UserResumeAsset(Base):
+    """
+    Stored resume file metadata (binary on disk or object storage path).
+
+    One row per user (replaced on re-upload).
+    """
+
+    __tablename__ = "user_resume_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+    storage_relative_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    byte_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    sha256_hex: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="resume_asset")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": str(self.id),
+            "user_id": str(self.user_id),
+            "original_filename": self.original_filename,
+            "mime_type": self.mime_type,
+            "byte_size": self.byte_size,
+            "sha256_hex": self.sha256_hex,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

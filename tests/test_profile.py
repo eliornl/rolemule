@@ -721,6 +721,32 @@ class TestCareerPreferences:
         assert profile["desired_salary_range"]["max"] == 180000
         assert "Remote" in profile["work_arrangements"]
 
+    def test_update_career_preferences_preserves_exact_salary_max(
+        self,
+        http_client: httpx.Client,
+        authenticated_user: Dict[str, str],
+        valid_career_preferences: Dict[str, Any],
+    ):
+        """220000 must persist exactly — not drift via rounding or number-input step."""
+        data = valid_career_preferences.copy()
+        data["desired_salary_range"] = {"min": 200000, "max": 220000}
+
+        response = http_client.put(
+            "/api/v1/profile/career-preferences",
+            headers=authenticated_user,
+            json=data,
+        )
+        assert response.status_code == 200
+
+        profile_resp = http_client.get(
+            "/api/v1/profile",
+            headers=authenticated_user,
+        )
+        assert profile_resp.status_code == 200
+        rng = profile_resp.json()["profile_data"]["desired_salary_range"]
+        assert rng["min"] == 200000
+        assert rng["max"] == 220000
+
     def test_update_career_preferences_invalid_salary_range(
         self,
         http_client: httpx.Client,

@@ -41,7 +41,7 @@
                 return false;
             }
             if (response.status === 404) {
-                window.location.href = '/profile/setup';
+                window.location.href = '/profile/setup?edit=true';
                 return false;
             }
             if (!response.ok) {
@@ -53,7 +53,7 @@
             localStorage.setItem('profile_completed', completed ? 'true' : 'false');
 
             if (!completed) {
-                window.location.href = '/profile/setup';
+                window.location.href = '/profile/setup?edit=true';
                 return false;
             }
             return true;

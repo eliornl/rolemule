@@ -6,11 +6,13 @@ MVP: same-document fields only; client previews suggestions before applying valu
 
 from __future__ import annotations
 
+import html
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -18,7 +20,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import get_settings
-from models.database import User, UserProfile as UserProfileModel
+from api.extension_autofill_rules import (
+    build_deterministic_raw_assignments,
+    filter_skipped_for_assigned_uids,
+    merge_assignment_dicts,
+)
+from models.database import User, UserProfile as UserProfileModel, UserResumeAsset
 from utils.auth import get_current_user_with_complete_profile
 from utils.cache import (
     cache_tool_result,
@@ -38,7 +45,7 @@ from utils.error_responses import (
 )
 from utils.llm_client import GeminiError, get_gemini_client, user_facing_message_from_llm_exception
 from utils.llm_parsing import parse_json_from_llm_response
-from utils.security import sanitize_llm_output, sanitize_text
+from utils.security import sanitize_text
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -47,7 +54,7 @@ router = APIRouter()
 # CONSTANTS
 # =============================================================================
 
-_MAX_FIELDS: int = 60
+_MAX_FIELDS: int = 80
 _MAX_LABEL_CHARS: int = 600
 _MAX_OPTION_TEXT: int = 200
 _MAX_OPTIONS_PER_SELECT: int = 40
@@ -58,7 +65,15 @@ _MAX_EXTRA_VALUE_LEN: int = 500
 _MAX_ASSIGNMENT_VALUE: int = 8000
 
 _RATE_LIMIT: int = 15
+_RATE_LIMIT_DEBUG: int = 200
 _RATE_WINDOW_S: int = 3600
+
+
+def _autofill_rate_limit() -> int:
+    """Production cap is 15/hour; local DEBUG allows more iteration while testing."""
+    if get_settings().debug:
+        return _RATE_LIMIT_DEBUG
+    return _RATE_LIMIT
 
 _SYSTEM_PROMPT: str = """You map job application form fields to a user's profile data.
 
@@ -67,11 +82,34 @@ Rules:
 - "assignments" is an array of {"field_uid": string, "value": string}. Use ONLY field_uid values from the input list.
 - "skipped" is an array of {"field_uid": string, "reason": string} for fields you refuse to fill or cannot map.
 - Use ONLY facts present in the provided profile JSON and extras JSON. Do not invent employers, degrees, or credentials.
+- Fields marked required:true are priority — fill them when profile data supports an answer; do not skip merely to be cautious.
+- Name fields (full/legal/applicant name): copy PROFILE_JSON full_name EXACTLY as stored — include all given names and surnames; never shorten to first+last only.
+- First name / last name split fields: derive from full_name (first token = first name; last name = all remaining tokens joined, e.g. Elior Nataf Lackritz → first Elior, last Nataf Lackritz; middle-only field = tokens between first and last when asked).
+- Email fields: use PROFILE_JSON email exactly.
+- Phone fields: use profile.phone when present.
 - When fields ask for school, university, degree, major, field of study, or graduation dates, map from profile.education when present (each entry may include institution, degree, field_of_study, start_date, end_date, is_current).
+- When multiple Degree/Discipline fields appear (duplicate_label_index 0, 1, …), map profile.education[0] to index 0, profile.education[1] to index 1, etc. Fill every row when profile data exists.
+- Degree dropdown mapping: copy the profile degree text; the server normalizes common aliases to dropdown labels. Examples — Associate: AA/AS/AAS → Associate's Degree; Bachelor: BA/BS/BSc/BBA/BEng/BFA/LLB/Bachelor of Laws → Bachelor's Degree (or specific Bachelor of … when listed); Master: MA/MS/MSc/MBA/MEng → Master of Arts/Science/Business/etc. or Master's Degree; explicit JD/Juris Doctor in profile → Juris Doctor (J.D.); Doctorate: PhD/MD/EdD → matching Doctor of … option. Never invent a degree not in profile.education.
+- Years of industry experience: when options are numeric ranges (e.g. 5-7, 8-10, 11+), pick the bucket closest to profile.years_experience — if the exact count is below a range's lower bound, use the nearest range above (e.g. 4 years → 5-7 when that is the closest bucket).
+- Profile may include city, state, country, willing_to_relocate, work_arrangements, desired_company_sizes, phone, linkedin_url, github_url, portfolio_url, work_authorization (no_work_authorization | has_work_authorization | us_lawful_permanent_resident | us_citizen; omit if null), requires_visa_sponsorship (boolean), and resume_file.has_file — use only when present in PROFILE_JSON.
+- Country dropdown/combobox fields: map profile.country to the full country name (e.g. US → United States).
+- Location (City) / current city / where you are located: use profile.city and profile.state when present (e.g. Hoboken, NJ) — not country dropdowns or relocation screening questions.
+- Website/portfolio fields: use portfolio_url when present; if empty, use github_url even when the form also has a separate GitHub Username field.
+- GitHub Username fields (not Website): use the username from github_url (e.g. eliornl from https://github.com/eliornl).
+- Legal acknowledgement attestations (acknowledge/confirm/agree to statements): select Yes or the affirmative agreement option — do not skip as EEO.
+- Application consent checkboxes ("By checking this box, I agree to allow … store/process/retain my data", privacy consent): assign value "checked" — default to checked; skip optional marketing/newsletter opt-ins and EEO/diversity boxes.
+- "Based in the United States" / US location questions: Yes when country is US/United States OR work_authorization is us_citizen or us_lawful_permanent_resident; No when country is clearly outside the US and no US work authorization.
+- Visa / employment sponsorship questions ("require visa sponsorship", H-1B, etc.): answer "Yes" ONLY if profile.requires_visa_sponsorship is true. Answer "No" when false or when work_authorization is us_citizen, us_lawful_permanent_resident, or has_work_authorization — having authorization means you do NOT need sponsorship; never answer Yes because the user is authorized.
+- In-person / on-site / NYC / tri-state commute questions (e.g. commute to NYC office 2x/week): use profile.city and profile.state to judge whether the candidate can reasonably commute (e.g. Hoboken NJ and Jersey City → Yes; Austin TX → No unless willing_to_relocate). Plain Yes/No → Yes when commute is reasonable. Long option lists → pick currently local/metropolitan when close, relocation when willing_to_relocate, else cannot work in-office. Match full option text when listed.
+- "Not local to central offices" / willing to relocate (Greenhouse long dropdowns): same geographic reasoning from city/state; pick currently local/metropolitan when close, relocation when willing_to_relocate, else not-willing.
+- Startup readiness questions: Yes when desired_company_sizes includes startup; otherwise Yes unless the user only selected enterprise/large company sizes.
+- Open-ended questions (why this company/role, why join, motivation, cover-letter-style prompts): ONE or TWO short sentences only (about 25–50 words total). Lead with role fit; one concrete point from profile.summary or work_experience — no lists, no fluff, no repetition. You may name the employer from the page URL when obvious. Do not invent facts.
+- input_type "file" for resume/CV: skip (the client attaches the stored resume separately). Do not assign file fields.
 - If a field asks for legally sensitive attestations, diversity/EEO self-ID, or anything you should not infer, skip it.
-- For salary questions, you may use desired_salary_range if present; otherwise skip.
+- For salary expectation questions (in $, yearly): use profile.desired_salary_range min/max when present (e.g. 150000-200000); if absent, skip — do not invent a number.
+- Start date / notice period / "how quickly are you looking to start" questions: answer with exactly "I can start a new role in 2 weeks." — not 2-4 weeks or a longer paragraph.
 - Keep values concise. Match the expected format when obvious (e.g. email for email fields).
-- If unsure, skip rather than guess wrong.
+- Skip only when profile truly lacks the needed fact or the field is EEO/diversity; do not skip required screening questions when profile has the answer.
 """
 
 # =============================================================================
@@ -106,6 +144,12 @@ class AutofillFieldIn(BaseModel):
     required: bool = False
     max_length: Optional[int] = Field(None, ge=0, le=1_000_000)
     options: Optional[List[AutofillSelectOption]] = Field(None, max_length=_MAX_OPTIONS_PER_SELECT)
+    duplicate_label_index: int = Field(
+        default=0,
+        ge=0,
+        le=20,
+        description="0-based index when the same label appears on multiple fields (e.g. education rows)",
+    )
 
 
 class AutofillMapRequest(BaseModel):
@@ -150,6 +194,12 @@ class AutofillAssignmentOut(BaseModel):
     field_uid: str
     value: str
     label_text: str = Field(default="", description="Echo from request for preview UI")
+    duplicate_label_index: int = Field(
+        default=0,
+        ge=0,
+        le=20,
+        description="Which repeated label occurrence (0=first Degree row, 1=second, etc.)",
+    )
 
 
 class AutofillMapResponse(BaseModel):
@@ -223,6 +273,18 @@ async def _load_profile_bundle(
     else:
         snap["profile"] = {}
 
+    ra_res = await db.execute(select(UserResumeAsset).where(UserResumeAsset.user_id == user_id))
+    ra = ra_res.scalar_one_or_none()
+    if ra:
+        snap["resume_file"] = {
+            "has_file": True,
+            "original_filename": ra.original_filename,
+            "mime_type": ra.mime_type,
+            "byte_size": ra.byte_size,
+        }
+    else:
+        snap["resume_file"] = {"has_file": False}
+
     return snap, prof_sig
 
 
@@ -245,7 +307,21 @@ def _sanitize_field_dict(f: AutofillFieldIn) -> Dict[str, Any]:
         "required": f.required,
         "max_length": f.max_length,
         "options": opts,
+        "duplicate_label_index": f.duplicate_label_index,
     }
+
+
+def _sanitize_form_autofill_value(val: str) -> str:
+    """Plain text for DOM input/textarea values — decode entities, strip controls, keep newlines."""
+    if not val:
+        return ""
+    text = html.unescape(str(val))
+    # Resolve double-encoded entities (e.g. &amp;#x27; from display sanitizers).
+    text = html.unescape(text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+    if len(text) > _MAX_ASSIGNMENT_VALUE:
+        text = text[:_MAX_ASSIGNMENT_VALUE]
+    return text
 
 
 def _sanitize_extras(extras: Optional[Dict[str, str]]) -> Dict[str, str]:
@@ -291,7 +367,7 @@ def _validate_assignments(
             continue
         if not isinstance(val, str):
             val = str(val) if val is not None else ""
-        val = sanitize_text(val)[:_MAX_ASSIGNMENT_VALUE]
+        val = _sanitize_form_autofill_value(val)
         meta = fields_by_uid[uid]
         if meta.max_length is not None and meta.max_length > 0 and len(val) > meta.max_length:
             val = val[: int(meta.max_length)]
@@ -300,9 +376,68 @@ def _validate_assignments(
                 field_uid=uid,
                 value=val,
                 label_text=meta.label_text[:_MAX_LABEL_CHARS],
+                duplicate_label_index=meta.duplicate_label_index,
             )
         )
     return out
+
+
+def _missing_required_warnings(
+    request_fields: Sequence["AutofillFieldIn"],
+    assignments: Sequence[AutofillAssignmentOut],
+) -> List[str]:
+    """Warn when required fields (except resume file) received no assignment."""
+    assigned = {a.field_uid for a in assignments}
+    missing_labels: List[str] = []
+    for field in request_fields:
+        if not field.required or field.field_uid in assigned:
+            continue
+        if (field.input_type or "").lower() == "file":
+            continue
+        label = re.sub(r"\s+", " ", (field.label_text or "").strip())[:100]
+        if label:
+            missing_labels.append(label)
+    if not missing_labels:
+        return []
+    preview = "; ".join(missing_labels[:3])
+    if len(missing_labels) > 3:
+        preview += f" (+{len(missing_labels) - 3} more)"
+    return [
+        f"{len(missing_labels)} required field(s) could not be auto-filled — please review: {preview}"
+    ]
+
+
+def _finalize_autofill_response(
+    llm_raw_assignments: List[Dict[str, Any]],
+    skipped: List[Dict[str, str]],
+    fields_by_uid: Dict[str, AutofillFieldIn],
+    profile_bundle: Dict[str, Any],
+    request_fields: List[AutofillFieldIn],
+) -> Tuple[List[AutofillAssignmentOut], List[Dict[str, str]]]:
+    """
+    Merge deterministic profile rules over LLM assignments and drop stale skips.
+
+    Args:
+        llm_raw_assignments: Raw assignment dicts from cache or LLM.
+        skipped: Skipped field entries from cache or LLM.
+        fields_by_uid: field_uid → field metadata.
+        profile_bundle: User + profile snapshot.
+        request_fields: All fields from the client request.
+
+    Returns:
+        Tuple of (validated assignments, filtered skipped list).
+    """
+    det_raw = build_deterministic_raw_assignments(request_fields, profile_bundle)
+    merged_raw = merge_assignment_dicts(llm_raw_assignments, det_raw)
+    assignments = _validate_assignments(
+        [x for x in merged_raw if isinstance(x, dict)],
+        fields_by_uid,
+    )
+    skipped_safe = filter_skipped_for_assigned_uids(
+        skipped,
+        [a.field_uid for a in assignments],
+    )
+    return assignments, skipped_safe
 
 
 # =============================================================================
@@ -324,14 +459,15 @@ async def map_form_fields_to_profile(
     """
     user_id = _get_user_uuid(current_user)
 
+    rate_cap = _autofill_rate_limit()
     rate = await check_rate_limit_with_headers(
         identifier=f"{user_id}:extension_autofill_map",
-        limit=_RATE_LIMIT,
+        limit=rate_cap,
         window_seconds=_RATE_WINDOW_S,
     )
     if not rate.allowed:
         raise rate_limit_error(
-            f"Rate limit exceeded. Maximum {_RATE_LIMIT} autofill requests per hour. "
+            f"Rate limit exceeded. Maximum {rate_cap} autofill requests per hour. "
             f"Resets in {rate.reset_seconds} seconds.",
             retry_after=rate.reset_seconds,
         )
@@ -371,7 +507,6 @@ async def map_form_fields_to_profile(
 
     if cached and isinstance(cached, dict) and "assignments" in cached:
         raw_assign = [x for x in (cached.get("assignments") or []) if isinstance(x, dict)]
-        assignments = _validate_assignments(raw_assign, fields_by_uid)
         raw_skip = cached.get("skipped") or []
         skipped_safe: List[Dict[str, str]] = []
         for s in raw_skip:
@@ -385,6 +520,14 @@ async def map_form_fields_to_profile(
                         "reason": sanitize_text(str(s.get("reason", "")))[:500],
                     }
                 )
+        assignments, skipped_safe = _finalize_autofill_response(
+            raw_assign,
+            skipped_safe,
+            fields_by_uid,
+            profile_bundle,
+            request.fields,
+        )
+        warnings.extend(_missing_required_warnings(request.fields, assignments))
         return AutofillMapResponse(assignments=assignments, skipped=skipped_safe, warnings=warnings)
 
     user_prompt = _build_user_prompt(fields_compact, profile_bundle, extras_clean, page_url_clean)
@@ -421,14 +564,10 @@ async def map_form_fields_to_profile(
             error_code=ErrorCode.LLM_SERVICE_ERROR,
         )
 
-    parsed = sanitize_llm_output(parsed)
+    # Do not use sanitize_llm_output here — it HTML-escapes strings (e.g. ' → &#x27;), which
+    # must remain plain text for form input/textarea values written by the extension.
     raw_assignments = parsed.get("assignments") if isinstance(parsed.get("assignments"), list) else []
     skipped = parsed.get("skipped") if isinstance(parsed.get("skipped"), list) else []
-
-    assignments = _validate_assignments(
-        [x for x in raw_assignments if isinstance(x, dict)],
-        fields_by_uid,
-    )
 
     skipped_safe: List[Dict[str, str]] = []
     for s in skipped:
@@ -442,6 +581,17 @@ async def map_form_fields_to_profile(
                     "reason": sanitize_text(str(s.get("reason", "")))[:500],
                 }
             )
+
+    llm_raw = [x for x in raw_assignments if isinstance(x, dict)]
+    assignments, skipped_safe = _finalize_autofill_response(
+        llm_raw,
+        skipped_safe,
+        fields_by_uid,
+        profile_bundle,
+        request.fields,
+    )
+
+    warnings.extend(_missing_required_warnings(request.fields, assignments))
 
     cache_body = {
         "assignments": [a.model_dump() for a in assignments],

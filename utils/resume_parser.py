@@ -84,6 +84,9 @@ Return ONLY this JSON structure. No explanations, no markdown, just the JSON:
     "full_name": "<full name or null if not found>",
     "email": "<email address or null>",
     "phone": "<phone number or null>",
+    "linkedin_url": "<https URL or null>",
+    "github_url": "<https URL or null>",
+    "portfolio_url": "<https URL or null>",
     "city": "<city or null>",
     "state": "<state/province or null>",
     "country": "<country or null>",
@@ -394,7 +397,8 @@ def _clean_parsed_data(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # String fields - ensure they're strings or None
     string_fields = [
-        "full_name", "email", "phone", "city", "state", "country",
+        "full_name", "email", "phone", "linkedin_url", "github_url", "portfolio_url",
+        "city", "state", "country",
         "professional_title", "summary", "parsing_confidence", "parsing_notes"
     ]
     for field in string_fields:

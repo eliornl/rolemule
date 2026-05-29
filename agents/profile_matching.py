@@ -588,6 +588,7 @@ class ProfileMatchingAgent:
         constraints_section = f"""
 ### CANDIDATE REQUIREMENTS/CONSTRAINTS
 - Requires Visa Sponsorship: {profile.get('requires_visa_sponsorship', False)}
+- Work authorization: {profile.get('work_authorization') or 'Not specified'}
 - Has Security Clearance: {profile.get('has_security_clearance', False)}
 """
 

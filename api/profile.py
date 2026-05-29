@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, List
 from enum import Enum
 
 from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, validator, field_validator, ValidationInfo, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete as sa_delete, func
@@ -22,6 +23,7 @@ from utils.database import get_database
 from config.settings import get_settings
 from utils.json_utils import serialize_object_for_json
 from utils.resume_parser import parse_resume_from_file, SUPPORTED_EXTENSIONS
+from utils.user_resume_storage import delete_resume_file, resume_absolute_path, save_resume_bytes
 from utils.cache import (
     get_cached_user_profile,
     cache_user_profile,
@@ -36,7 +38,7 @@ from utils.encryption import (
 from utils.gemini_api_key_format import validate_gemini_api_key
 from utils.logging_config import get_structured_logger, mask_email
 from utils.error_responses import APIError, ErrorCode, internal_error, no_api_key_error, not_found_error, not_implemented_error, rate_limit_error, validation_error
-from models.database import User, UserProfile as UserProfileModel, JobApplication, WorkflowSession, UserWorkflowPreferences
+from models.database import User, UserProfile as UserProfileModel, JobApplication, WorkflowSession, UserWorkflowPreferences, UserResumeAsset
 
 logger = logging.getLogger(__name__)
 structured_logger = get_structured_logger(__name__)
@@ -99,7 +101,16 @@ MAX_COMPANY_SIZE_ITEMS: int = 5
 MAX_JOB_TYPE_ITEMS: int = 5
 MAX_WORK_ARRANGEMENT_ITEMS: int = 3
 MAX_COMPANY_LENGTH: int = 100
-
+MAX_PHONE_LENGTH: int = 40
+MAX_PROFILE_URL_LENGTH: int = 500
+_VALID_WORK_AUTHORIZATION = frozenset(
+    {
+        "no_work_authorization",
+        "has_work_authorization",
+        "us_lawful_permanent_resident",
+        "us_citizen",
+    }
+)
 # Minimum lengths
 MIN_LENGTH: int = 1
 MIN_SKILLS_ITEMS: int = 1
@@ -191,6 +202,24 @@ def _validate_location(v: Optional[str], field_name: str) -> Optional[str]:
     return cleaned
 
 
+def _validate_profile_url_field(value: str, field_label: str) -> None:
+    """Require http(s) scheme for stored profile URLs."""
+    t = value.strip()
+    if not t:
+        return
+    if not t.startswith(("http://", "https://")):
+        raise ValueError(f"{field_label} must start with http:// or https://")
+    if len(t) > MAX_PROFILE_URL_LENGTH:
+        raise ValueError(f"{field_label} cannot exceed {MAX_PROFILE_URL_LENGTH} characters")
+
+
+def _blank_to_none(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    t = str(value).strip()
+    return t or None
+
+
 # =============================================================================
 # ENUMS
 # =============================================================================
@@ -279,6 +308,14 @@ class BasicInfoRequest(BaseModel):
         max_length=MAX_SUMMARY_LENGTH,
         description="Professional summary or bio (resume-style overview of your background)",
     )
+    phone: str = Field(
+        default="",
+        max_length=MAX_PHONE_LENGTH,
+        description="Phone for applications (optional)",
+    )
+    linkedin_url: str = Field(default="", max_length=MAX_PROFILE_URL_LENGTH)
+    github_url: str = Field(default="", max_length=MAX_PROFILE_URL_LENGTH)
+    portfolio_url: str = Field(default="", max_length=MAX_PROFILE_URL_LENGTH)
 
     @validator("city")
     def validate_city(cls, v: str) -> str:
@@ -318,6 +355,36 @@ class BasicInfoRequest(BaseModel):
     @validator("summary")
     def validate_summary(cls, v: Optional[str]) -> Optional[str]:
         return _validate_text_field(v, "Professional summary", MAX_SUMMARY_LENGTH)
+
+    @validator("phone")
+    def validate_phone(cls, v: str) -> str:
+        if not v:
+            return ""
+        t = v.strip()
+        if len(t) > MAX_PHONE_LENGTH:
+            raise ValueError(f"Phone cannot exceed {MAX_PHONE_LENGTH} characters")
+        return t
+
+    @validator("linkedin_url")
+    def validate_linkedin_url(cls, v: str) -> str:
+        if not v or not str(v).strip():
+            return ""
+        _validate_profile_url_field(str(v), "LinkedIn URL")
+        return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
+
+    @validator("github_url")
+    def validate_github_url(cls, v: str) -> str:
+        if not v or not str(v).strip():
+            return ""
+        _validate_profile_url_field(str(v), "GitHub")
+        return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
+
+    @validator("portfolio_url")
+    def validate_portfolio_url(cls, v: str) -> str:
+        if not v or not str(v).strip():
+            return ""
+        _validate_profile_url_field(str(v), "Portfolio URL")
+        return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
 
 
 class WorkExperienceItem(BaseModel):
@@ -658,6 +725,13 @@ class CareerPreferencesRequest(BaseModel):
     requires_visa_sponsorship: bool = Field(
         False, description="Whether user requires visa sponsorship"
     )
+    work_authorization: Optional[str] = Field(
+        default=None,
+        description=(
+            "no_work_authorization | has_work_authorization | "
+            "us_lawful_permanent_resident | us_citizen"
+        ),
+    )
     has_security_clearance: bool = Field(
         False, description="Whether user has security clearance"
     )
@@ -709,19 +783,48 @@ class CareerPreferencesRequest(BaseModel):
         if not v:
             return None
 
+        normalized: Dict[str, int] = {}
         for key in ("min", "max"):
-            if key in v:
-                if not isinstance(v[key], int):
-                    raise ValueError(f"Salary {key} must be an integer")
-                if v[key] < 0:
-                    raise ValueError(f"Salary {key} must be positive")
-                if v[key] > 2000000:
-                    raise ValueError(f"Salary {key} seems unreasonably high")
+            if key not in v:
+                continue
+            raw = v[key]
+            if isinstance(raw, bool):
+                raise ValueError(f"Salary {key} must be an integer")
+            if isinstance(raw, int):
+                amount = raw
+            elif isinstance(raw, str):
+                digits = re.sub(r"\D", "", raw.strip())
+                if not digits:
+                    continue
+                amount = int(digits)
+            else:
+                raise ValueError(f"Salary {key} must be an integer")
+            if amount < 0:
+                raise ValueError(f"Salary {key} must be positive")
+            if amount > 2000000:
+                raise ValueError(f"Salary {key} seems unreasonably high")
+            normalized[key] = amount
 
-        if "min" in v and "max" in v and v["min"] >= v["max"]:
+        if "min" in normalized and "max" in normalized and normalized["min"] >= normalized["max"]:
             raise ValueError("Minimum salary must be less than maximum salary")
 
-        return v
+        return normalized or None
+
+    @model_validator(mode="after")
+    def _normalize_work_authorization(self) -> "CareerPreferencesRequest":
+        raw = self.work_authorization
+        if raw is None or (isinstance(raw, str) and not str(raw).strip()):
+            object.__setattr__(self, "work_authorization", None)
+            return self
+        wa = str(raw).strip().lower()
+        if wa not in _VALID_WORK_AUTHORIZATION:
+            raise ValueError(
+                "work_authorization must be one of: "
+                "no_work_authorization, has_work_authorization, "
+                "us_lawful_permanent_resident, us_citizen"
+            )
+        object.__setattr__(self, "work_authorization", wa)
+        return self
 
 
 class ProfileStatusResponse(BaseModel):
@@ -768,6 +871,72 @@ class ResumeParseResponse(BaseModel):
     processing_time: Optional[float] = Field(
         None, description="Time taken to parse in seconds"
     )
+
+
+_MIME_BY_RESUME_EXT: Dict[str, str] = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "txt": "text/plain; charset=utf-8",
+}
+
+
+def _merge_resume_contact_into_profile_if_empty(
+    prof: UserProfileModel,
+    parsed: Dict[str, Any],
+) -> None:
+    """Fill phone / profile URLs from resume parse only when DB fields are empty."""
+    p_phone = parsed.get("phone")
+    if isinstance(p_phone, str) and p_phone.strip() and not (prof.phone and prof.phone.strip()):
+        prof.phone = p_phone.strip()[:MAX_PHONE_LENGTH]
+
+    for fld in ("linkedin_url", "github_url", "portfolio_url"):
+        val = parsed.get(fld)
+        if not isinstance(val, str) or not val.strip():
+            continue
+        cur = getattr(prof, fld)
+        if cur and str(cur).strip():
+            continue
+        try:
+            _validate_profile_url_field(val, fld)
+        except ValueError:
+            continue
+        setattr(prof, fld, val.strip()[:MAX_PROFILE_URL_LENGTH])
+
+
+async def _upsert_user_resume_asset(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    content: bytes,
+    filename: str,
+    file_extension: str,
+) -> None:
+    """Write bytes to disk and upsert ``user_resume_assets`` (one row per user)."""
+    base_dir = settings.user_resume_storage_dir
+    rel, sha_hex, _ext = save_resume_bytes(base_dir, user_id, content, filename)
+    mime = _MIME_BY_RESUME_EXT.get(file_extension, "application/octet-stream")
+    res = await db.execute(select(UserResumeAsset).where(UserResumeAsset.user_id == user_id))
+    row = res.scalar_one_or_none()
+    safe_name = (filename or "resume")[:255]
+    if row:
+        delete_resume_file(base_dir, row.storage_relative_path)
+        row.storage_relative_path = rel
+        row.original_filename = safe_name
+        row.mime_type = mime[:100]
+        row.byte_size = len(content)
+        row.sha256_hex = sha_hex
+        row.updated_at = datetime.now(timezone.utc)
+    else:
+        db.add(
+            UserResumeAsset(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                storage_relative_path=rel,
+                original_filename=safe_name,
+                mime_type=mime[:100],
+                byte_size=len(content),
+                sha256_hex=sha_hex,
+            )
+        )
 
 
 @router.post("/parse-resume", response_model=ResumeParseResponse)
@@ -843,6 +1012,29 @@ async def parse_resume_endpoint(
 
         parsed_data = await parse_resume_from_file(content, resume.filename, user_api_key=user_api_key)
 
+        try:
+            await _upsert_user_resume_asset(
+                db,
+                user_id,
+                content,
+                resume.filename or "resume.dat",
+                file_extension,
+            )
+            prof_r = await db.execute(select(UserProfileModel).where(UserProfileModel.user_id == user_id))
+            prof = prof_r.scalar_one_or_none()
+            if prof:
+                _merge_resume_contact_into_profile_if_empty(prof, parsed_data)
+                prof.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+            await invalidate_user_profile(str(user_id))
+        except Exception as merge_err:
+            await db.rollback()
+            logger.warning(
+                "Resume parse succeeded but persist/merge failed: %s",
+                merge_err,
+                exc_info=True,
+            )
+
         return ResumeParseResponse(
             success=True,
             data=parsed_data,
@@ -861,6 +1053,49 @@ async def parse_resume_endpoint(
     except Exception as e:
         logger.error(f"Resume parsing failed: {e}", exc_info=True)
         raise internal_error("Failed to parse resume. Please try again or enter your information manually.")
+
+
+@router.get("/resume")
+async def download_stored_resume(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database),
+):
+    """Download the user's stored resume file (from parse-resume or future uploads)."""
+    user_id = get_user_id_from_token(current_user)
+    res = await db.execute(select(UserResumeAsset).where(UserResumeAsset.user_id == user_id))
+    row = res.scalar_one_or_none()
+    if not row:
+        raise not_found_error(resource_type="Stored resume")
+    try:
+        path = resume_absolute_path(settings.user_resume_storage_dir, row.storage_relative_path)
+    except ValueError as e:
+        logger.warning("Invalid resume storage path for user %s: %s", user_id, e)
+        raise not_found_error(resource_type="Stored resume")
+    if not path.is_file():
+        raise not_found_error(resource_type="Stored resume")
+    return FileResponse(
+        str(path),
+        media_type=row.mime_type or "application/octet-stream",
+        filename=row.original_filename or "resume",
+    )
+
+
+@router.delete("/resume")
+async def delete_stored_resume(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database),
+):
+    """Remove stored resume file metadata and on-disk bytes."""
+    user_id = get_user_id_from_token(current_user)
+    res = await db.execute(select(UserResumeAsset).where(UserResumeAsset.user_id == user_id))
+    row = res.scalar_one_or_none()
+    if not row:
+        raise not_found_error(resource_type="Stored resume")
+    delete_resume_file(settings.user_resume_storage_dir, row.storage_relative_path)
+    await db.execute(sa_delete(UserResumeAsset).where(UserResumeAsset.user_id == user_id))
+    await db.commit()
+    await invalidate_user_profile(str(user_id))
+    return {"message": "Resume file deleted"}
 
 
 # =============================================================================
@@ -922,6 +1157,12 @@ async def get_profile_data(
 
         # Profile data structure
         profile_data = user_profile.to_dict() if user_profile else {}
+        resume_q = await db.execute(select(UserResumeAsset).where(UserResumeAsset.user_id == user_id))
+        resume_row = resume_q.scalar_one_or_none()
+        if resume_row:
+            profile_data["resume_file"] = {"has_file": True, **resume_row.to_dict()}
+        else:
+            profile_data["resume_file"] = {"has_file": False}
 
         response_data = {
             "user_info": serialize_object_for_json(user_info),
@@ -967,6 +1208,10 @@ async def update_basic_info(
             user_profile.years_experience = basic_info.years_experience
             user_profile.is_student = basic_info.is_student
             user_profile.summary = basic_info.summary
+            user_profile.phone = _blank_to_none(basic_info.phone)
+            user_profile.linkedin_url = _blank_to_none(basic_info.linkedin_url)
+            user_profile.github_url = _blank_to_none(basic_info.github_url)
+            user_profile.portfolio_url = _blank_to_none(basic_info.portfolio_url)
             user_profile.updated_at = datetime.now(timezone.utc)
         else:
             # Create new profile
@@ -980,6 +1225,10 @@ async def update_basic_info(
                 years_experience=basic_info.years_experience,
                 is_student=basic_info.is_student,
                 summary=basic_info.summary,
+                phone=_blank_to_none(basic_info.phone),
+                linkedin_url=_blank_to_none(basic_info.linkedin_url),
+                github_url=_blank_to_none(basic_info.github_url),
+                portfolio_url=_blank_to_none(basic_info.portfolio_url),
             )
             db.add(user_profile)
 
@@ -1191,6 +1440,7 @@ async def update_career_preferences(
             user_profile.desired_company_sizes = company_sizes
             user_profile.willing_to_relocate = preferences.willing_to_relocate
             user_profile.requires_visa_sponsorship = preferences.requires_visa_sponsorship
+            user_profile.work_authorization = preferences.work_authorization
             user_profile.has_security_clearance = preferences.has_security_clearance
             user_profile.max_travel_preference = max_travel
             user_profile.updated_at = datetime.now(timezone.utc)
@@ -1206,6 +1456,7 @@ async def update_career_preferences(
                 desired_company_sizes=company_sizes,
                 willing_to_relocate=preferences.willing_to_relocate,
                 requires_visa_sponsorship=preferences.requires_visa_sponsorship,
+                work_authorization=preferences.work_authorization,
                 has_security_clearance=preferences.has_security_clearance,
                 max_travel_preference=max_travel,
             )
@@ -1686,10 +1937,25 @@ def _check_career_preferences_completion(user_profile: Optional[UserProfileModel
     desired_company_sizes = user_profile.desired_company_sizes or []
     job_types = user_profile.job_types or []
     work_arrangements = user_profile.work_arrangements or []
-    return (
+    career_fields_ok = (
         len(desired_company_sizes) > 0
         and len(job_types) > 0
         and len(work_arrangements) > 0
+    )
+    if not career_fields_ok:
+        return False
+
+    wa = (user_profile.work_authorization or "").strip()
+    if wa in _VALID_WORK_AUTHORIZATION:
+        return True
+
+    # Profiles completed before work_authorization existed: leave column NULL but
+    # treat career step as done when the rest of the profile is already complete.
+    return (
+        _check_basic_info_completion(user_profile)
+        and _check_work_experience_completion(user_profile)
+        and _check_education_completion(user_profile)
+        and _check_skills_qualifications_completion(user_profile)
     )
 
 
@@ -2062,6 +2328,7 @@ async def delete_user_account(
         UserProfile as UserProfileModel,
         JobApplication,
         WorkflowSession,
+        UserResumeAsset,
     )
     from api.auth import pwd_context, _bcrypt_safe
 
@@ -2121,6 +2388,13 @@ async def delete_user_account(
             select(func.count()).select_from(UserProfileModel).where(UserProfileModel.user_id == user_id)
         )
         has_profile: bool = (profile_result.scalar_one() or 0) > 0
+
+        resume_row_result = await db.execute(
+            select(UserResumeAsset).where(UserResumeAsset.user_id == user_id)
+        )
+        resume_asset = resume_row_result.scalar_one_or_none()
+        if resume_asset:
+            delete_resume_file(settings.user_resume_storage_dir, resume_asset.storage_relative_path)
 
         # Bulk-delete in child-to-parent order to respect FK constraints
         await db.execute(sa_delete(JobApplication).where(JobApplication.user_id == user_id))

@@ -86,6 +86,28 @@
         });
     }
 
+    /**
+     * Parse salary from text — strips commas/spaces so "220,000" → 220000.
+     * Avoids type="number" step/wheel changing 220000 → 218000 before save.
+     * @param {string|number|null|undefined} value
+     * @returns {number}
+     */
+    function parseSalaryDigits(value) {
+        const digits = String(value ?? '').replace(/[^\d]/g, '');
+        if (!digits) return 0;
+        const n = Number(digits);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+    }
+
+    /**
+     * @param {HTMLInputElement|null|undefined} el
+     * @returns {number}
+     */
+    function readSalaryField(el) {
+        if (!el) return 0;
+        return parseSalaryDigits(el.value);
+    }
+
     // Validation rules and constants
     const VALIDATION_RULES = {
         MIN_EXPERIENCE_ENTRIES: 1,
@@ -162,7 +184,8 @@
 
         // Must finish loading saved profile before applying parsed resume from sessionStorage.
         // Otherwise populateFormData() can resolve after autoFillProfile() and overwrite parsed data.
-        await loadUserData();
+        const profilePayload = await loadUserData();
+        const completionStatus = profilePayload?.completion_status;
 
         initializeEventListeners();
         updateStepDisplay();
@@ -199,12 +222,15 @@
             }
         }
 
-        if (isEditMode) {
-            // In edit mode, skip step 0 (resume upload) and go to step 1
-            // Use requestAnimationFrame to defer until layout is settled
-            requestAnimationFrame(() => changeStep(1));
+        const returningUser =
+            isEditMode ||
+            (completionStatus && !completionStatus.profile_completed &&
+                (completionStatus.completion_percentage ?? 0) > 0);
 
-            // Update page title for edit mode
+        if (returningUser) {
+            const targetStep = onlyCareerPreferencesMissing(completionStatus) ? 5 : 1;
+            requestAnimationFrame(() => changeStep(targetStep));
+
             const headerTitle = document.querySelector('.sidebar h2');
             if (headerTitle) {
                 headerTitle.textContent = 'Edit Your Profile';
@@ -272,14 +298,33 @@
         return response.json();
     }
 
+    /**
+     * Returning user who only needs Step 5 (e.g. new work_authorization column after migrate).
+     * @param {object|null|undefined} completionStatus
+     * @returns {boolean}
+     */
+    function onlyCareerPreferencesMissing(completionStatus) {
+        const cs = completionStatus;
+        if (!cs || cs.profile_completed) return false;
+        return (
+            cs.career_preferences === false &&
+            cs.basic_info !== false &&
+            cs.work_experience !== false &&
+            cs.education !== false &&
+            cs.skills_qualifications !== false
+        );
+    }
+
     // Load existing user data
+    /** @returns {Promise<object|null>} */
     async function loadUserData() {
         try {
             const data = await makeAuthenticatedApiCall("/profile/");
             populateFormData(data);
-
+            return data;
         } catch (error) {
             // For new users, this error is expected and will be silently ignored
+            return null;
         }
     }
 
@@ -303,6 +348,15 @@
             document.getElementById("years-experience").value = String(profileData.years_experience);
         if (profileData.summary)
             document.getElementById("summary").value = profileData.summary;
+
+        const phoneEl = document.getElementById("phone");
+        if (phoneEl && profileData.phone) phoneEl.value = profileData.phone;
+        const liEl = document.getElementById("linkedin-url");
+        if (liEl && profileData.linkedin_url) liEl.value = profileData.linkedin_url;
+        const ghEl = document.getElementById("github-url");
+        if (ghEl && profileData.github_url) ghEl.value = profileData.github_url;
+        const pfEl = document.getElementById("portfolio-url");
+        if (pfEl && profileData.portfolio_url) pfEl.value = profileData.portfolio_url;
 
         // Student status field has been removed
 
@@ -406,9 +460,24 @@
             document.getElementById("willing-to-relocate").checked = true;
         }
 
-        // Handle visa sponsorship checkbox - check for both field names in DB
+        // Work authorization (career step)
+        const validWorkAuth = new Set([
+            "no_work_authorization",
+            "has_work_authorization",
+            "us_lawful_permanent_resident",
+            "us_citizen",
+        ]);
+        let workAuth = profileData.work_authorization;
+        if (workAuth && validWorkAuth.has(workAuth)) {
+            document.querySelectorAll('input[name="work-authorization"]').forEach((/** @type {Element} */ el) => {
+                const inp = /** @type {HTMLInputElement} */ (el);
+                inp.checked = inp.value === workAuth;
+            });
+        }
+
         if (profileData.requires_visa_sponsorship === true) {
-            document.getElementById("requires-visa-sponsorship").checked = true;
+            const visaEl = document.getElementById("requires-visa-sponsorship");
+            if (visaEl) visaEl.checked = true;
         }
 
         if (profileData.has_security_clearance) {
@@ -534,17 +603,25 @@
 
         // Salary inputs — debounced validation (300 ms) to avoid on-every-keystroke work
         const debouncedSalaryValidate = debounce(() => {
-            const min = parseInt(/** @type {HTMLInputElement} */ (document.getElementById('min-salary'))?.value) || 0;
-            const max = parseInt(/** @type {HTMLInputElement} */ (document.getElementById('max-salary'))?.value) || 0;
-            const maxInput = /** @type {HTMLInputElement|null} */ (document.getElementById('max-salary'));
-            if (maxInput && max > 0 && min > 0 && max <= min) {
-                maxInput.setCustomValidity('Maximum salary must be greater than minimum salary.');
-            } else if (maxInput) {
-                maxInput.setCustomValidity('');
+            const minEl = /** @type {HTMLInputElement|null} */ (document.getElementById('min-salary'));
+            const maxEl = /** @type {HTMLInputElement|null} */ (document.getElementById('max-salary'));
+            const min = readSalaryField(minEl);
+            const max = readSalaryField(maxEl);
+            if (maxEl && max > 0 && min > 0 && max <= min) {
+                maxEl.setCustomValidity('Maximum salary must be greater than minimum salary.');
+            } else if (maxEl) {
+                maxEl.setCustomValidity('');
             }
         }, 300);
-        document.getElementById('min-salary')?.addEventListener('input', debouncedSalaryValidate);
-        document.getElementById('max-salary')?.addEventListener('input', debouncedSalaryValidate);
+        ['min-salary', 'max-salary'].forEach((id) => {
+            const salaryInput = /** @type {HTMLInputElement|null} */ (document.getElementById(id));
+            salaryInput?.addEventListener('input', debouncedSalaryValidate);
+            salaryInput?.addEventListener('blur', () => {
+                const n = readSalaryField(salaryInput);
+                salaryInput.value = n > 0 ? String(n) : '';
+                debouncedSalaryValidate();
+            });
+        });
 
         // Add experience button (wired here; also used below for no-experience toggle)
         document
@@ -897,6 +974,22 @@
         if (data.years_experience !== undefined) document.getElementById("years-experience").value = data.years_experience;
         if (data.summary) document.getElementById("summary").value = data.summary;
         if (data.is_student !== undefined) document.getElementById("is-student").checked = data.is_student;
+        if (data.phone) {
+            const pe = document.getElementById("phone");
+            if (pe) pe.value = data.phone;
+        }
+        if (data.linkedin_url) {
+            const e = document.getElementById("linkedin-url");
+            if (e) e.value = data.linkedin_url;
+        }
+        if (data.github_url) {
+            const e = document.getElementById("github-url");
+            if (e) e.value = data.github_url;
+        }
+        if (data.portfolio_url) {
+            const e = document.getElementById("portfolio-url");
+            if (e) e.value = data.portfolio_url;
+        }
 
         // Step 2: Work Experience
         if (data.work_experience && data.work_experience.length > 0) {
@@ -1138,9 +1231,9 @@
 
         // Optional URL fields (no validation required)
         const optionalUrlFields = [
-            { id: "profile-url", name: "Professional Profile URL" },
+            { id: "linkedin-url", name: "LinkedIn URL" },
             { id: "github-url", name: "GitHub URL" },
-            { id: "website-url", name: "Personal Website" }
+            { id: "portfolio-url", name: "Portfolio URL" },
         ];
 
         let isValid = true;
@@ -1316,7 +1409,7 @@
         const minSalary = document.getElementById('min-salary').value;
         const maxSalary = document.getElementById('max-salary').value;
 
-        if (minSalary && maxSalary && parseInt(minSalary) >= parseInt(maxSalary)) {
+        if (minSalary && maxSalary && parseSalaryDigits(minSalary) >= parseSalaryDigits(maxSalary)) {
             isValid = false;
             errorMessages.push('Minimum salary must be less than maximum salary');
         }
@@ -1347,6 +1440,12 @@
         if (!travelPreferenceElement) {
             isValid = false;
             errorMessages.push('Maximum travel preference must be selected');
+        }
+
+        const workAuthElement = document.querySelector('input[name="work-authorization"]:checked');
+        if (!workAuthElement) {
+            isValid = false;
+            errorMessages.push('Work authorization status must be selected');
         }
 
         // Show validation errors if any
@@ -1804,13 +1903,24 @@
                 travelPreference = "NONE";
             }
 
-            // Get preference flags
+            const waEl = document.querySelector('input[name="work-authorization"]:checked');
+            if (!waEl) {
+                showError("Work authorization status must be selected");
+                return false;
+            }
+            const workAuthorization = String(/** @type {HTMLInputElement} */ (waEl).value);
+
             const relocateChecked = document.getElementById('willing-to-relocate')?.checked || false;
-            const visaSponsorshipChecked = document.getElementById('requires-visa-sponsorship')?.checked || false;
+            const visaSponsorshipChecked =
+                document.getElementById('requires-visa-sponsorship')?.checked || false;
             const securityClearanceChecked = document.getElementById('has-security-clearance')?.checked || false;
 
-            const minSalaryVal = parseInt(document.getElementById('min-salary')?.value) || 0;
-            const maxSalaryVal = parseInt(document.getElementById('max-salary')?.value) || 0;
+            const minSalaryVal = readSalaryField(
+                /** @type {HTMLInputElement|null} */ (document.getElementById('min-salary'))
+            );
+            const maxSalaryVal = readSalaryField(
+                /** @type {HTMLInputElement|null} */ (document.getElementById('max-salary'))
+            );
             const desiredSalaryRange = {};
             if (minSalaryVal > 0) desiredSalaryRange.min = minSalaryVal;
             if (maxSalaryVal > 0) desiredSalaryRange.max = maxSalaryVal;
@@ -1823,6 +1933,7 @@
                 desired_salary_range: Object.keys(desiredSalaryRange).length > 0 ? desiredSalaryRange : null,
                 willing_to_relocate: relocateChecked,
                 requires_visa_sponsorship: visaSponsorshipChecked,
+                work_authorization: workAuthorization,
                 has_security_clearance: securityClearanceChecked
             };
 

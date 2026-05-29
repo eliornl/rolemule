@@ -109,19 +109,59 @@ async function runExtractPageContent(tabId, options = {}) {
  * @param {number} tabId
  * @returns {Promise<{ fields: Array<Record<string, unknown>>, page_url: string, warnings?: string[] }>}
  */
-async function runSerializeAutofill(tabId) {
+async function runSerializeAutofill(tabId, educationCount) {
   await chrome.scripting.executeScript({
     target: { tabId },
     files: [JAA_FORM_AUTOFILL_FILE]
   });
   const [exec] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: () => {
-      if (typeof window.__jaaSerializeAutofillFields === 'function') {
-        return window.__jaaSerializeAutofillFields();
+    func: async (eduCount) => {
+      var result;
+      if (typeof window.__jaaSerializeAutofillFieldsAsync === 'function') {
+        result = await window.__jaaSerializeAutofillFieldsAsync(eduCount);
+      } else if (typeof window.__jaaSerializeAutofillFields === 'function') {
+        result = window.__jaaSerializeAutofillFields();
+      } else {
+        return { fields: [], page_url: String(location.href || ''), warnings: ['Serializer not loaded'] };
       }
-      return { fields: [], page_url: String(location.href || ''), warnings: ['Serializer not loaded'] };
-    }
+      try {
+        var n = result && result.fields ? result.fields.length : 0;
+        console.warn('[ApplyPilot] scan found ' + n + ' field(s)');
+        if (result && result.fields) {
+          console.warn(
+            '[ApplyPilot] scan labels:',
+            result.fields.map(function (f) {
+              return (f.input_type || f.tag || '?') + ': ' + String(f.label_text || '').slice(0, 100);
+            })
+          );
+        }
+        if (result && result.education_expand) {
+          console.warn('[ApplyPilot] education expand:', result.education_expand);
+        }
+        if (result && result.scan_debug) {
+          console.warn('[ApplyPilot] scan debug:', result.scan_debug);
+          console.warn(
+            '[ApplyPilot] scan debug — sponsorship in fields:',
+            result.scan_debug.sponsorship_in_fields,
+            '| minimal Yes/No containers:',
+            result.scan_debug.minimal_pair_containers
+              ? result.scan_debug.minimal_pair_containers.length
+              : 0,
+            '| text hits:',
+            result.scan_debug.sponsorship_text_hits
+          );
+        } else {
+          console.warn(
+            '[ApplyPilot] scan debug: (missing — reload extension at chrome://extensions)'
+          );
+        }
+      } catch (logErr) {
+        /* ignore */
+      }
+      return result;
+    },
+    args: [typeof educationCount === 'number' ? educationCount : 0]
   });
   return exec.result;
 }
@@ -131,7 +171,126 @@ async function runSerializeAutofill(tabId) {
  * @param {Array<{ field_uid: string, value: string }>} assignments
  * @returns {Promise<{ applied: number, failed: number }>}
  */
-async function runApplyAutofill(tabId, assignments) {
+async function runApplyAutofill(tabId, assignments, educationCount) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: [JAA_FORM_AUTOFILL_FILE]
+  });
+  const [exec] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: async (payload) => {
+      if (typeof window.__jaaApplyAutofillWithRematch === 'function') {
+        return await window.__jaaApplyAutofillWithRematch(
+          payload.assignments,
+          payload.educationCount
+        );
+      }
+      if (typeof window.__jaaApplyAutofillWithRematchSync === 'function') {
+        return window.__jaaApplyAutofillWithRematchSync(
+          payload.assignments,
+          payload.educationCount
+        );
+      }
+      if (typeof window.__jaaApplyAutofillAssignments === 'function') {
+        return window.__jaaApplyAutofillAssignments(payload.assignments);
+      }
+      return { applied: 0, failed: 0 };
+    },
+    args: [
+      {
+        assignments: assignments,
+        educationCount: typeof educationCount === 'number' ? educationCount : 0
+      }
+    ]
+  });
+  return exec.result;
+}
+
+/**
+ * Name/email assignments only — used to restore profile identity after Ashby resume parsing.
+ * @param {Array<{ field_uid: string, value: string, label_text?: string, duplicate_label_index?: number }>} mapped
+ * @returns {Array<{ field_uid: string, value: string, label_text?: string, duplicate_label_index?: number }>}
+ */
+function identityAutofillAssignments(mapped) {
+  if (!Array.isArray(mapped)) return [];
+  return mapped.filter(function (a) {
+    if (!a || !a.value) return false;
+    var lab = String(a.label_text || '').toLowerCase();
+    if (/company|employer|school|university|reference|hiring\s+manager/.test(lab)) {
+      return false;
+    }
+    if (/\bemail\b/.test(lab)) return true;
+    if (/\bname\b/.test(lab) || /^first(\s+|-)?name/.test(lab) || /^last(\s+|-)?name/.test(lab)) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
+ * Ashby's resume parser overwrites name/email after upload — re-apply profile values once.
+ * @param {number} tabId
+ * @param {Array<{ field_uid: string, value: string, label_text?: string }>} mapped
+ * @returns {Promise<void>}
+ */
+async function reapplyAshbyIdentityAfterResume(tabId, mapped) {
+  var subset = identityAutofillAssignments(mapped);
+  if (!subset.length) return;
+  await new Promise(function (resolve) {
+    setTimeout(resolve, 1200);
+  });
+  await runApplyAutofill(tabId, subset, 0);
+}
+
+/**
+ * Hide Ashby "Autofill from resume" UI in the active tab (profile is source of truth).
+ * @param {number} tabId
+ * @returns {Promise<void>}
+ */
+async function suppressAshbyResumeAutofillOnTab(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: [JAA_FORM_AUTOFILL_FILE]
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      if (typeof window.__jaaRestoreAshbyOverhidden === 'function') {
+        window.__jaaRestoreAshbyOverhidden();
+      }
+      if (typeof window.__jaaSuppressAshbyResumeAutofill === 'function') {
+        return window.__jaaSuppressAshbyResumeAutofill();
+      }
+      return { hidden_sections: 0, hidden_banners: 0 };
+    }
+  });
+}
+
+/**
+ * @param {number} tabId
+ * @returns {Promise<{ attached: number, ashby_upload_failed: boolean }>}
+ */
+async function attachStoredResumeToTab(tabId) {
+  const res = await fetch(`${CONFIG.API_BASE_URL}/profile/resume`, {
+    headers: { Authorization: 'Bearer ' + state.token }
+  });
+  if (!res.ok) return { attached: 0, ashby_upload_failed: false };
+  const blob = await res.blob();
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+  let filename = 'resume.pdf';
+  const cd = res.headers.get('Content-Disposition') || '';
+  const fnMatch = /filename\*?=(?:UTF-8''|")?([^";\n]+)/i.exec(cd);
+  if (fnMatch && fnMatch[1]) {
+    filename = fnMatch[1].replace(/"/g, '').trim();
+  }
+  const mimeType = blob.type || 'application/pdf';
+
   await chrome.scripting.executeScript({
     target: { tabId },
     files: [JAA_FORM_AUTOFILL_FILE]
@@ -139,14 +298,60 @@ async function runApplyAutofill(tabId, assignments) {
   const [exec] = await chrome.scripting.executeScript({
     target: { tabId },
     func: (payload) => {
-      if (typeof window.__jaaApplyAutofillAssignments === 'function') {
-        return window.__jaaApplyAutofillAssignments(payload.assignments);
+      if (typeof window.__jaaAttachResumeFile === 'function') {
+        return window.__jaaAttachResumeFile(payload);
       }
-      return { applied: 0, failed: 0 };
+      return { attached: 0 };
     },
-    args: [{ assignments: assignments }]
+    args: [{ base64: base64, filename: filename, mimeType: mimeType }]
   });
-  return exec.result;
+  const r = exec && exec.result;
+  const attached = r && typeof r.attached === 'number' ? r.attached : 0;
+  return {
+    attached: attached,
+    ashby_upload_failed: !!(r && r.ashby_upload_failed)
+  };
+}
+
+/**
+ * Ashby uploads the file to their servers asynchronously after the input is set.
+ * @param {number} tabId
+ * @returns {Promise<boolean>}
+ */
+async function ashbyResumeUploadFailedOnTab(tabId) {
+  await new Promise(function (resolve) {
+    setTimeout(resolve, 2800);
+  });
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: [JAA_FORM_AUTOFILL_FILE]
+  });
+  const [exec] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      return typeof window.__jaaAshbyResumeUploadFailed === 'function' && window.__jaaAshbyResumeUploadFailed();
+    }
+  });
+  return !!(exec && exec.result);
+}
+
+/**
+ * @returns {Promise<number>}
+ */
+async function fetchProfileEducationCount() {
+  try {
+    const res = await fetch(`${CONFIG.API_BASE_URL}/profile`, {
+      headers: { Authorization: 'Bearer ' + state.token }
+    });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    const prof = data.profile_data || data.profile || data;
+    const edu = prof && prof.education;
+    return Array.isArray(edu) ? edu.length : 0;
+  } catch (e) {
+    console.debug('Education count fetch skipped:', e);
+    return 0;
+  }
 }
 
 // =============================================================================
@@ -458,19 +663,56 @@ function exitAutofillPreview() {
  * @param {Array<{ field_uid: string, value: string, label_text?: string }>} mapped
  * @returns {Promise<void>}
  */
-async function applyAutofillAssignmentsToTab(tabId, mapped) {
+async function applyAutofillAssignmentsToTab(tabId, mapped, scanCount, educationCount) {
   const mapFn = mapped.map(function (a) {
-    return { field_uid: a.field_uid, value: a.value };
+    return {
+      field_uid: a.field_uid,
+      value: a.value,
+      label_text: a.label_text || '',
+      duplicate_label_index:
+        typeof a.duplicate_label_index === 'number' ? a.duplicate_label_index : 0
+    };
   });
-  const result = await runApplyAutofill(tabId, mapFn);
+  const result = await runApplyAutofill(tabId, mapFn, educationCount);
   const n = result && typeof result.applied === 'number' ? result.applied : 0;
   const f = result && typeof result.failed === 'number' ? result.failed : 0;
-  let msg =
-    'Filled ' + n + ' field(s). Check the page before you submit or leave.';
+  const scanned = typeof scanCount === 'number' ? scanCount : 0;
+  let msg = 'Scanned ' + scanned + ' field(s), filled ' + n + '. Review before submit.';
   if (f > 0) {
-    msg += ' ' + f + ' could not be filled (fields may have changed).';
+    msg += ' (' + f + ' failed)';
   }
-  showToast(msg, f > 0 ? 'info' : 'success', 8000);
+  showToast(msg, f > 0 ? 'info' : 'success', 10000);
+
+  console.log('[ApplyPilot popup] autofill result', {
+    scanned: scanned,
+    applied: n,
+    failed: f,
+    debug: result && result.debug ? result.debug : null
+  });
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (debugPayload) => {
+        try {
+          if (debugPayload) {
+            console.warn('[ApplyPilot] apply debug — field count: ' + (debugPayload.scanned_field_count || 0));
+            console.warn('[ApplyPilot] apply details:', debugPayload);
+          } else if (window.__jaaLastAutofillDebug) {
+            console.warn('[ApplyPilot] apply debug (cached):', window.__jaaLastAutofillDebug);
+          } else {
+            console.warn('[ApplyPilot] apply finished but no debug payload was returned.');
+          }
+        } catch (e) {
+          console.warn('[ApplyPilot] apply debug log error', e);
+        }
+      },
+      args: [result && result.debug ? result.debug : null]
+    });
+  } catch (logErr) {
+    console.debug('Autofill debug log skipped:', logErr);
+  }
+  return result;
 }
 
 async function matchFormToProfile() {
@@ -490,7 +732,21 @@ async function matchFormToProfile() {
   if (elements.matchProfileBtn) elements.matchProfileBtn.disabled = true;
 
   try {
-    const serialized = await runSerializeAutofill(tab.id);
+    let resumeAttached = 0;
+    let ashbyResumeUploadFailed = false;
+    const isAshby = /ashbyhq\.com|jobs\.ashby/i.test(u);
+
+    if (isAshby) {
+      try {
+        await suppressAshbyResumeAutofillOnTab(tab.id);
+      } catch (suppressErr) {
+        console.debug('Ashby autofill suppress skipped:', suppressErr);
+      }
+    }
+
+    const eduCount = await fetchProfileEducationCount();
+
+    const serialized = await runSerializeAutofill(tab.id, eduCount);
     const fields = serialized && serialized.fields ? serialized.fields : [];
     if (!fields.length) {
       showToast(
@@ -523,6 +779,19 @@ async function matchFormToProfile() {
         showToast('Add your API key under Settings → AI Setup, then try again.', 'info', 8000);
         return;
       }
+      if (res.status === 429 || data.error_code === 'RATE_4001') {
+        const retrySec = parseInt(res.headers.get('Retry-After') || '0', 10);
+        const waitMsg =
+          retrySec > 0
+            ? ' Try again in ' + Math.ceil(retrySec / 60) + ' min (' + retrySec + ' s).'
+            : '';
+        showToast(
+          (data.message || 'Autofill rate limit reached.') + waitMsg,
+          'info',
+          12000
+        );
+        return;
+      }
       if (res.status === 403) {
         showToast(data.message || 'Finish your profile setup on the dashboard first.', 'info', 8000);
         return;
@@ -537,10 +806,94 @@ async function matchFormToProfile() {
     }
 
     const mapped = assignments.map(function (x) {
-      return { field_uid: x.field_uid, value: x.value, label_text: x.label_text };
+      return {
+        field_uid: x.field_uid,
+        value: x.value,
+        label_text: x.label_text,
+        duplicate_label_index:
+          typeof x.duplicate_label_index === 'number' ? x.duplicate_label_index : 0
+      };
     });
     try {
-      await applyAutofillAssignmentsToTab(tab.id, mapped);
+      await applyAutofillAssignmentsToTab(tab.id, mapped, fields.length, eduCount);
+      const apiWarnings = Array.isArray(data.warnings) ? data.warnings : [];
+      const missingRequired = apiWarnings.find(function (w) {
+        return typeof w === 'string' && w.indexOf('required field(s) could not be auto-filled') >= 0;
+      });
+      if (missingRequired) {
+        showToast(missingRequired, 'info', 10000);
+      }
+      // Attach resume after profile apply (Ashby resume parser can overwrite name/email).
+      try {
+        await new Promise(function (resolve) {
+          setTimeout(resolve, isAshby ? 200 : 400);
+        });
+        const attachedAfter = await attachStoredResumeToTab(tab.id);
+        if (attachedAfter.attached > resumeAttached) {
+          resumeAttached = attachedAfter.attached;
+        }
+        if (attachedAfter.ashby_upload_failed) {
+          ashbyResumeUploadFailed = true;
+        }
+        if (isAshby) {
+          try {
+            await suppressAshbyResumeAutofillOnTab(tab.id);
+          } catch (suppressAfterErr) {
+            console.debug('Ashby autofill suppress after attach skipped:', suppressAfterErr);
+          }
+        }
+        if (isAshby && resumeAttached > 0) {
+          await reapplyAshbyIdentityAfterResume(tab.id, mapped);
+          if (await ashbyResumeUploadFailedOnTab(tab.id)) {
+            ashbyResumeUploadFailed = true;
+          }
+        }
+        if (resumeAttached === 0) {
+          await new Promise(function (resolve) {
+            setTimeout(resolve, 600);
+          });
+          const attachedRetry = await attachStoredResumeToTab(tab.id);
+          if (attachedRetry.attached > resumeAttached) {
+            resumeAttached = attachedRetry.attached;
+          }
+          if (attachedRetry.ashby_upload_failed) {
+            ashbyResumeUploadFailed = true;
+          }
+          if (isAshby) {
+            try {
+              await suppressAshbyResumeAutofillOnTab(tab.id);
+            } catch (suppressRetryErr) {
+              console.debug('Ashby autofill suppress retry skipped:', suppressRetryErr);
+            }
+          }
+          if (isAshby && resumeAttached > 0) {
+            await reapplyAshbyIdentityAfterResume(tab.id, mapped);
+            if (await ashbyResumeUploadFailedOnTab(tab.id)) {
+              ashbyResumeUploadFailed = true;
+            }
+          }
+        }
+      } catch (resumeAfterErr) {
+        console.debug('Post-apply resume attach skipped:', resumeAfterErr);
+      }
+      if (ashbyResumeUploadFailed) {
+        showToast(
+          'Profile fields filled. Ashby could not save the resume on their servers (502). Click Replace and choose your PDF again, or try later.',
+          'info',
+          12000
+        );
+      } else if (resumeAttached === 0) {
+        const hasResumeField = fields.some(function (f) {
+          return f && f.input_type === 'file' && /resume|cv/i.test(String(f.label_text || ''));
+        });
+        if (hasResumeField) {
+          showToast(
+            'Fields filled. Upload a resume in Profile Setup to autofill resume file fields.',
+            'info',
+            8000
+          );
+        }
+      }
     } catch (applyErr) {
       console.error('Autofill apply failed:', applyErr);
       showToast('Could not fill fields on this page.', 'error', 5000);

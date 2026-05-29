@@ -1398,7 +1398,7 @@
                                 </div>
 
                                 <!-- Professional Summary -->
-                                <div class="form-floating">
+                                <div class="form-floating mt-4">
                                     <textarea
                                         class="form-control"
                                         id="summary"
@@ -1415,6 +1415,70 @@
                                     </small>
                                 </div>
 
+                                <h4 class="mt-4 mb-3">Contact &amp; links</h4>
+                                <p class="text-muted small mb-3">
+                                    Used for job application autofill and your account. Your sign-in email stays on your account; add a phone or profile links if you want them on applications.
+                                </p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input
+                                                type="tel"
+                                                class="form-control"
+                                                id="phone"
+                                                name="phone"
+                                                placeholder="Phone"
+                                                autocomplete="tel"
+                                                maxlength="40"
+                                            />
+                                            <label for="phone">Phone</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input
+                                                type="url"
+                                                class="form-control"
+                                                id="linkedin-url"
+                                                name="linkedin_url"
+                                                placeholder="https://"
+                                                maxlength="500"
+                                                autocomplete="off"
+                                            />
+                                            <label for="linkedin-url">LinkedIn URL</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input
+                                                type="url"
+                                                class="form-control"
+                                                id="github-url"
+                                                name="github_url"
+                                                placeholder="https://"
+                                                maxlength="500"
+                                                autocomplete="off"
+                                            />
+                                            <label for="github-url">GitHub URL</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-floating">
+                                            <input
+                                                type="url"
+                                                class="form-control"
+                                                id="portfolio-url"
+                                                name="portfolio_url"
+                                                placeholder="https://"
+                                                maxlength="500"
+                                                autocomplete="off"
+                                            />
+                                            <label for="portfolio-url">Portfolio URL</label>
+                                        </div>
+                                    </div>
+                                </div>
                                 <!-- Student Status (moved to end) -->
                                 <div class="form-check mt-4">
                                     <input
@@ -1532,10 +1596,13 @@
                                     <div class="col-md-6">
                                         <div class="form-floating">
                                             <input
-                                                type="number"
+                                                type="text"
                                                 class="form-control"
                                                 id="min-salary"
                                                 placeholder="Optional"
+                                                inputmode="numeric"
+                                                autocomplete="off"
+                                                spellcheck="false"
                                             />
                                             <label for="min-salary">Minimum Salary ($)</label>
                                         </div>
@@ -1543,10 +1610,13 @@
                                     <div class="col-md-6">
                                         <div class="form-floating">
                                             <input
-                                                type="number"
+                                                type="text"
                                                 class="form-control"
                                                 id="max-salary"
                                                 placeholder="Optional"
+                                                inputmode="numeric"
+                                                autocomplete="off"
+                                                spellcheck="false"
                                             />
                                             <label for="max-salary">Maximum Salary ($)</label>
                                         </div>
@@ -1711,6 +1781,62 @@
                                 </div>
 
                                 <div class="form-section mb-4">
+                                    <h4>Work authorization</h4>
+                                    <p class="text-muted small mb-3">
+                                        Select the work authorization status that applies to you today.
+                                    </p>
+                                    <div class="form-check mb-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="work-authorization"
+                                            id="work-auth-none"
+                                            value="no_work_authorization"
+                                            required
+                                        />
+                                        <label class="form-check-label" for="work-auth-none">
+                                            I do not have work authorization
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="work-authorization"
+                                            id="work-auth-has"
+                                            value="has_work_authorization"
+                                        />
+                                        <label class="form-check-label" for="work-auth-has">
+                                            I have work authorization
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="work-authorization"
+                                            id="work-auth-pr"
+                                            value="us_lawful_permanent_resident"
+                                        />
+                                        <label class="form-check-label" for="work-auth-pr">
+                                            I am a U.S. lawful permanent resident
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input
+                                            class="form-check-input"
+                                            type="radio"
+                                            name="work-authorization"
+                                            id="work-auth-citizen"
+                                            value="us_citizen"
+                                        />
+                                        <label class="form-check-label" for="work-auth-citizen">
+                                            I am a U.S. citizen
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-section mb-4">
                                     <h4>Additional Options</h4>
                                     <p class="text-muted">Please select all that apply to you</p>
                                     <div class="form-check mb-2">
@@ -1730,7 +1856,7 @@
                                             id="requires-visa-sponsorship"
                                         />
                                         <label class="form-check-label" for="requires-visa-sponsorship">
-                                            I need visa sponsorship
+                                            I will need visa sponsorship for roles I apply to
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
