@@ -69,7 +69,7 @@ class Settings(BaseSettings):
         default=None,
         description="Google Gemini API key (optional - users can provide their own in Settings)"
     )
-    gemini_model: str = "gemini-3-flash-preview"
+    gemini_model: str = "gemini-3.5-flash"
     
     # Vertex AI Configuration (alternative backend - higher rate limits, no free tier limits)
     # Requires: gcloud auth application-default login (or GOOGLE_APPLICATION_CREDENTIALS)

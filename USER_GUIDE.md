@@ -376,7 +376,7 @@ If the instance is running in BYOK mode (no server-side AI key configured):
 
 Your key is encrypted at rest and never logged or exposed.
 
-**Model selection** — the AI Setup tab also lets you choose which Gemini model to use (e.g. `gemini-2.0-flash`). The default is set by the instance operator. Only change this if you have a specific reason — different models have different speed and quality trade-offs.
+**Model selection** — the AI Setup tab also lets you choose which Gemini model to use (e.g. `gemini-3.5-flash`). The default is set by the instance operator. Only change this if you have a specific reason — different models have different speed and quality trade-offs.
 
 ### Preferences
 

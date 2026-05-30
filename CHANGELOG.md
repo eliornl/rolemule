@@ -41,6 +41,15 @@ The **Upload File** tab on `/dashboard/new-application` accepts **`.docx`** in a
 
 ### Changed
 
+#### LLM — Gemini model lineup refresh (Gemini 3.5 Flash default)
+
+Refreshed the selectable Gemini models to match Google's current lineup (verified against the [Gemini API changelog](https://ai.google.dev/gemini-api/docs/changelog)):
+
+- **Added** `gemini-3.5-flash` (stable GA 2026-05-19) and `gemini-3.1-flash-lite` (stable GA 2026-05-07).
+- **New default** `gemini-3.5-flash` replaces the preview `gemini-3-flash-preview` (`config/settings.py`, `.env.local.example`, README). This is the server default **and** the BYOK fallback when a user has not picked a model in **Settings → AI Setup** (`preferred_model = null`); `utils/llm_client.py` resolves `model or settings.gemini_model`.
+- **Removed** shut-down / deprecated options: `gemini-3.1-flash-lite-preview` (shut down 2026-05-25), `gemini-2.0-flash` / `gemini-2.0-flash-lite` (shut down 2026-06-01), plus the stale `gemini-1.5-*` and `gemini-2.5-*-preview` names. The `gemini-2.5-flash` / `gemini-2.5-pro` GA pair is **kept** as a stable, lower-cost tier and the only models that run on a region-pinned Vertex deployment (every `gemini-3.*` model requires `VERTEX_AI_LOCATION=global`).
+- **Fixed** a validation/UI mismatch: `_VALID_MODELS` in `api/profile.py` no longer disagrees with the Settings dropdown, so saving the recommended default via `PATCH /api/v1/profile/preferences` no longer returns `422`. Dropdown (`ui/dashboard/settings.html`) and backend allow-list are now identical. Rule docs (`llm-integration.mdc`, `settings-page.mdc`, `settings-and-env.mdc`) and `USER_GUIDE.md` updated.
+
 #### Dashboard — funnel statistics (Applied card and response rate)
 
 - **Applied** stats card counts **Applied**, **Interview**, **Offer** (accepted), and **Rejected** so the card reflects submissions and funnel progress (not Applied-only).

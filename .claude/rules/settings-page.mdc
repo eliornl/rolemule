@@ -51,19 +51,16 @@ Three mutually exclusive API key state cards (shown/hidden by `updateApiKeyStatu
 **Currently supported models**:
 ```html
 <optgroup label="Gemini 3">
-  <option value="gemini-3-flash-preview">Best speed &amp; quality balance (recommended)</option>
+  <option value="gemini-3.5-flash">Best speed &amp; quality balance (recommended)</option>
   <option value="gemini-3.1-pro-preview">Most capable, advanced reasoning</option>
-  <option value="gemini-3.1-flash-lite-preview">Fastest &amp; lightest, lowest quota usage</option>
+  <option value="gemini-3.1-flash-lite">Fastest &amp; lightest, lowest quota usage</option>
 </optgroup>
-<optgroup label="Gemini 2.5">
+<optgroup label="Gemini 2.5 (stable)">
   <option value="gemini-2.5-flash">Fast &amp; efficient</option>
   <option value="gemini-2.5-pro">Highly capable</option>
 </optgroup>
-<optgroup label="Gemini 2.0 (stable)">
-  <option value="gemini-2.0-flash">Stable, well-tested</option>
-</optgroup>
 ```
-**Dead models (do not re-add):** `gemini-2.0-flash-lite` (no longer available to new users), `gemini-1.5-flash`, `gemini-1.5-pro` (not found / unsupported in v1beta).
+**Dead models (do not re-add):** `gemini-3-flash-preview` (superseded by GA `gemini-3.5-flash`), `gemini-3.1-flash-lite-preview` (shut down 2026-05-25; use GA `gemini-3.1-flash-lite`), `gemini-3-pro-preview` (shut down 2026-03-26; redirects to `gemini-3.1-pro-preview`), `gemini-2.0-flash` / `gemini-2.0-flash-lite` (shut down 2026-06-01), `gemini-1.5-flash`, `gemini-1.5-pro` (not found / unsupported in v1beta).
 
 `GET /api/v1/profile/api-key/status` response shape:
 ```json

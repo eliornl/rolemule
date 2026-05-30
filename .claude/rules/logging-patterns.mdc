@@ -112,7 +112,7 @@ This populates `service`, `version`, `environment`, `host` in every JSON record 
 Development (`LOG_FORMAT=text`) outputs clean, fixed-width columns:
 ```
 HH:MM:SS.mmm  LEVEL     module_name               [trace_id]  message
-13:24:05.100  INFO      llm_client                [a3f9b2c1]  [LLM] Vertex AI  model=gemini-3-flash-preview  prompt=8,432 chars
+13:24:05.100  INFO      llm_client                [a3f9b2c1]  [LLM] Vertex AI  model=gemini-3.5-flash  prompt=8,432 chars
 13:24:08.890  INFO      llm_client                [a3f9b2c1]  [LLM] Done  3790ms  response=4,211 chars
 13:24:05.012  INFO      request_middleware        [a3f9b2c1]  POST /api/v1/workflow/start -> 202  (5ms)
 ```

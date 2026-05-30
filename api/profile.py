@@ -1975,12 +1975,11 @@ _PREFERENCE_DEFAULTS: Dict[str, Any] = {
 _VALID_COVER_LETTER_TONES = {"professional", "conversational", "enthusiastic"}
 _VALID_RESUME_LENGTHS = {"concise", "detailed"}
 _VALID_MODELS = {
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
-    "gemini-2.5-flash-preview",
-    "gemini-2.5-pro-preview",
+    "gemini-3.5-flash",
+    "gemini-3.1-pro-preview",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
 }
 
 

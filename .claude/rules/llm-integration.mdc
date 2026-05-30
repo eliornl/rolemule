@@ -160,10 +160,15 @@ Use **`user_facing_message_from_llm_exception(exc)`** in `utils/llm_client.py` w
 
 | Model | Speed | Notes |
 |---|---|---|
-| `gemini-3-flash-preview` | Fastest | **Current default.** Requires `VERTEX_AI_LOCATION=global` on Vertex AI |
-| `gemini-3-pro-preview` | Slower | Most capable Gemini 3 |
+| `gemini-3.5-flash` | Fastest | **Current default.** Stable GA (2026-05-19). Requires `VERTEX_AI_LOCATION=global` on Vertex AI |
+| `gemini-3.1-pro-preview` | Slower | Most capable; current Pro tier (preview) |
+| `gemini-3.1-flash-lite` | Fastest | Lowest cost/quota; stable GA (2026-05-07) |
 | `gemini-2.5-flash` | Fast | Stable fallback |
-| `gemini-2.0-flash-001` | Fast | Previous stable |
+| `gemini-2.5-pro` | Slower | Capable 2.5 fallback |
+
+**Default resolution:** a request that passes no model — i.e. a BYOK user whose `preferred_model` is `null` (the default), or any non-BYOK path — falls back to `settings.gemini_model` (`gemini-3.5-flash`) via `model_to_use = model or current_settings.gemini_model` in `utils/llm_client.py`. A BYOK user's saved `preferred_model` overrides it.
+
+**Why the Gemini 2.5 GA pair is retained** (not pruned with the 2.0 / 1.5 models): `gemini-2.5-flash` / `gemini-2.5-pro` are still GA (no sunset announced), give a stable, lower-cost alternative to the preview Pro tier, and are the only options that run on a **region-pinned Vertex deployment** — every `gemini-3.*` model requires `VERTEX_AI_LOCATION=global`. The selectable model list (Settings dropdown) must stay identical to `_VALID_MODELS` in `api/profile.py` or `PATCH /profile/preferences` will reject a value the UI offers.
 
 ## Thinking Mode — Always Disabled
 

@@ -35,7 +35,7 @@ REDIS_URL=redis://localhost:6379/0
 # LLM — Google Gemini / AI Studio (BYOK default, recommended for self-hosting)
 # Optional server-side key; Google rotates key formats (not only the legacy AIza… shape).
 GEMINI_API_KEY=<your Gemini API key>
-GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_MODEL=gemini-3.5-flash
 
 # LLM — Vertex AI (optional, server-admin only)
 # USE_VERTEX_AI=true
