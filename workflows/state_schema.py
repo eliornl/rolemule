@@ -201,6 +201,7 @@ class JobAnalysisResult:
     job_city: Optional[str] = None
     job_state: Optional[str] = None
     job_country: Optional[str] = None
+    additional_locations: Optional[List[str]] = field(default_factory=list)
     employment_type: Optional[str] = None
     work_arrangement: Optional[str] = None
     salary_range: Optional[Dict[str, Any]] = None

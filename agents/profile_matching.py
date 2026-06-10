@@ -621,6 +621,7 @@ class ProfileMatchingAgent:
 - Job Title: {job.get('job_title', 'Not provided')}
 - Company: {job.get('company_name', 'Not provided')}
 - Location: {job.get('job_city', 'N/A')}, {job.get('job_state', 'N/A')}, {job.get('job_country', 'N/A')}
+- Additional Locations Offered: {'; '.join(job.get('additional_locations') or []) or 'None listed'} (when judging location fit, consider ALL offered locations and use the one closest to the candidate)
 - Work Arrangement: {job.get('work_arrangement', 'Not specified')}
 - Employment Type: {job.get('employment_type', 'Not specified')}
 - Company Size: {job.get('company_size', 'Not specified')}

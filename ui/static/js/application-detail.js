@@ -387,7 +387,9 @@
         if (cdEl) cdEl.textContent = new Date().toLocaleDateString();
 
         // Location
-        const location = [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ');
+        const _extraLocations = Array.isArray(job.additional_locations) ? job.additional_locations.filter(Boolean) : [];
+        const _primaryLocation = [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ');
+        const location = [_primaryLocation, ..._extraLocations].filter(Boolean).join(' | ');
         if (location) {
             const jlEl = document.getElementById('jobLocation');
             const lmEl = document.getElementById('locationMeta');
@@ -967,7 +969,9 @@
             // Bare number → append %; already has % or is descriptive → keep as-is
             return /^\d+$/.test(str) ? `${str}%` : str;
         })();
-        const jobLocation = [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ');
+        const _jdExtraLocations = Array.isArray(job.additional_locations) ? job.additional_locations.filter(Boolean) : [];
+        const _jdPrimaryLocation = [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ');
+        const jobLocation = [_jdPrimaryLocation, ..._jdExtraLocations].filter(Boolean).join(' | ');
 
         // Salary display (reuse already-computed header value or rebuild)
         /** @type {Record<string,string>} */
