@@ -357,6 +357,15 @@
         // Store job URL and application ID
         currentApplicationId = data['application_id'] || null;
 
+        // Original posting link
+        const jobUrl = typeof data['job_url'] === 'string' ? data['job_url'] : '';
+        const jobUrlMeta = document.getElementById('jobUrlMeta');
+        const jobUrlLink = /** @type {HTMLAnchorElement|null} */ (document.getElementById('jobUrlLink'));
+        if (jobUrlMeta && jobUrlLink && /^https?:\/\//.test(jobUrl)) {
+            jobUrlLink.href = jobUrl;
+            jobUrlMeta.classList.remove('is-hidden');
+        }
+
         // Render header
         renderHeader(job, match);
 
