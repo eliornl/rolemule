@@ -1,0 +1,65 @@
+name: Feature Request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature.
+
+        ApplyPilot is **self-hosted and privacy-first**. Features that require external cloud services, third-party data collection, or centralized infrastructure are generally out of scope for the default build — but we're happy to discuss alternatives.
+
+        For large changes, maintainers may ask you to wait for feedback before opening a pull request. See [CONTRIBUTING.md](../../blob/main/CONTRIBUTING.md).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? What can't you do today?
+      placeholder: e.g. I want to export all my applications as CSV for offline tracking.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+      placeholder: Describe the user-facing behavior, UI, or API you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways you've thought about solving this.
+      placeholder: e.g. Manual export via browser devtools, using a spreadsheet plugin, etc.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app would this affect?
+      options:
+        - Dashboard / application tracking
+        - Application detail / workflow output
+        - Career tools
+        - Chrome extension
+        - Profile / settings
+        - API / backend
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This feature can work in a self-hosted setup without sending user data to ApplyPilot-operated servers
+          required: true

@@ -1,0 +1,115 @@
+name: Bug Report
+description: Report something that isn't working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        Before submitting, please check [existing issues](../../issues) and confirm you're on the latest version. Configuration problems are often resolved by comparing your setup with [`.env.local.example`](../../blob/main/.env.local.example) and the [README](../../blob/main/README.md).
+
+        **Do not use this form for security vulnerabilities** — see [SECURITY.md](../../blob/main/SECURITY.md) for private reporting instructions.
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: e.g. The workflow should complete and show a fit score on the dashboard.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include the full error message or stack trace if available.
+      placeholder: Paste the error message, API response, or describe the incorrect UI state.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to trigger the bug.
+      placeholder: |
+        1. Start the app with `make start`
+        2. Log in and paste a job description on the dashboard
+        3. Click Analyze
+        4. See error in browser console / server logs
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Where does this occur?
+      options:
+        - Web app (dashboard, settings, application detail, etc.)
+        - Chrome extension (popup, context menu, page extract, autofill)
+        - Both web app and extension
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How are you running ApplyPilot?
+      options:
+        - Docker (`make start`)
+        - macOS no-Docker (`make start-local`)
+        - Manual dev (`make dev` with local PostgreSQL + Redis)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. macOS 15, Ubuntu 22.04, Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version (if running locally)
+      placeholder: Output of `python --version`, or N/A for Docker-only
+    validations:
+      required: false
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser (if UI or extension issue)
+      placeholder: e.g. Chrome 131, Firefox 133, or N/A
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: |
+        For Docker users, attach relevant output from `make docker-logs` or `docker compose logs app`.
+        Redact API keys, passwords, and personal data.
+      placeholder: Paste log excerpts or drag screenshots into the comment after submitting.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate
+          required: true
+        - label: I am on the latest commit or release
+          required: true
+        - label: I redacted secrets and personal data from logs/screenshots
+          required: true

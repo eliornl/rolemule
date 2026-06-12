@@ -442,6 +442,9 @@ applypilot/
 ├── requirements.txt      # Python dependencies
 ├── CHANGELOG.md          # Version history
 ├── CONTRIBUTING.md       # Contribution guide
+├── CODE_OF_CONDUCT.md    # Contributor Covenant
+├── SECURITY.md           # Private vulnerability reporting
+├── .github/              # Issue & PR templates
 ├── USER_GUIDE.md         # End-user documentation
 └── .env.local.example    # Config template (make start copies this to .env)
 ```
@@ -456,6 +459,8 @@ Contributions are welcome. Open an issue first to discuss what you'd like to cha
 2. Create a feature branch: `git checkout -b feature/my-feature`
 3. Make your changes and run the tests: `make test`
 4. Open a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, code style, and the PR checklist. Security issues: [SECURITY.md](SECURITY.md). Community standards: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ---
 

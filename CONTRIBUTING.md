@@ -22,12 +22,13 @@ ApplyPilot is a personal open-source project. All contributions are welcome: bug
 - [Pull Request Process](#pull-request-process)
 - [Commit Messages](#commit-messages)
 - [Questions](#questions)
+- [For maintainers](#for-maintainers)
 
 ---
 
 ## Code of Conduct
 
-Be respectful and constructive. This project follows a simple rule: treat others the way you want to be treated. Issues or PRs that include harassment, personal attacks, or intentionally destructive content will be closed.
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold it. Report violations to the repository maintainer via their [GitHub profile](https://github.com/eliornl).
 
 ---
 
@@ -46,6 +47,8 @@ You don't have to write code to contribute:
 ---
 
 ## Reporting Bugs
+
+Use the **Bug Report** issue template when opening a new issue — it asks for reproduction steps, runtime, and environment details.
 
 Before filing a bug report:
 - Check you're on the latest version
@@ -83,7 +86,7 @@ Before suggesting, check if the feature might conflict with the self-hosted / pr
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-If you discover a security issue (auth bypass, data exposure, injection, etc.), please report it privately by opening a [GitHub Security Advisory](../../security/advisories/new) or emailing the maintainer directly (see the GitHub profile). Include a description of the issue and reproduction steps.
+See [SECURITY.md](SECURITY.md) for supported versions, scope, private reporting channels, and response expectations.
 
 ---
 
@@ -402,21 +405,9 @@ function notify(msg, type = 'info') {
 
 1. **Open an issue first** for anything beyond a small bug fix — discuss the approach before writing code
 2. Fork the repo and create a branch: `feature/my-feature` or `fix/my-fix`
-3. Make your changes and ensure all checks pass (see checklist below)
-4. Open a PR against `main` with a clear description of what changed and why
+3. Make your changes and ensure all checks pass
+4. Open a PR against `main` — GitHub pre-fills the [pull request template](.github/pull_request_template.md); complete every section
 5. A maintainer will review; expect feedback within a few days
-
-### PR checklist
-
-- [ ] Unit/integration tests pass: `make test` / `just test`
-- [ ] E2E smoke tests pass: `cd e2e && npm run test:smoke`
-- [ ] Frontend builds cleanly: `make build-frontend` / `just build-frontend`
-- [ ] No new linter errors: `make lint` / `just lint`
-- [ ] No bare `HTTPException` — always use `APIError` / factory helpers
-- [ ] All JSONB mutations have a `flag_modified()` call
-- [ ] No `onclick=` / `onchange=` HTML attributes (use event delegation)
-- [ ] No `style="..."` HTML attributes (blocked by CSP — use CSS classes)
-- [ ] No `alert()` / `confirm()` — use `notify()` / `window.showConfirm()`
 
 ---
 
@@ -448,6 +439,17 @@ Closes #42
 ## Questions
 
 Open an issue — questions are welcome. Include your OS, how you're running the app, and what you've already tried.
+
+---
+
+## For maintainers
+
+Issue and PR templates live under [`.github/`](.github/). Templates reference these labels — create them under **Issues → Labels** if they do not exist yet:
+
+| Label | Used by |
+|-------|---------|
+| `bug` | Bug Report template |
+| `enhancement` | Feature Request template |
 
 ---
 
