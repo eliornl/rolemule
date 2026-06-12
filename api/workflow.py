@@ -711,6 +711,14 @@ async def start_workflow(
 
         effective_job_url = resolved_url if resolved_url else source_url
 
+        # Never persist a non-http(s) URL as job_url. Unlike WorkflowStartRequest.job_url,
+        # the form job_url field and source_url (JSON body or Form) are not schema-validated,
+        # so the extension or a manual submit could supply an arbitrary scheme.
+        if effective_job_url and not effective_job_url.startswith(VALID_URL_PREFIXES):
+            logger.warning("Discarding job URL with unsupported scheme on workflow start")
+            effective_job_url = None
+            source_url = None
+
         # Resolve input method and job text before duplicate check so we can fingerprint
         # pasted job descriptions (manual / file / extension) even without a URL.
         if resolved_url:
