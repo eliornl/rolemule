@@ -9,11 +9,65 @@ Endpoints:
 """
 
 import uuid
+import jwt
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
+
+from api.cv_optimizer import _synthesize_jd_from_analysis
+from config.settings import get_security_settings
+from models.database import WorkflowSession
+from tests.test_api.conftest import _NullSessionLocal
 
 BASE = "/api/v1/cv-optimizer"
 SESSION_ID = str(uuid.uuid4())
+
+
+# ---------------------------------------------------------------------------
+# _synthesize_jd_from_analysis
+# ---------------------------------------------------------------------------
+
+
+class TestSynthesizeJdFromAnalysis:
+    """Plain-text JD reconstruction when raw job_input is unavailable."""
+
+    def test_builds_text_from_job_analysis_fields(self):
+        jd = _synthesize_jd_from_analysis(
+            {
+                "job_title": "Senior Platform Engineer",
+                "company_name": "TechCorp",
+                "required_qualifications": ["5+ years Python", "Cloud experience"],
+                "preferred_qualifications": ["Kubernetes"],
+                "required_skills": ["Python", "AWS"],
+            }
+        )
+        assert "Senior Platform Engineer" in jd
+        assert "TechCorp" in jd
+        assert "5+ years Python" in jd
+        assert "Kubernetes" in jd
+        assert "Python, AWS" in jd
+
+    def test_empty_analysis_returns_empty_string(self):
+        assert _synthesize_jd_from_analysis({}) == ""
+
+
+# ---------------------------------------------------------------------------
+# get_cached_cv_optimization cache wrapper
+# ---------------------------------------------------------------------------
+
+
+class TestCvOptimizationCache:
+    """cache_set wraps payloads; get_cached_cv_optimization must unwrap."""
+
+    @pytest.mark.asyncio
+    async def test_get_cached_unwraps_cache_set_wrapper(self):
+        from utils.cache import get_cached_cv_optimization
+
+        session_id = str(uuid.uuid4())
+        inner = {"optimized_cv": "# Jane", "best_score": 8.2}
+        wrapped = {"cached_at": "2026-06-09T00:00:00+00:00", "data": inner}
+        with patch("utils.cache.cache_get", AsyncMock(return_value=wrapped)):
+            result = await get_cached_cv_optimization(session_id)
+        assert result == inner
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +175,27 @@ class TestGetCvOptimization:
         assert resp.status_code in (404, 200)
 
     @pytest.mark.asyncio
-    async def test_cache_hit_returns_200_with_result(self, authed_client):
+    async def test_cache_hit_returns_200_with_result(self, authed_client_with_user):
+        token = authed_client_with_user.headers["Authorization"].split(" ", 1)[1]
+        sec = get_security_settings()
+        payload = jwt.decode(
+            token,
+            sec.jwt_config["secret_key"],
+            algorithms=[sec.jwt_config["algorithm"]],
+        )
+        uid = uuid.UUID(payload["sub"])
+        session_id = str(uuid.uuid4())
+
+        async with _NullSessionLocal() as db:
+            db.add(
+                WorkflowSession(
+                    id=uuid.uuid4(),
+                    session_id=session_id,
+                    user_id=uid,
+                )
+            )
+            await db.commit()
+
         mock_result = {
             "status": "completed",
             "best_score": 8.6,
@@ -132,12 +206,28 @@ class TestGetCvOptimization:
             "api.cv_optimizer.get_cached_cv_optimization",
             AsyncMock(return_value=mock_result),
         ):
-            resp = await authed_client.get(f"{BASE}/{SESSION_ID}")
+            resp = await authed_client_with_user.get(f"{BASE}/{session_id}")
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["has_result"] is True
-        assert data["result"] is not None
+        assert data["result"]["optimized_cv"] == "# Jane Smith"
+
+    @pytest.mark.asyncio
+    async def test_unowned_session_returns_404_without_reading_cache(self, authed_client):
+        """Ownership is verified before cache — foreign session_id must not leak cached PII."""
+        foreign_session = str(uuid.uuid4())
+        cache_mock = AsyncMock(
+            return_value={
+                "optimized_cv": "# Secret CV",
+                "cover_letter": "Secret letter",
+            }
+        )
+        with patch("api.cv_optimizer.get_cached_cv_optimization", cache_mock):
+            resp = await authed_client.get(f"{BASE}/{foreign_session}")
+
+        assert resp.status_code == 404
+        cache_mock.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_no_result_returns_200_has_result_false(self, authed_client):
@@ -206,7 +296,27 @@ class TestDeleteCvOptimization:
         assert resp.status_code in (404, 204)
 
     @pytest.mark.asyncio
-    async def test_cannot_delete_while_running_returns_409(self, authed_client):
+    async def test_cannot_delete_while_running_returns_409(self, authed_client_with_user):
+        token = authed_client_with_user.headers["Authorization"].split(" ", 1)[1]
+        sec = get_security_settings()
+        payload = jwt.decode(
+            token,
+            sec.jwt_config["secret_key"],
+            algorithms=[sec.jwt_config["algorithm"]],
+        )
+        uid = uuid.UUID(payload["sub"])
+        session_id = str(uuid.uuid4())
+
+        async with _NullSessionLocal() as db:
+            db.add(
+                WorkflowSession(
+                    id=uuid.uuid4(),
+                    session_id=session_id,
+                    user_id=uid,
+                )
+            )
+            await db.commit()
+
         with patch("api.cv_optimizer.is_cv_optimization_running", AsyncMock(return_value=True)):
-            resp = await authed_client.delete(f"{BASE}/{SESSION_ID}")
+            resp = await authed_client_with_user.delete(f"{BASE}/{session_id}")
         assert resp.status_code == 409
