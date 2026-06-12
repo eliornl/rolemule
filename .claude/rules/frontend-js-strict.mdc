@@ -320,8 +320,9 @@ The API already allows zero (`BasicInfo` in `api/profile.py` uses `ge=0`).
 const stepValidations = [
     { step: 1, fn: validateBasicInfo },
     { step: 2, fn: validateWorkExperience },
-    { step: 3, fn: validateSkillsQualifications },
-    { step: 4, fn: validateCareerPreferences },
+    { step: 3, fn: validateEducation },
+    { step: 4, fn: validateSkillsQualifications },
+    { step: 5, fn: validateCareerPreferences },
 ];
 for (const { step, fn } of stepValidations) {
     if (!fn()) {          // fn() shows its own error via showErrorMessage()
@@ -336,6 +337,10 @@ for (const { step, fn } of stepValidations) {
 ### `profile-setup.js` — “No work experience” must be persisted
 
 If the user checks **“I don’t have any relevant work experience yet”**, `saveWorkExperience()` must **`PUT /api/v1/profile/work-experience`** with `{ work_experience: [] }`. Returning success without that call leaves the column **`NULL`** in PostgreSQL, so `POST /profile/complete` still reports **Work Experience** as missing. Unchecked = require at least one valid entry (enforced by `validateWorkExperience()`). When loading profile data, keep the checkbox in sync when the saved list is empty.
+
+### `profile-setup.js` — “No formal education” must be persisted
+
+If the user checks **“I don't have formal education to add”**, `saveEducation()` must **`PUT /api/v1/profile/education`** with `{ education: [] }`. Skipping the API call leaves **`education` NULL**, so `POST /profile/complete` still reports **Education** incomplete. `[]` means the user explicitly completed step 3 with no schools (`_check_education_completion` treats `NULL` as incomplete and non-null `[]` as complete). See **`database-patterns.mdc`**.
 
 ### `changeStep()` Must NOT Clear Error Messages
 

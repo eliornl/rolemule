@@ -31,6 +31,26 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 ### Added
 
+#### Profile — Education step (JSONB)
+
+Profile setup adds an **Education** step (institution, degree, field of study, dates, **Currently enrolled**). Users with no formal education check **“I don't have formal education to add”** — that persists `education: []` so the step counts complete. Agents and extension autofill read `profile.education`; degree dropdown matching uses **`utils/degree_aliases.py`**.
+
+#### Application detail — View posting link and multi-location display
+
+When **`job_url`** is stored (extension **`source_url`**, optional manual URL metadata — not fetch-from-URL), the application detail header shows **View posting** (http(s) only). Job Analyzer **`additional_locations`** render in the header and Job Details tab as `Primary | Office 2 | …`.
+
+### Changed
+
+#### Workflow — posting URL on Form path and scheme guard
+
+`POST /api/v1/workflow/start` accepts **`source_url`** and related fields on the **Form** path (multipart clients could never populate the JSON body). Non-http(s) schemes are discarded before persisting **`job_url`**.
+
+### Fixed
+
+#### Job Analyzer — all posting locations preserved
+
+Extracts **`additional_locations`** for every office listed in the posting, not just the first primary city. Profile Matcher uses all offered locations for location-fit scoring.
+
 #### Chrome Extension — Shared page content extraction
 
 Injectable **`extension/lib/extract-page-content.js`**: selection, JSON-LD, site connectors, split-view heuristics. Large **jobs listing** pages (e.g. **`/jobs`** UIs): skip feed JSON-LD, prefer the detail pane, two-pass async extract. **Ashby** marketing embeds (query params such as **`ashby_jid`** on third-party career pages): resolve posting text via Ashby's public posting API when the slug is known. Popup and context menu use the async extractor; **`extension/lib/`** is tracked in git (`.gitignore` exception); manifest adds Ashby API host permission. README and **`.cursor`/`.claude`** chrome-extension rules updated.
@@ -323,7 +343,7 @@ The `from google.cloud import tasks_v2` import is now wrapped in `try/except Imp
 
 ### Removed
 
-- **URL job input method** — the ability to paste a job posting URL and have the app fetch the description has been removed. Job descriptions must now be provided via the Chrome Extension, pasted text, or file upload. This simplifies the codebase and removes an external HTTP dependency.
+- **URL job input method** — the ability to paste a job posting URL and have the app **fetch** the description has been removed. Job descriptions must now be provided via the Chrome Extension, pasted text, or file upload. The app still **stores** an optional http(s) **posting URL** as metadata (extension `source_url`, dedupe, and **View posting** on the detail page) — it does not download the page content from that URL.
 - **`beautifulsoup4` / `bs4`** removed from `requirements.txt` — no longer used following the URL input removal.
 
 ### Fixed

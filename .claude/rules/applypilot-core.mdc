@@ -66,6 +66,15 @@ Multipart uploads for the job description support **`.pdf`**, **`.txt`**, and **
 - **Extraction:** PDF → `extract_text_from_pdf`; TXT → UTF-8 decode; DOCX → `extract_text_from_docx()` (`docx2txt`, from `utils/resume_parser`).
 - **Not supported:** legacy binary **`.doc`** (Word 97–2003) — users should save as `.docx` or PDF, or paste text.
 
+### Posting URL metadata (`job_url`) — not fetch-from-URL
+
+The app **does not** fetch job descriptions from a pasted URL (that input method was removed). It **does** store an optional **http(s) posting URL** for dedupe and a **View posting** link on the application detail page.
+
+- **Sources:** extension `source_url` (Form/JSON), optional `job_url` on manual/dashboard submit, or canonical URL when the legacy JSON `WorkflowStartRequest.job_url` path is used.
+- **Persist:** `effective_job_url` → `job_applications.job_url` and duplicate check via `_canonical_job_url`.
+- **Guard:** In `start_workflow`, discard `effective_job_url` (and clear `source_url`) when the scheme is not `http://` or `https://` — Form fields are not Pydantic-validated like `WorkflowStartRequest.job_url`.
+- **UI:** `application-detail.js` shows `#jobUrlLink` only when `job_url` matches `/^https?:\/\//`.
+
 ### Duplicate job after start (workflow run — not `RES_3002`)
 
 Start-time dedupe can miss when **`detected_title` / `detected_company` are absent** (e.g. extension sends only `job_text`) or fingerprints differ slightly. Two additional layers enforce the same user-facing copy as `RES_3002` (*You already have an application for this job…*):

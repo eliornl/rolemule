@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Python Testing
 
+**Approximate counts (CI suites):** ~227 agent unit tests in `tests/test_agents/`, ~221 API integration tests in `tests/test_api/` (run with `--override-ini="addopts="`).
+
 ## Test Suites
 
 ### Unit Tests (`tests/test_agents/`)

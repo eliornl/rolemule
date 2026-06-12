@@ -132,7 +132,9 @@ def _validate_job_url(url: str) -> bool:
     return True
 ```
 
-Raise a validation error if the URL fails — never fetch it. This is implemented in `agents/job_analyzer.py::_validate_job_url()`.
+Raise a validation error if the URL fails — never fetch it. Implemented in `agents/job_analyzer.py::_validate_job_url()` for analyzer-side checks.
+
+**Workflow start (`api/workflow.py`):** `effective_job_url` (from `source_url`, form `job_url`, or resolved URL) must also be discarded when it does not start with `http://` or `https://` before writing `job_applications.job_url` or using it in dedupe. Log at warning and set to `None` — do not persist `javascript:`, `file:`, or other schemes even if a client bypasses the UI.
 
 ## Log Injection Prevention
 Values logged from HTTP requests (headers, IP addresses, query params) must have newlines and control characters stripped before logging to prevent log injection attacks:

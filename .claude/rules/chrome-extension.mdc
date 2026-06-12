@@ -9,7 +9,7 @@ alwaysApply: false
 ## Structure
 ```
 extension/
-├── manifest.json          # Manifest V3, version 1.1.0
+├── manifest.json          # Manifest V3, version 2.0.0
 ├── popup/                 # popup.html, popup.css, popup.js
 ├── content/               # content.js (extraction), content.css
 ├── background/            # service-worker.js (token refresh every 55 min)
@@ -40,7 +40,7 @@ chrome.storage.local.set({ jaa_api_url: 'http://localhost:8000/api/v1' })
 ```
 
 ## Manifest (current)
-- **version**: `1.1.0`
+- **version**: `2.0.0`
 - **description**: "Extract any job posting and get AI-powered analysis, resume tips, cover letters, and interview prep on ApplyPilot."
 - **short_name**: `ApplyPilot`
 - **default_title**: `ApplyPilot — AI Job Application Assistant`
@@ -153,19 +153,23 @@ The popup and context menu inject **`lib/extract-page-content.js`**, then call *
 - **Deterministic rules (never mention specific job sites in user-facing copy):** name/email/phone, country vs city location, work authorization, visa sponsorship, acknowledgements, education degree/discipline/school, website/portfolio, consent checkboxes, NYC commute screening, etc. Profile fields: `work_authorization`, `requires_visa_sponsorship`, `country`, education JSONB, stored resume via `utils/user_resume_storage.py`.
 - **Client apply paths:** `applyYesNoComboboxAsync` (exact Yes/No only), `applyAcknowledgementComboboxAsync` (long “Yes, I acknowledge…” options), `applyLocationCityComboboxAsync`, education block expand + sort order, `assignmentUidStillValid` / `findFieldUidForAssignment` to avoid cross-wiring screening UIDs.
 - **MVP scope:** main `document` only (no iframes/shadow roots). Popup does not send **`extras`**; endpoint still accepts optional **`extras`** for other clients.
-- **Errors:** `CFG_6001` → Settings → AI Setup. **403** → complete profile setup (work authorization required for extension map).
+- **Errors:** `CFG_6001` → Settings → AI Setup. **403** → complete profile setup (work authorization required for extension map). Rate limit: **15 requests/hour** per user in production (`200/hour` when `DEBUG=true`; see **`caching-redis.mdc`**).
 - **Docs:** `extension/README.md`, `USER_GUIDE.md` Chrome Extension section, `CHANGELOG.md` [Unreleased], Help FAQ — keep user-facing text generic (“any job site”, “application forms”), no third-party job board names.
 
 ## Submitting to Backend
 
-The extension POSTs `FormData` with only `job_text` — never `detected_title` or `detected_company`:
+Two client paths hit `POST /api/v1/workflow/start`. Both use multipart/Form (FastAPI never populates a JSON body on this endpoint when `File`/`Form` params are declared).
+
+### Popup (`popup.js`) — `job_text` only
+
+The popup sends **`FormData` with only `job_text`** — no `detected_title`, `detected_company`, or `source_url`:
 
 ```javascript
 const formData = new FormData();
 formData.append('job_text', extractedText);
-// Do NOT send detected_title / detected_company — page titles are unreliable
-// (e.g. a noisy browser tab title). The dashboard shows skeleton shimmers while the
-// Job Analyzer extracts the correct title and company from the job text.
+// Do NOT send detected_title / detected_company from the popup — browser tab titles
+// are unreliable (e.g. "(5) LinkedIn"). The dashboard shows skeleton shimmers until
+// the Job Analyzer extracts title and company from the job text (~4 s).
 
 const response = await fetch(`${CONFIG.API_BASE_URL}/workflow/start`, {
     method: 'POST',
@@ -174,16 +178,32 @@ const response = await fetch(`${CONFIG.API_BASE_URL}/workflow/start`, {
 });
 ```
 
-### Backend: `detected_title` / `detected_company` Form params
+### Service worker / context menu (`service-worker.js`) — metadata + URL
 
-`POST /api/v1/workflow/start` accepts two optional `Form` fields (retained for non-extension paths):
+The context-menu path calls `startWorkflow(jobContent, sourceUrl, metadata)` via JSON helper and sends:
+
+- `job_text`, `source: 'extension'`
+- **`source_url`** — page URL stored as `job_applications.job_url` when http(s); powers **View posting** on the application detail page
+- **`detected_title` / `detected_company`** — optional heuristics from page title for immediate dashboard card labels (overwritten by Job Analyzer when it completes)
+
+```javascript
+await startWorkflow(data.content, data.url, {
+    detected_title: data.title,
+    detected_company: data.company,
+});
+```
+
+### Backend Form params (`api/workflow.py`)
+
+Optional Form aliases (JSON body keys mirror these when a non-multipart client exists):
 
 ```python
+source_url_form:       Optional[str] = Form(None, alias="source_url")
 detected_title_form:   Optional[str] = Form(None, alias="detected_title")
 detected_company_form: Optional[str] = Form(None, alias="detected_company")
 ```
 
-When omitted (the extension path), `job_title` and `company_name` are `null` at creation. The dashboard card shows skeleton shimmers (`status === 'processing'`, no title/company). The Job Analyzer agent populates both fields with AI-extracted values ~4 s into the workflow.
+**`effective_job_url`** = resolved URL or `source_url`. Before persist, discard any value whose scheme is not `http://` or `https://` (see **`security-python.mdc`** and **`applypilot-core.mdc`**). When title/company are omitted, `job_title` / `company_name` are `null` at creation and the dashboard shows skeleton shimmers until the Job Analyzer runs.
 
 ## Backend: InputMethod.EXTENSION
 ```python
@@ -205,7 +225,7 @@ if source == "extension":
 ## Non-Negotiables
 
 1. **Never reference a popup DOM element without a null check** — elements may be absent if the HTML evolves. Example: `if (elements.copyBtn) elements.copyBtn.disabled = true;`. A missing element that is accessed unconditionally in `showExtracting()` or a similar setup function will throw a `TypeError` that silently aborts the entire extraction flow before the `try/catch` block is reached.
-2. **Never send `detected_title` or `detected_company` from the extension** — browser page titles are unreliable (e.g. `"(5) LinkedIn"`, `"Careers | Company"`). Send only `job_text`; the dashboard shows skeleton shimmers while the Job Analyzer extracts the correct title and company.
+2. **Never send `detected_title` or `detected_company` from the popup** — browser tab titles are unreliable. Popup path: **`job_text` only**. Service-worker / context-menu path **may** send `detected_title`, `detected_company`, and `source_url`; Job Analyzer still overwrites title/company when it completes.
 3. **Never revert to `position: fixed` toast in the popup** — use the `#popupNotification` inline bar; see above.
 4. **Handle `RES_3002` (409) from `/workflow/start` explicitly** — show the server message (or an equivalent friendly line) in the inline notification bar; do not treat it as an uncaught fetch failure.
 

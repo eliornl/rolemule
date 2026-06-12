@@ -64,6 +64,7 @@ The `UserProfile` model contains exactly these fields. **There is no `location_p
 | `is_student` | Boolean | |
 | `willing_to_relocate` | Boolean | default False |
 | `requires_visa_sponsorship` | Boolean | default False |
+| `work_authorization` | String(64) nullable | `no_work_authorization` \| `has_work_authorization` \| `us_lawful_permanent_resident` \| `us_citizen`; required for profile completion and extension autofill screening |
 | `has_security_clearance` | Boolean | default False |
 | `max_travel_preference` | String | Optional travel % or category |
 

@@ -383,12 +383,12 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            ApplyPilot is an AI-powered job search companion that turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get seven tabs of AI-generated insights:
+                            ApplyPilot is an AI-powered job search companion that turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get eight tabs of AI-generated insights:
                             <ul>
                                 <li><strong>Company</strong> — Culture, funding stage, interview culture, and insider tips</li>
                                 <li><strong>Your Fit</strong> — A match score with a breakdown of strengths and gaps</li>
                                 <li><strong>Strategy</strong> — How to position yourself and what to emphasize in your application</li>
-                                <li><strong>Job Details</strong> — Extracted salary, work type, required skills, and qualifications</li>
+                                <li><strong>Job Details</strong> — Extracted salary, work type, required skills, qualifications, and all listed office locations</li>
                                 <li><strong>Cover Letter</strong> — A tailored letter referencing your specific experience</li>
                                 <li><strong>Resume</strong> — Personalized recommendations to optimize your resume for this role</li>
                                 <li><strong>Interview Prep</strong> — Predicted questions, STAR answer frameworks, and process tips</li>
@@ -583,6 +583,34 @@
                             <p><strong>A high score</strong> (&gt;75%) means you meet most stated requirements — worth applying confidently. <strong>A moderate score</strong> (50–75%) means gaps exist but the role may still be reachable — read the Strategy tab for how to address them. <strong>A low score</strong> (&lt;50%) is a signal to reconsider whether the role is right for your current profile.</p>
                             <p>You can configure the minimum threshold at which the workflow pauses and asks you to confirm in <strong>Settings → Preferences</strong>. The default is 50%.</p>
                             <p>The score improves with a more complete profile — sparse profiles produce less reliable matching.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What do the dashboard statistics cards mean?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The four cards at the top of your dashboard summarize your pipeline:</p>
+                            <ul>
+                                <li><strong>Total Applications</strong> — every job you've added and analyzed</li>
+                                <li><strong>Applied</strong> — applications you've moved into the funnel (counts Applied, Interview, Offer, and Rejected tracking stages)</li>
+                                <li><strong>Interviews</strong> — applications where you've marked <strong>Interview</strong></li>
+                                <li><strong>Response Rate</strong> — among tracked applications only: (Interview + Offer + Rejected) ÷ (Applied + Interview + Offer + Rejected). Cards still in analysis-only state (no tracking button selected) are excluded.</li>
+                            </ul>
+                            <p>Use the <strong>Applied / Interview / Offer / Rejected</strong> buttons on each card to keep these stats accurate.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Where is the original job posting link?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>When you submit a job from the Chrome extension (or another path that saves a posting URL), the application detail page header shows a <strong>View posting</strong> link that opens the original listing in a new tab. The link appears only for valid http(s) URLs.</p>
+                            <p>If the posting lists multiple office locations, the header location line shows them separated by <strong>|</strong> (primary city first, then additional offices). The Job Details tab lists the same locations.</p>
                         </div>
                     </div>
 

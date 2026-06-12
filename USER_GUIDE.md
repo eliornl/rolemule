@@ -135,10 +135,10 @@ The dashboard is your central hub for tracking applications and accessing all fe
 
 | Metric | Description |
 |--------|-------------|
-| Total Applications | All jobs added |
-| Applied | Jobs you've formally applied to |
-| Interviews | Jobs where you've had interviews |
-| Response Rate | Percentage of applications with company responses |
+| Total Applications | All jobs added (visible on your dashboard) |
+| Applied | Applications you've moved into the funnel — counts **Applied**, **Interview**, **Offer**, and **Rejected** tracking stages |
+| Interviews | Applications where you've marked **Interview** |
+| Response Rate | Share of tracked applications with an employer outcome: **(Interview + Offer + Rejected) ÷ (Applied + Interview + Offer + Rejected)**. Analysis-only cards (no tracking stage yet) are excluded. **Applied** is in the denominator but not the numerator. |
 
 ### Applications List
 
@@ -206,14 +206,14 @@ The **CV Optimizer** also runs on demand from the **Optimize CV** tab after the 
 
 ### Viewing Results
 
-The application details page opens with an **8-tab layout**:
+The application details page opens with an **8-tab layout**. When a posting URL was saved (for example from the Chrome extension), the page header shows a **View posting** link that opens the original listing in a new tab. If the job lists multiple office locations, the header location line shows them separated by **|** (primary city first, then additional offices).
 
 | Tab | Content |
 |-----|---------|
 | **Company** | Overview, culture, values, leadership, hiring practices |
 | **Your Fit** | Match score, strengths, skill gaps, deal-breaker analysis |
 | **Strategy** | Positioning strategy, key selling points to emphasize |
-| **Job Details** | Extracted requirements, salary, work arrangement |
+| **Job Details** | Extracted requirements, salary, work arrangement, and all listed office locations |
 | **Cover Letter** | Personalized letter ready to copy |
 | **Resume** | 4 sub-tabs: Overview, Experience, Keywords & ATS, Summary |
 | **Interview** | 3 sub-tabs: Process, Questions, Preparation |

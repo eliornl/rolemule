@@ -32,6 +32,23 @@ The backend uses `func.lower().contains()` (parameterised — no SQL injection r
 
 **Why:** `job_applications` can remain `processing` for a short window after the workflow session is already `failed`, while `_format_application_response()` maps that pair to a **failed** badge for the API consumer — which used to show a phantom FAILED card. Filtering on workflow status keeps failed analyses off the list and aligns counts with the empty state. See **`applypilot-core.mdc`** (workflow failure — no partial client data).
 
+### Stats overview (`GET /api/v1/applications/stats/overview`)
+
+Rendered in `#statsCards` on the dashboard home page. Uses the same visibility filter as the list (excludes workflow-failed rows).
+
+| Card | Count logic |
+|---|---|
+| **Total Applications** | All visible (non-deleted, non-workflow-failed) rows |
+| **Applied** | Rows in **any** user tracking stage: `applied`, `interview`, `accepted` (Offer), or `rejected` — not “Applied-only” |
+| **Interviews** | Rows with status `interview` |
+| **Response Rate** | **Numerator:** `interview` + `accepted` + `rejected` (employer-side outcomes). **Denominator:** `applied` + `interview` + `accepted` + `rejected`. Analysis-only rows (no tracking stage) are **excluded** from both. **Applied** is in the denominator but **not** the numerator. |
+
+Do not revert to counting all list rows in the response-rate denominator — that diluted the metric with analysis-only cards.
+
+### List pagination — no duplicate rows on Load More
+
+`api/applications.py` list query uses **`EXISTS`** for workflow-session visibility (not a bare **`LEFT JOIN`** that duplicated rows under **`OFFSET`**). Stable **`ORDER BY`** includes an **`id`** tie-breaker. **`dashboard-home.js`** also dedupes merged pages by application **`id`** when appending Load More results.
+
 ---
 
 ## JS State (`dashboard-home.js`)

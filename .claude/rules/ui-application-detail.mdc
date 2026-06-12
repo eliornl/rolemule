@@ -103,6 +103,20 @@ if (cnEl) {
 
 **Company tab heading** — When there is no usable employer name, the first section title is **`About this opportunity`** (not “About the Company”). When a real name exists, use **`About ${escapeHtml(trimmedName)}`**.
 
+**View posting link — `#jobUrlMeta` / `#jobUrlLink`**  
+When `data.job_url` is a valid http(s) URL, `renderHeader()` sets `jobUrlLink.href` and removes `.is-hidden` from `#jobUrlMeta`. Template: `<a id="jobUrlLink" … rel="noopener noreferrer">View posting</a>`. Same `/^https?:\/\//` guard as company website links — hide the meta row when missing or invalid.
+
+**Location line — primary + `additional_locations`**  
+Many postings list multiple offices. Job Analyzer stores extras in **`job.additional_locations`** (`List[str]`). Header `#jobLocation` and Job Details render:
+
+```javascript
+const _extraLocations = Array.isArray(job.additional_locations) ? job.additional_locations.filter(Boolean) : [];
+const _primaryLocation = [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', ');
+const location = [_primaryLocation, ..._extraLocations].filter(Boolean).join(' | ');
+```
+
+Profile Matcher uses all offered locations when judging location fit (see **`agent-patterns.mdc`**).
+
 ---
 
 ## Cover Letter Tab
@@ -348,7 +362,7 @@ Source: `job` object from `JobAnalysisResult`
 
 | Section | Fields |
 |---------|--------|
-| At a Glance grid | `job_city/state/country`, `work_arrangement` (title-cased), `salary_range` (currency symbol from code), `employment_type` (title-cased), `years_experience_required`, `education_requirements`, `industry`, `visa_sponsorship`, `security_clearance`, `posted_date`, `application_deadline` |
+| At a Glance grid | `job_city/state/country`, **`additional_locations`** (pipe-separated with primary in header), `work_arrangement` (title-cased), `salary_range` (currency symbol from code), `employment_type` (title-cased), `years_experience_required`, `education_requirements`, `industry`, `visa_sponsorship`, `security_clearance`, `posted_date`, `application_deadline` |
 | Header badges | `employment_type` and `work_arrangement` in the page header also use `toTitleCase(decodeEntities(value))` — never render them raw (LLM may return lowercase like "full-time") |
 | Education | Hide card if `required === false`; show "Not specified" for generic "Required" |
 | Salary | Currency codes converted to symbols: USD→$, EUR→€, GBP→£, etc. |

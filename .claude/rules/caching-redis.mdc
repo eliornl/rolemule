@@ -111,8 +111,8 @@ All `get_cached_*` functions automatically validate the cached payload against `
 from utils.cache import check_rate_limit
 
 is_allowed, remaining = await check_rate_limit(
-    identifier=f"{user_id}:workflow_start",
-    limit=10,
+    identifier=f"{user_id}:workflow_start:30ph",
+    limit=30,
     window_seconds=3600,
 )
 if not is_allowed:
@@ -142,7 +142,8 @@ response.headers["X-RateLimit-Reset"]     = str(result.reset_seconds)
 ## Standard Rate Limits by Feature
 | Feature | Endpoint | Limit | Key |
 |---------|----------|-------|-----|
-| Workflow start | `POST /workflow/start` | 10/hour | user_id |
+| Workflow start | `POST /workflow/start` | 30/hour | `{user_id}:workflow_start:30ph` |
+| Extension autofill map | `POST /extension/autofill/map` | 15/hour (200/hour when `DEBUG=true`) | user_id |
 | Workflow continue (gate override) | `POST /workflow/continue/{id}` | 20/hour | user_id |
 | Workflow generate documents | `POST /workflow/generate-documents/{id}` | 10/hour | user_id |
 | Regenerate cover letter | `POST /workflow/regenerate-cover-letter/{id}` | 5/hour | user_id |
