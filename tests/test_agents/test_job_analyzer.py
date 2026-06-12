@@ -74,6 +74,7 @@ def mock_gemini_client():
             "job_city": "San Francisco",
             "job_state": "California",
             "job_country": "USA",
+            "additional_locations": ["New York City, NY", "Seattle, WA"],
             "employment_type": "full-time",
             "work_arrangement": "hybrid",
             "salary_range": {"min": 150000, "max": 200000, "currency": "USD", "period": "yearly"},
@@ -184,6 +185,39 @@ class TestManualInputProcessing:
         
         assert "job_analysis" in result
         assert result["job_analysis"]["job_title"] == "Senior Software Engineer"
+
+    @pytest.mark.asyncio
+    async def test_additional_locations_extracted(
+        self, mock_gemini_client, workflow_state_manual
+    ):
+        """All listed locations beyond the primary are preserved."""
+        agent = JobAnalyzerAgent(gemini_client=mock_gemini_client)
+
+        with patch('agents.job_analyzer.get_cached_job_analysis', return_value=None), \
+             patch('agents.job_analyzer.cache_job_analysis', return_value=None):
+            result = await agent.process(workflow_state_manual)
+
+        assert result["job_analysis"]["additional_locations"] == [
+            "New York City, NY",
+            "Seattle, WA",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_additional_locations_default_empty(
+        self, mock_gemini_client, workflow_state_manual
+    ):
+        """Missing additional_locations in the LLM response maps to an empty list."""
+        payload = mock_gemini_client.generate.return_value["response"].replace(
+            '"additional_locations": ["New York City, NY", "Seattle, WA"],', ''
+        )
+        mock_gemini_client.generate.return_value = {"response": payload, "filtered": False}
+        agent = JobAnalyzerAgent(gemini_client=mock_gemini_client)
+
+        with patch('agents.job_analyzer.get_cached_job_analysis', return_value=None), \
+             patch('agents.job_analyzer.cache_job_analysis', return_value=None):
+            result = await agent.process(workflow_state_manual)
+
+        assert result["job_analysis"]["additional_locations"] == []
 
     @pytest.mark.asyncio
     async def test_process_manual_input_too_short(self, mock_gemini_client):

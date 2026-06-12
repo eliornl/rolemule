@@ -112,6 +112,7 @@ AI_SYSTEM_CONTEXT: str = """You are an expert job posting analyst with 15+ years
 - Distinguish REQUIRED vs PREFERRED qualifications carefully
 - When uncertain, use null rather than guessing
 - Capture ALL skills mentioned, even in passing
+- Capture ALL listed locations — many postings offer several offices; never drop any
 - Identify HIDDEN requirements (e.g., "fast-paced" = adaptability needed)"""
 
 JOB_ANALYSIS_PROMPT: str = """Analyze this job posting and extract ALL structured information.
@@ -126,9 +127,10 @@ Extract information into this EXACT JSON structure. Output ONLY valid JSON, no e
 {{
     "company_name": "<company/organization name or null>",
     "job_title": "<exact job title as posted>",
-    "job_city": "<city or null if remote/not specified>",
-    "job_state": "<state/province or null>",
+    "job_city": "<primary city (first listed) or null if remote/not specified>",
+    "job_state": "<state/province of the primary city or null>",
     "job_country": "<country or null>",
+    "additional_locations": ["<'City, State' or 'City, Country' for EVERY other location the posting lists beyond the primary — postings often list several offices (e.g. 'San Francisco, CA | New York City, NY'); empty array if only one location>"],
     "employment_type": "<full-time | part-time | contract | temporary | internship | null>",
     "work_arrangement": "<onsite | remote | hybrid | null>",
     "salary_range": {{
@@ -477,6 +479,9 @@ class JobAnalyzerAgent:
                 job_city=parsed_data.get("job_city"),
                 job_state=parsed_data.get("job_state"),
                 job_country=parsed_data.get("job_country"),
+                additional_locations=_normalize_string_list(
+                    parsed_data.get("additional_locations")
+                ),
                 employment_type=parsed_data.get("employment_type"),
                 work_arrangement=parsed_data.get("work_arrangement"),
                 salary_range=parsed_data.get("salary_range") or {},

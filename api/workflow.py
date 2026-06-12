@@ -574,6 +574,8 @@ async def start_workflow(
     job_text: Optional[str] = Form(None),
     detected_title_form: Optional[str] = Form(None, alias="detected_title"),
     detected_company_form: Optional[str] = Form(None, alias="detected_company"),
+    source_form: Optional[str] = Form(None, alias="source"),
+    source_url_form: Optional[str] = Form(None, alias="source_url"),
     current_user: Dict[str, Any] = Depends(get_current_user_with_complete_profile),
     db: AsyncSession = Depends(get_database),
 ) -> WorkflowStartResponse:
@@ -702,8 +704,8 @@ async def start_workflow(
 
         # Get extension-specific metadata (JSON body takes priority; Form fields are the
         # extension path where request is None)
-        source = request.source if request else None
-        source_url = request.source_url if request else None
+        source = (request.source if request else None) or source_form
+        source_url = (request.source_url if request else None) or source_url_form
         detected_title = (request.detected_title if request else None) or detected_title_form
         detected_company = (request.detected_company if request else None) or detected_company_form
 

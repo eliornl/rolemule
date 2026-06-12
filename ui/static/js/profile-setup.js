@@ -408,10 +408,12 @@
 
         // Job preferences
         if (profileData.desired_salary_range) {
-            document.getElementById("min-salary").value =
-                profileData.desired_salary_range.min;
-            document.getElementById("max-salary").value =
-                profileData.desired_salary_range.max;
+            const minSalaryEl = /** @type {HTMLInputElement|null} */ (document.getElementById("min-salary"));
+            const maxSalaryEl = /** @type {HTMLInputElement|null} */ (document.getElementById("max-salary"));
+            const parsedMin = parseSalaryDigits(profileData.desired_salary_range.min);
+            const parsedMax = parseSalaryDigits(profileData.desired_salary_range.max);
+            if (minSalaryEl) minSalaryEl.value = parsedMin > 0 ? String(parsedMin) : "";
+            if (maxSalaryEl) maxSalaryEl.value = parsedMax > 0 ? String(parsedMax) : "";
         }
 
         // Company sizes
