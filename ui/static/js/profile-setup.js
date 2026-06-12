@@ -293,7 +293,9 @@
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             if (response.status === 401) { window.location.href = (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || '/auth/login'; }
-            throw new Error(err.message || err.detail || `API error: ${response.status}`);
+            const apiErr = new Error(err.message || err.detail || `API error: ${response.status}`);
+            if (err.details) { /** @type {any} */ (apiErr).details = err.details; }
+            throw apiErr;
         }
         return response.json();
     }
@@ -1578,6 +1580,13 @@
             return true; // Ensure we return true for success
         } catch (error) {
             console.error("Error saving basic info:", error);
+            const details = /** @type {any} */ (error).details;
+            if (Array.isArray(details) && details.length > 0) {
+                const fieldMessages = details.map(
+                    (d) => `${d.field || "field"}: ${d.message || "invalid value"}`
+                ).join("; ");
+                throw new Error(`Failed to save basic information — ${fieldMessages}`);
+            }
             throw new Error(`Failed to save basic information: ${error.message}`);
         }
     }
@@ -1703,7 +1712,20 @@
             return true; // Ensure we return true for success
         } catch (error) {
             console.error("Error saving work experience:", error);
-            showError("Failed to save work experience: " + error.message);
+            const details = /** @type {any} */ (error).details;
+            if (Array.isArray(details) && details.length > 0) {
+                const fieldMessages = details.map((d) => {
+                    // "body.work_experience.0.start_date" → "Entry 1 start date"
+                    const raw = (d.field || "").replace(/^body\.work_experience\./, "");
+                    const label = raw.replace(/^(\d+)\.(.+)$/, (/** @type {string} */ _, /** @type {string} */ idx, /** @type {string} */ field) =>
+                        `Entry ${Number(idx) + 1} ${field.replace(/_/g, " ")}`
+                    ) || raw.replace(/_/g, " ") || "field";
+                    return `${label}: ${d.message || "invalid value"}`;
+                }).join("; ");
+                showError(`Failed to save work experience — ${fieldMessages}`);
+            } else {
+                showError("Failed to save work experience: " + (/** @type {any} */ (error).message || "Unknown error"));
+            }
             return false; // Return false on error
         }
     }
@@ -2036,7 +2058,6 @@
                     if (workExpResult) {
                     } else {
                         console.error("Work experience save returned false");
-                        showError("Failed to save work experience. Please try again.");
                         setLoading(false);
                         return false;
                     }

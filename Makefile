@@ -93,7 +93,7 @@ start-d:
 # Checks that Docker is installed and the daemon is running.
 # Does NOT install or start Docker — the user is responsible for that.
 _ensure_docker:
-	@if ! command -v docker &>/dev/null; then \
+	@if ! command -v docker >/dev/null 2>&1; then \
 		echo ""; \
 		echo "ERROR: Docker is not installed."; \
 		echo ""; \
@@ -102,7 +102,7 @@ _ensure_docker:
 		echo ""; \
 		exit 1; \
 	fi
-	@if ! docker info &>/dev/null 2>&1; then \
+	@if ! docker info >/dev/null 2>&1; then \
 		echo ""; \
 		echo "ERROR: Docker is not running."; \
 		echo ""; \

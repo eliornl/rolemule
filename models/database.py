@@ -536,6 +536,11 @@ class WorkflowSession(Base):
         JSONB, nullable=True, default=None
     )
 
+    # CV Optimization Loop (generated on-demand after workflow completion)
+    cv_optimization: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+
     # Timing - Use proper DateTime instead of String for time-based queries
     processing_start_time: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -594,6 +599,7 @@ class WorkflowSession(Base):
             "resume_recommendations": self.resume_recommendations or {},
             "cover_letter": self.cover_letter or {},
             "interview_prep": self.interview_prep or {},
+            "cv_optimization": self.cv_optimization or {},
             "processing_start_time": (
                 self.processing_start_time.isoformat()
                 if self.processing_start_time

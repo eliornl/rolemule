@@ -46,6 +46,7 @@ Paste a job description and the pipeline runs automatically:
 | **Resume Advisor** | Per-bullet rewrites, ATS alignment score, before-you-submit checklist |
 | **Cover Letter Writer** | Personalized cover letter, regenerate with one click |
 | **Interview Prep** _(standalone)_ | Role-specific questions, model answers, full mock interview session |
+| **CV Optimizer** _(standalone)_ | Iterative evaluate→revise loop: AI hiring manager scores your CV, AI applicant rewrites it, repeats until score threshold or max iterations. Outputs an optimized CV and cover letter. |
 
 ## Six career tools
 
@@ -386,6 +387,15 @@ Browser / Chrome Extension
 
         Interview Prep  ← standalone, runs on demand
 
+        CV Optimizer  ← standalone, runs on demand after workflow completes
+               Hiring Manager (evaluator) ←──────────────┐
+                       ↓                                  │
+               CV Optimizer (reviser)                     │
+                       ↓                                  │
+               Convergence check ─── continue ───────────┘
+                       │ stop
+               Cover Letter Finalizer → optimized CV + cover letter
+
         Six career tools (Follow-up Email, Thank You Note, Salary Coach,
         Rejection Analyzer, Reference Request, Job Comparison)
                         ← standalone, no job description needed
@@ -400,7 +410,7 @@ Frontend: server-rendered HTML + vanilla JS, no framework. Assets are compiled a
 ```
 applypilot/
 ├── main.py               # FastAPI app entry point
-├── agents/               # 5 workflow agents + interview prep + 6 career tool agents
+├── agents/               # 5 workflow agents + interview prep + CV optimizer loop + 6 career tool agents
 ├── workflows/            # LangGraph pipeline orchestration and state schema
 ├── api/                  # FastAPI route handlers
 ├── config/               # Settings (Pydantic BaseSettings + .env)

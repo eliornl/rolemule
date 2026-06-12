@@ -83,8 +83,8 @@
     <!-- Analytics (PostHog) — only loads if user accepts analytics cookies -->
     <script nonce="{{ request.state.csp_nonce | default('') }}">
         window.POSTHOG_CONFIG = {
-            apiKey: {{ posthog_api_key or "" | tojson }},
-            apiHost: {{ posthog_host or "https://us.i.posthog.com" | tojson }}
+            apiKey: {{ (posthog_api_key or "") | tojson }},
+            apiHost: {{ (posthog_host or "https://us.i.posthog.com") | tojson }}
         };
     </script>
     <script src="{{ asset_url('js/analytics.js') }}"></script>

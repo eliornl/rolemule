@@ -3505,6 +3505,582 @@
                 }
             }
 
+            /* ── CV Optimizer ─────────────────────────────────────────── */
+
+            /* Section visibility */
+            .cvo-section { margin-top: 0; }
+
+            /* Setup card */
+            .cvo-setup-card {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-lg);
+                padding: 1.75rem;
+            }
+
+            .cvo-setup-title {
+                font-size: 1.15rem;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 0.75rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .cvo-setup-title i { color: var(--accent-primary); }
+
+            .cvo-setup-desc {
+                font-size: 0.88rem;
+                color: var(--text-secondary);
+                line-height: 1.65;
+                margin-bottom: 1.25rem;
+            }
+
+            /* BYOK warning */
+            .cvo-byok-warning {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.6rem;
+                background: rgba(245, 158, 11, 0.08);
+                border: 1px solid rgba(245, 158, 11, 0.25);
+                border-radius: var(--radius-md);
+                padding: 0.85rem 1rem;
+                font-size: 0.85rem;
+                color: #f59e0b;
+                margin-bottom: 1.25rem;
+            }
+
+            .cvo-byok-warning i { flex-shrink: 0; margin-top: 0.1rem; }
+
+            .cvo-settings-link {
+                color: var(--accent-primary);
+                text-decoration: underline;
+                text-underline-offset: 2px;
+            }
+
+            .cvo-settings-link:hover { opacity: 0.8; }
+
+            /* Config row */
+            .cvo-config-row {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-bottom: 0.85rem;
+                flex-wrap: wrap;
+            }
+
+            .cvo-config-label {
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                min-width: 130px;
+            }
+
+            .cvo-config-hint {
+                font-size: 0.75rem;
+                color: var(--text-muted);
+                font-weight: 400;
+            }
+
+            .cvo-config-select,
+            .cvo-config-input {
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                color: var(--text-primary);
+                font-size: 0.88rem;
+                padding: 0.45rem 0.75rem;
+                min-width: 140px;
+                transition: border-color 0.2s;
+            }
+
+            .cvo-config-select:focus,
+            .cvo-config-input:focus {
+                outline: none;
+                border-color: var(--accent-primary);
+                box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+            }
+
+            /* Start button */
+            .cvo-start-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-top: 1.25rem;
+                padding: 0.65rem 1.5rem;
+                background: var(--accent-gradient);
+                border: none;
+                border-radius: var(--radius-md);
+                color: #fff;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: opacity 0.2s, transform 0.2s;
+            }
+
+            .cvo-start-btn:hover:not(:disabled) {
+                opacity: 0.88;
+                transform: translateY(-1px);
+            }
+
+            .cvo-start-btn:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            /* Progress view */
+            .cvo-progress-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .cvo-progress-label {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--accent-primary);
+            }
+
+            .cvo-iteration-counter {
+                font-size: 0.8rem;
+                color: var(--text-muted);
+                font-weight: 500;
+            }
+
+            .cvo-score-display {
+                display: flex;
+                align-items: baseline;
+                gap: 0.35rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .cvo-score-value {
+                font-size: 2.5rem;
+                font-weight: 800;
+                color: var(--accent-primary);
+                line-height: 1;
+            }
+
+            .cvo-score-label {
+                font-size: 1rem;
+                color: var(--text-muted);
+            }
+
+            /* Score colour tiers */
+            .cvo-score-excellent { color: #10b981; }
+            .cvo-score-good      { color: var(--accent-primary); }
+            .cvo-score-fair      { color: #f59e0b; }
+            .cvo-score-poor      { color: #ef4444; }
+
+            /* Iteration log */
+            .cvo-iteration-log {
+                display: flex;
+                flex-direction: column;
+                gap: 0.6rem;
+                max-height: 360px;
+                overflow-y: auto;
+                padding-right: 0.25rem;
+            }
+
+            .cvo-iter-card {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                overflow: hidden;
+            }
+
+            .cvo-iter-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.6rem 0.85rem;
+                background: var(--bg-tertiary);
+            }
+
+            .cvo-iter-label {
+                font-size: 0.82rem;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+
+            .cvo-iter-score {
+                font-size: 0.82rem;
+                font-weight: 700;
+            }
+
+            .cvo-iter-details summary {
+                padding: 0.5rem 0.85rem;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .cvo-iter-body {
+                padding: 0.75rem 0.85rem;
+                border-top: 1px solid var(--border-color);
+            }
+
+            /* Feedback sections inside iter cards */
+            .cvo-fb-section {
+                margin-bottom: 0.65rem;
+            }
+
+            .cvo-fb-section:last-child { margin-bottom: 0; }
+
+            .cvo-fb-section strong {
+                display: block;
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--accent-primary);
+                margin-bottom: 0.3rem;
+            }
+
+            .cvo-fb-section ul {
+                list-style: disc;
+                padding-left: 1.2rem;
+                margin: 0;
+            }
+
+            .cvo-fb-section ul li {
+                font-size: 0.82rem;
+                color: var(--text-secondary);
+                line-height: 1.5;
+                padding: 0.1rem 0;
+            }
+
+            /* Results view */
+            .cvo-results-header {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                flex-wrap: wrap;
+                margin-bottom: 1.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .cvo-score-badge {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1));
+                border: 1px solid var(--border-accent);
+                border-radius: var(--radius-md);
+                padding: 0.6rem 1.25rem;
+                min-width: 90px;
+                text-align: center;
+            }
+
+            .cvo-score-badge .cvo-score-value { font-size: 2rem; }
+            .cvo-score-badge .cvo-score-label { font-size: 0.7rem; color: var(--text-muted); }
+
+            .cvo-stop-badge {
+                display: inline-block;
+                padding: 0.3rem 0.75rem;
+                border-radius: var(--radius-full);
+                font-size: 0.75rem;
+                font-weight: 600;
+                background: rgba(255, 255, 255, 0.06);
+                color: var(--text-secondary);
+                border: 1px solid var(--border-color);
+            }
+
+            .cvo-stop-score_threshold { background: rgba(16, 185, 129, 0.12); color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+            .cvo-stop-score_plateau   { background: rgba(245, 158, 11, 0.1);  color: #f59e0b; border-color: rgba(245, 158, 11, 0.25); }
+            .cvo-stop-max_iterations  { background: rgba(102, 126, 234, 0.1); color: var(--accent-primary); border-color: var(--border-accent); }
+            .cvo-stop-score_decrease  { background: rgba(239, 68, 68, 0.1);   color: #ef4444; border-color: rgba(239, 68, 68, 0.25); }
+
+            .cvo-rerun-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.45rem 1rem;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                font-size: 0.82rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition: all 0.2s;
+                margin-left: auto;
+            }
+
+            .cvo-rerun-btn:hover {
+                background: rgba(102, 126, 234, 0.1);
+                color: var(--text-primary);
+                border-color: var(--accent-primary);
+            }
+
+            /* Score progression chart */
+            .cvo-score-progression {
+                margin-bottom: 1.5rem;
+            }
+
+            .cvo-score-chart {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                padding: 0.75rem 1rem;
+                overflow-x: auto;
+            }
+
+            .cvo-chart {
+                display: flex;
+                align-items: flex-end;
+                gap: 0.6rem;
+                height: 80px;
+                min-width: max-content;
+            }
+
+            .cvo-chart-bar-wrap {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.3rem;
+                flex: 1;
+                min-width: 36px;
+                height: 100%;
+                justify-content: flex-end;
+            }
+
+            .cvo-chart-bar {
+                width: 100%;
+                height: 4px;
+                border-radius: 4px 4px 0 0;
+                background: var(--accent-primary);
+                transition: height 0.4s ease;
+            }
+
+            /* Bar heights driven by data-score attribute (style= attr blocked by CSP) */
+            .cvo-chart-bar[data-score="1"]  { height: 10%; }
+            .cvo-chart-bar[data-score="2"]  { height: 20%; }
+            .cvo-chart-bar[data-score="3"]  { height: 30%; }
+            .cvo-chart-bar[data-score="4"]  { height: 40%; }
+            .cvo-chart-bar[data-score="5"]  { height: 50%; }
+            .cvo-chart-bar[data-score="6"]  { height: 60%; }
+            .cvo-chart-bar[data-score="7"]  { height: 70%; }
+            .cvo-chart-bar[data-score="8"]  { height: 80%; }
+            .cvo-chart-bar[data-score="9"]  { height: 90%; }
+            .cvo-chart-bar[data-score="10"] { height: 100%; }
+
+            .cvo-chart-bar.cvo-score-excellent { background: #10b981; }
+            .cvo-chart-bar.cvo-score-good      { background: var(--accent-primary); }
+            .cvo-chart-bar.cvo-score-fair      { background: #f59e0b; }
+            .cvo-chart-bar.cvo-score-poor      { background: #ef4444; }
+
+            .cvo-chart-label {
+                font-size: 0.65rem;
+                color: var(--text-muted);
+                white-space: nowrap;
+            }
+
+            /* Artifact sections (Optimized CV, Cover Letter, etc.) */
+            .cvo-artifact-section {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                padding: 1.25rem;
+                margin-bottom: 1rem;
+            }
+
+            .cvo-artifact-section:last-child { margin-bottom: 0; }
+
+            .cvo-section-heading {
+                font-size: 0.92rem;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 0.85rem;
+            }
+
+            .cvo-artifact-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.85rem;
+            }
+
+            .cvo-artifact-header .cvo-section-heading { margin-bottom: 0; }
+
+            .cvo-artifact-actions {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .cvo-artifact-text {
+                background: var(--bg-tertiary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                padding: 1rem 1.25rem;
+                font-size: 0.82rem;
+                line-height: 1.7;
+                color: var(--text-secondary);
+                white-space: pre-wrap;
+                font-family: var(--font-mono);
+                max-height: 420px;
+                overflow-y: auto;
+                margin: 0;
+            }
+
+            /* Copy button */
+            .cvo-copy-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.35rem 0.75rem;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                font-size: 0.78rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+
+            .cvo-copy-btn:hover {
+                background: var(--accent-primary);
+                color: #fff;
+                border-color: var(--accent-primary);
+            }
+
+            /* Download button */
+            .cvo-download-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.35rem 0.75rem;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                font-size: 0.78rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+
+            .cvo-download-btn:hover:not(:disabled) {
+                background: var(--accent-primary);
+                color: #fff;
+                border-color: var(--accent-primary);
+            }
+
+            .cvo-download-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            /* Gap analysis */
+            .cvo-gap-intro {
+                font-size: 0.85rem;
+                color: var(--text-secondary);
+                margin-bottom: 0.75rem;
+            }
+
+            .cvo-gap-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .cvo-gap-list li {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.6rem;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid var(--border-color);
+                font-size: 0.85rem;
+                color: var(--text-secondary);
+                line-height: 1.5;
+            }
+
+            .cvo-gap-list li::before {
+                content: '\f06a';
+                font-family: 'Font Awesome 6 Free';
+                font-weight: 900;
+                color: #f59e0b;
+                font-size: 0.75rem;
+                margin-top: 0.15rem;
+                flex-shrink: 0;
+            }
+
+            .cvo-gap-list li:last-child { border-bottom: none; }
+
+            .cvo-no-gaps {
+                font-size: 0.85rem;
+                color: #10b981;
+                font-style: italic;
+            }
+
+            /* Iteration history accordion */
+            .cvo-history-accordion {
+                display: flex;
+                flex-direction: column;
+                gap: 0.4rem;
+            }
+
+            .cvo-history-item {
+                background: var(--bg-tertiary);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-md);
+                overflow: hidden;
+            }
+
+            .cvo-history-item summary {
+                padding: 0.65rem 0.9rem;
+                font-size: 0.84rem;
+                font-weight: 500;
+                color: var(--text-secondary);
+                cursor: pointer;
+                user-select: none;
+                transition: color 0.15s;
+            }
+
+            .cvo-history-item summary:hover { color: var(--text-primary); }
+
+            .cvo-history-item .cvo-fb-section {
+                padding: 0 0.9rem 0.65rem;
+                border-top: 1px solid var(--border-color);
+                margin-top: 0.5rem;
+                padding-top: 0.65rem;
+                margin-bottom: 0;
+            }
+
+            /* Error view */
+            .cvo-error-card {
+                background: rgba(239, 68, 68, 0.06);
+                border: 1px solid rgba(239, 68, 68, 0.2);
+                border-radius: var(--radius-lg);
+                padding: 2rem;
+                text-align: center;
+            }
+
+            .cvo-error-card > i {
+                font-size: 2rem;
+                color: #ef4444;
+                margin-bottom: 0.75rem;
+                display: block;
+            }
+
+            .cvo-error-message {
+                font-size: 0.9rem;
+                color: var(--text-secondary);
+                margin-bottom: 1.25rem;
+                line-height: 1.6;
+            }
+
             /* ── Print Styles (minimal — no export button) ── */
             @media print {
                 .navbar, .page-tabs { display: none !important; }
@@ -3608,6 +4184,10 @@
                         <i class="fas fa-chalkboard-teacher"></i>
                         <span>Interview</span>
                     </button>
+                    <button class="page-tab" data-tab="optimize">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Optimize CV</span>
+                    </button>
                 </div>
 
                 <!-- Tab Content -->
@@ -3655,6 +4235,136 @@
                             <div id="interviewRegenBtn"></div>
                         </div>
                     </div>
+                    <div class="tab-pane" id="pane-optimize">
+                        <div id="cvOptimizeContent">
+                            <!-- Setup card: shown when no result and not running -->
+                            <div id="cvo-setup" class="cvo-section">
+                                <div class="cvo-setup-card">
+                                    <h3 class="cvo-setup-title"><i class="fas fa-chart-line"></i> Optimize Your CV</h3>
+                                    <p class="cvo-setup-desc">
+                                        Run an AI-powered optimization loop: an AI Hiring Manager evaluates your CV
+                                        against the job description, an AI Applicant revises it based on the feedback,
+                                        and the cycle repeats until the fit score converges.
+                                    </p>
+
+                                    <!-- BYOK warning (shown when no API key detected) -->
+                                    <div id="cvo-byok-warning" class="cvo-byok-warning is-hidden">
+                                        <i class="fas fa-key"></i>
+                                        <span>This feature requires a Gemini API key.
+                                            <a href="/dashboard/settings?tab=ai-setup" class="cvo-settings-link">Add your key in Settings → AI Setup</a>
+                                        </span>
+                                    </div>
+
+                                    <div class="cvo-config-row">
+                                        <label class="cvo-config-label" for="cvo-max-iterations">Max Iterations
+                                            <span class="cvo-config-hint">(1–7)</span>
+                                        </label>
+                                        <select id="cvo-max-iterations" class="cvo-config-select">
+                                            <option value="3">3</option>
+                                            <option value="5" selected>5 (recommended)</option>
+                                            <option value="7">7</option>
+                                        </select>
+                                    </div>
+                                    <div class="cvo-config-row">
+                                        <label class="cvo-config-label" for="cvo-score-threshold">Stop at score
+                                            <span class="cvo-config-hint">(7.0–9.5)</span>
+                                        </label>
+                                        <input id="cvo-score-threshold" type="number"
+                                            class="cvo-config-input" value="8.5"
+                                            min="7.0" max="9.5" step="0.5">
+                                    </div>
+
+                                    <button id="cvo-start-btn" class="cvo-start-btn" data-action="startCvOptimization">
+                                        <i class="fas fa-play"></i> Start Optimization
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Progress view: shown while running -->
+                            <div id="cvo-progress" class="cvo-section is-hidden">
+                                <div class="cvo-progress-header">
+                                    <span class="cvo-progress-label"><i class="fas fa-spinner fa-spin"></i> Optimizing…</span>
+                                    <span id="cvo-iteration-counter" class="cvo-iteration-counter">Iteration 0</span>
+                                </div>
+                                <div id="cvo-score-display" class="cvo-score-display">
+                                    <span class="cvo-score-value" id="cvo-current-score">–</span>
+                                    <span class="cvo-score-label">/ 10</span>
+                                </div>
+                                <div id="cvo-iteration-log" class="cvo-iteration-log"></div>
+                            </div>
+
+                            <!-- Results view: shown when complete -->
+                            <div id="cvo-results" class="cvo-section is-hidden">
+                                <div class="cvo-results-header">
+                                    <div class="cvo-score-badge">
+                                        <span class="cvo-score-value" id="cvo-final-score">–</span>
+                                        <span class="cvo-score-label">Best Score</span>
+                                    </div>
+                                    <span id="cvo-stop-reason-badge" class="cvo-stop-badge"></span>
+                                    <button class="cvo-rerun-btn" data-action="clearCvOptimization">
+                                        <i class="fas fa-redo"></i> Re-run
+                                    </button>
+                                </div>
+
+                                <!-- Score progression -->
+                                <div class="cvo-score-progression">
+                                    <h4 class="cvo-section-heading">Score Progression</h4>
+                                    <div id="cvo-score-chart" class="cvo-score-chart"></div>
+                                </div>
+
+                                <!-- Optimized CV -->
+                                <div class="cvo-artifact-section">
+                                    <div class="cvo-artifact-header">
+                                        <h4 class="cvo-section-heading">Optimized CV</h4>
+                                        <div class="cvo-artifact-actions">
+                                            <button class="cvo-copy-btn" data-action="copyOptimizedCv">
+                                                <i class="fas fa-copy"></i> Copy
+                                            </button>
+                                            <button class="cvo-download-btn" id="cvo-download-odt-btn" data-action="downloadOptimizedCvOdt">
+                                                <i class="fas fa-file-alt"></i> Download ODT
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <pre id="cvo-optimized-cv" class="cvo-artifact-text"></pre>
+                                </div>
+
+                                <!-- Cover Letter -->
+                                <div class="cvo-artifact-section">
+                                    <div class="cvo-artifact-header">
+                                        <h4 class="cvo-section-heading">Cover Letter</h4>
+                                        <button class="cvo-copy-btn" data-action="copyCvoCoverLetter">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <pre id="cvo-cover-letter" class="cvo-artifact-text"></pre>
+                                </div>
+
+                                <!-- Gap Analysis -->
+                                <div class="cvo-artifact-section">
+                                    <h4 class="cvo-section-heading">Gap Analysis</h4>
+                                    <p class="cvo-gap-intro">These gaps could not be resolved through rephrasing alone:</p>
+                                    <ul id="cvo-gap-list" class="cvo-gap-list"></ul>
+                                </div>
+
+                                <!-- Iteration History accordion -->
+                                <div class="cvo-artifact-section">
+                                    <h4 class="cvo-section-heading">Iteration History</h4>
+                                    <div id="cvo-history-accordion" class="cvo-history-accordion"></div>
+                                </div>
+                            </div>
+
+                            <!-- Error view -->
+                            <div id="cvo-error" class="cvo-section is-hidden">
+                                <div class="cvo-error-card">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <p id="cvo-error-message" class="cvo-error-message">An error occurred during optimization.</p>
+                                    <button class="cvo-start-btn" data-action="resetCvOptimization">
+                                        <i class="fas fa-redo"></i> Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -3662,4 +4372,5 @@
 {% block page_scripts %}
 <script src="{{ asset_url('js/profile-completion-sync.js') }}"></script>
 <script src="{{ asset_url('js/application-detail.js') }}"></script>
+<script src="{{ asset_url('js/cv-optimizer.js') }}"></script>
 {% endblock %}

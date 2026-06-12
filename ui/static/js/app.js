@@ -435,6 +435,9 @@ class JobApplicationAssistant {
                 if (result.error_code) {
                     /** @type {any} */ (apiErr).errorCode = result.error_code;
                 }
+                if (result.details) {
+                    /** @type {any} */ (apiErr).details = result.details;
+                }
                 throw apiErr;
             }
 
