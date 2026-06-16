@@ -12,12 +12,17 @@ Endpoints:
 import uuid
 import jwt
 import pytest
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
-from api.cv_optimizer import _synthesize_jd_from_analysis
+from api.cv_optimizer import _run_cv_optimization_background, _synthesize_jd_from_analysis
+from agents.cv_optimizer_loop import OptimizationResult
 from config.settings import get_security_settings
-from models.database import WorkflowSession
+from models.database import WorkflowSession, WorkflowStatusEnum
+from sqlalchemy import select
 from tests.test_api.conftest import _NullSessionLocal
+from utils.database import get_session as real_get_session
 
 BASE = "/api/v1/cv-optimizer"
 SESSION_ID = str(uuid.uuid4())
@@ -398,3 +403,114 @@ class TestDownloadOptimizedCv:
         data = resp.json()
         assert data.get("error_code") == "RATE_4001"
         assert "quota" in data.get("message", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# _run_cv_optimization_background — DB session lifecycle
+# ---------------------------------------------------------------------------
+
+
+class TestCvOptimizationBackgroundTask:
+    """Background task must not hold a DB connection during the LLM loop."""
+
+    @pytest.mark.asyncio
+    async def test_orchestrator_runs_without_open_db_session_and_persists_result(
+        self, authed_client_with_user,
+    ):
+        token = authed_client_with_user.headers["Authorization"].split(" ", 1)[1]
+        sec = get_security_settings()
+        payload = jwt.decode(
+            token,
+            sec.jwt_config["secret_key"],
+            algorithms=[sec.jwt_config["algorithm"]],
+        )
+        uid = uuid.UUID(payload["sub"])
+        session_id = str(uuid.uuid4())
+
+        user_data = {
+            "full_name": "Jane Smith",
+            "professional_title": "Engineer",
+            "summary": "Built platforms.",
+            "work_experience": [],
+            "education": [],
+            "skills": ["Python"],
+        }
+        job_analysis = {
+            "job_title": "Senior Engineer",
+            "company_name": "TechCorp",
+            "required_skills": ["Python"],
+        }
+
+        async with _NullSessionLocal() as db:
+            db.add(
+                WorkflowSession(
+                    id=uuid.uuid4(),
+                    session_id=session_id,
+                    user_id=uid,
+                    workflow_status=WorkflowStatusEnum.COMPLETED.value,
+                    user_data=user_data,
+                    job_analysis=job_analysis,
+                    job_input_data={"job_input": "Senior Engineer at TechCorp. Python required."},
+                )
+            )
+            await db.commit()
+
+        session_depth = 0
+        orchestrator_called_while_session_open = False
+
+        @asynccontextmanager
+        async def tracking_get_session():
+            nonlocal session_depth, orchestrator_called_while_session_open
+            session_depth += 1
+            try:
+                async with real_get_session() as db:
+                    yield db
+            finally:
+                session_depth -= 1
+
+        mock_result = OptimizationResult(
+            started_at=datetime.now(timezone.utc).isoformat(),
+            completed_at=datetime.now(timezone.utc).isoformat(),
+            stop_reason="score_threshold",
+            config={"max_iterations": 3, "score_threshold": 8.0},
+            status="completed",
+            best_score=8.5,
+            optimized_cv="# Jane Smith\n\n## Experience",
+            cover_letter="Dear Hiring Team,",
+        )
+
+        async def mock_orchestrator_run(**_kwargs):
+            nonlocal orchestrator_called_while_session_open
+            orchestrator_called_while_session_open = session_depth > 0
+            return mock_result
+
+        with (
+            patch("api.cv_optimizer.get_session", tracking_get_session),
+            patch(
+                "api.cv_optimizer.CVOptimizationOrchestrator.run",
+                AsyncMock(side_effect=mock_orchestrator_run),
+            ),
+            patch("api.cv_optimizer.broadcast_cv_optimization_started", AsyncMock()),
+            patch("api.cv_optimizer.broadcast_cv_optimization_complete", AsyncMock()),
+            patch("api.cv_optimizer.cache_cv_optimization", AsyncMock()),
+            patch("api.cv_optimizer.clear_cv_optimization_running", AsyncMock()),
+        ):
+            await _run_cv_optimization_background(
+                session_id=session_id,
+                user_id=str(uid),
+                user_api_key="test-key",
+            )
+
+        assert orchestrator_called_while_session_open is False
+
+        async with _NullSessionLocal() as db:
+            row = await db.execute(
+                select(WorkflowSession).where(WorkflowSession.session_id == session_id)
+            )
+            workflow_session = row.scalar_one()
+            stored = workflow_session.cv_optimization
+
+        assert stored is not None
+        assert stored["optimized_cv"] == "# Jane Smith\n\n## Experience"
+        assert stored["best_score"] == 8.5
+        assert stored["stop_reason"] == "score_threshold"

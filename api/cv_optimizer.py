@@ -21,7 +21,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -926,7 +926,12 @@ async def _run_cv_optimization_background(
     if config is None:
         config = OptimizationConfig()
 
+    ws_user_id = user_id
+
     try:
+        # Phase 1 — load inputs with a short-lived session. Do not hold the DB
+        # connection open during the optimization loop (can run 10+ minutes); idle
+        # connections are closed by PostgreSQL / PgBouncer before the final commit.
         async with get_session() as db:
             result = await db.execute(
                 select(WorkflowSession).where(WorkflowSession.session_id == session_id)
@@ -938,8 +943,6 @@ async def _run_cv_optimization_background(
                 return
 
             ws_user_id = user_id or str(workflow_session.user_id)
-
-            await broadcast_cv_optimization_started(ws_user_id, session_id)
 
             # Compose initial CV from structured profile data
             user_data = workflow_session.user_data or {}
@@ -960,62 +963,68 @@ async def _run_cv_optimization_background(
             job_analysis = workflow_session.job_analysis or {}
             company_research = workflow_session.company_research
 
-            # Build per-iteration broadcast callback
-            async def _broadcast_iteration(record: IterationRecord) -> None:
-                await broadcast_cv_optimization_iteration(
-                    user_id=ws_user_id,
-                    session_id=session_id,
-                    iteration=record.iteration,
-                    score=record.score,
-                    strengths=record.strengths,
-                    gaps=record.gaps,
-                    action_items=record.action_items,
-                )
+        await broadcast_cv_optimization_started(ws_user_id, session_id)
 
-            orchestrator = CVOptimizationOrchestrator()
-            optimization_result = await orchestrator.run(
-                session_id=session_id,
-                user_id=ws_user_id,
-                initial_cv=initial_cv,
-                job_description=job_description,
-                job_analysis=job_analysis,
-                company_research=company_research,
-                config=config,
-                user_api_key=user_api_key,
-                broadcast_iteration_fn=_broadcast_iteration,
-                user_profile=user_data,
-            )
-
-            result_dict = sanitize_llm_output(optimization_result.to_dict())
-            result_dict = _sanitize_optimization_result(result_dict) or result_dict
-
-            logger.info(
-                "CV optimization storing result session=%s cv_len=%d cl_len=%d",
-                session_id,
-                len(result_dict.get("optimized_cv", "")),
-                len(result_dict.get("cover_letter", "")),
-            )
-
-            workflow_session.cv_optimization = result_dict
-            flag_modified(workflow_session, "cv_optimization")
-            await db.commit()
-
-            await cache_cv_optimization(session_id, result_dict)
-
-            logger.info(
-                "CV optimization complete session=%s best_score=%.1f stop=%s",
-                session_id,
-                optimization_result.best_score,
-                optimization_result.stop_reason,
-            )
-
-            await broadcast_cv_optimization_complete(
+        # Phase 2 — long-running LLM loop (no DB session held)
+        async def _broadcast_iteration(record: IterationRecord) -> None:
+            await broadcast_cv_optimization_iteration(
                 user_id=ws_user_id,
                 session_id=session_id,
-                final_score=optimization_result.best_score,
-                stop_reason=optimization_result.stop_reason,
-                iteration_count=len(optimization_result.iteration_history),
+                iteration=record.iteration,
+                score=record.score,
+                strengths=record.strengths,
+                gaps=record.gaps,
+                action_items=record.action_items,
             )
+
+        orchestrator = CVOptimizationOrchestrator()
+        optimization_result = await orchestrator.run(
+            session_id=session_id,
+            user_id=ws_user_id,
+            initial_cv=initial_cv,
+            job_description=job_description,
+            job_analysis=job_analysis,
+            company_research=company_research,
+            config=config,
+            user_api_key=user_api_key,
+            broadcast_iteration_fn=_broadcast_iteration,
+            user_profile=user_data,
+        )
+
+        result_dict = sanitize_llm_output(optimization_result.to_dict())
+        result_dict = _sanitize_optimization_result(result_dict) or result_dict
+
+        logger.info(
+            "CV optimization storing result session=%s cv_len=%d cl_len=%d",
+            session_id,
+            len(result_dict.get("optimized_cv", "")),
+            len(result_dict.get("cover_letter", "")),
+        )
+
+        # Phase 3 — persist with a fresh session after LLM work completes
+        async with get_session() as db:
+            await db.execute(
+                update(WorkflowSession)
+                .where(WorkflowSession.session_id == session_id)
+                .values(cv_optimization=result_dict)
+            )
+
+        await cache_cv_optimization(session_id, result_dict)
+
+        logger.info(
+            "CV optimization complete session=%s best_score=%.1f stop=%s",
+            session_id,
+            optimization_result.best_score,
+            optimization_result.stop_reason,
+        )
+
+        await broadcast_cv_optimization_complete(
+            user_id=ws_user_id,
+            session_id=session_id,
+            final_score=optimization_result.best_score,
+            stop_reason=optimization_result.stop_reason,
+            iteration_count=len(optimization_result.iteration_history),
+        )
 
     except Exception as e:
         logger.error(
