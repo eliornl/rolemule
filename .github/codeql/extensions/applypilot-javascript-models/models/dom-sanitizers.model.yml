@@ -4,13 +4,13 @@ extensions:
       extensible: barrierModel
     data:
       # Global sanitizers from ui/static/js/dom-security.js (window.*)
-      - [".", "Member[window].Member[escapeHtml].ReturnValue", "xss"]
-      - [".", "Member[window].Member[escapeHtml].ReturnValue", "dom-xss"]
-      - [".", "Member[window].Member[escapeHtml].ReturnValue", "double-escaping"]
-      - [".", "Member[window].Member[decodeEntities].ReturnValue", "double-escaping"]
-      - [".", "Member[window].Member[sanitizeLogValue].ReturnValue", "log-injection"]
-      - [".", "Member[window].Member[stripHtmlForAlert].ReturnValue", "xss"]
-      - [".", "Member[window].Member[stripHtmlForAlert].ReturnValue", "dom-xss"]
-      - [".", "Member[window].Member[validateRelativeRedirectPath].ReturnValue", "client-side-unvalidated-url-redirection"]
+      - [".", "Member[window].Member[escapeHtml].ReturnValue", "xss", "manual"]
+      - [".", "Member[window].Member[escapeHtml].ReturnValue", "dom-xss", "manual"]
+      - [".", "Member[window].Member[escapeHtml].ReturnValue", "double-escaping", "manual"]
+      - [".", "Member[window].Member[decodeEntities].ReturnValue", "double-escaping", "manual"]
+      - [".", "Member[window].Member[sanitizeLogValue].ReturnValue", "log-injection", "manual"]
+      - [".", "Member[window].Member[stripHtmlForAlert].ReturnValue", "xss", "manual"]
+      - [".", "Member[window].Member[stripHtmlForAlert].ReturnValue", "dom-xss", "manual"]
+      - [".", "Member[window].Member[validateRelativeRedirectPath].ReturnValue", "client-side-unvalidated-url-redirection", "manual"]
       # Extension autofill: decode HTML entities before writing form values
-      - [".", "Member[window].Member[decodeHtmlEntities].ReturnValue", "double-escaping"]
+      - [".", "Member[window].Member[decodeHtmlEntities].ReturnValue", "double-escaping", "manual"]
