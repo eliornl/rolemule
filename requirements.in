@@ -2,6 +2,7 @@
 # Regenerate lockfile: pip install -r requirements.in && pip freeze > requirements.txt
 fastapi==0.135.0
 starlette==1.3.1
+jinja2>=3.1.0
 uvicorn[standard]==0.35.0
 pydantic-settings==2.10.1
 SQLAlchemy==2.0.36
