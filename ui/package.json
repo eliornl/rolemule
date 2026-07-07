@@ -8,7 +8,7 @@
     "build:watch": "node build.mjs --watch"
   },
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "esbuild": "^0.28.1"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0"
