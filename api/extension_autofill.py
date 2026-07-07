@@ -60,6 +60,9 @@ from utils.llm_client import GeminiError, get_gemini_client, user_facing_message
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.security import sanitize_text
 
+# Re-exported for tests and extension_autofill_rules consumers
+__all__ = ["AutofillSelectOption"]
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import utils.cache as cache_mod
 from utils.cache import (
     CACHE_VERSION,
     RateLimitResult,

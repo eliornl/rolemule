@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import jwt
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import _make_jwt, pwd_context, _SQLIntegrityError

@@ -15,7 +15,7 @@ import jwt
 from config.settings import get_settings
 from utils.auth import get_current_user
 from utils.error_reporting import report_exception
-from utils.logging_config import get_structured_logger, sanitize_log_value, sanitize_log_value
+from utils.logging_config import get_structured_logger, sanitize_log_value
 
 _WS_MAX_MESSAGE_BYTES = 64 * 1024  # 64 KB — reject oversized client messages
 
