@@ -83,20 +83,12 @@
 
     /** Decode HTML entities for use with .textContent (doesn't re-encode) */
     function decodeEntities(str) {
-        if (str == null) return '';
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = String(str);
-        return textarea.value;
+        return window.decodeEntities(str);
     }
 
     /** @param {string|null|undefined} str */
     function escapeHtml(str) {
-        if (str == null) return '';
-        const decoded = decodeEntities(str);
-        return decoded
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+        return window.escapeHtml(str);
     }
 
     /**
@@ -195,10 +187,6 @@
     /**
      * @param {string} message
      * @param {string} [type]
-     */
-    /**
-     * @param {string} message
-     * @param {string} [type]
      * @param {boolean} [scrollTop] - scroll to top so the alert is visible
      */
     function notify(message, type = 'info', scrollTop = false) {
@@ -215,8 +203,17 @@
         if (app && typeof app.showNotification === 'function') { app.showNotification(message, notifType); return; }
         const container = document.getElementById('alertContainer');
         if (!container) return;
+        /** @type {Record<string, string>} */
+        const alertClassByType = {
+            success: 'success',
+            error: 'danger',
+            warning: 'warning',
+            info: 'info',
+            danger: 'danger',
+        };
+        const alertClass = alertClassByType[notifType] ?? 'info';
         const div = document.createElement('div');
-        div.className = `alert alert-${escapeHtml(type)} alert-dismissible fade show`;
+        div.className = `alert alert-${alertClass} alert-dismissible fade show`;
         div.setAttribute('role', 'alert');
         div.innerHTML = `${escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
         container.appendChild(div);

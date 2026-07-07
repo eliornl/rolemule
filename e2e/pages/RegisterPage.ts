@@ -137,7 +137,7 @@ export class RegisterPage extends BasePage {
     password: string;
     confirmPassword?: string;
     acceptTerms?: boolean;
-  }, errorText?: string) {
+  }, _errorText?: string) {
     await this.fillForm(data);
     
     // Try to submit - may fail due to client-side validation

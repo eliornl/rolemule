@@ -114,7 +114,9 @@ class TestDeterministicContactFields:
     def test_linkedin_field(self) -> None:
         f = _field(label_text="LinkedIn profile URL", input_type="url")
         val = deterministic_value_for_field(f, _bundle())
-        assert val and urlparse(val).hostname and urlparse(val).hostname.endswith("linkedin.com")
+        host = (urlparse(val).hostname or "").lower()
+        parts = host.split(".")
+        assert val and len(parts) >= 2 and parts[-2] == "linkedin" and parts[-1] == "com"
 
 
 class TestScreeningQuestions:

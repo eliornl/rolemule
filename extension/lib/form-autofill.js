@@ -1191,10 +1191,10 @@
     if (blockIndex < 0 || blockIndex >= blocks.length) return;
     try {
       blocks[blockIndex].scrollIntoView({ block: 'center', behavior: 'instant' });
-    } catch (eScroll) {
+    } catch (_eScroll) {
       try {
         blocks[blockIndex].scrollIntoView();
-      } catch (eScroll2) {
+      } catch (_eScroll2) {
         /* ignore */
       }
     }
@@ -4533,4 +4533,5 @@
   window.__jaaSuppressAshbyResumeAutofill = suppressAshbyResumeAutofillUI;
   window.__jaaRestoreAshbyOverhidden = restoreAshbyOverhiddenSections;
   window.__jaaExpandEducationRows = expandEducationRows;
+  window.decodeHtmlEntities = decodeHtmlEntities;
 })();

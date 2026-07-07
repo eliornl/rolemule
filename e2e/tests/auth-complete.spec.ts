@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAllMocks, setupAuthMocks, setupCookieConsent, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuthMocks, setupCookieConsent, MOCK_JWT } from '../utils/api-mocks';
 
 
 /**

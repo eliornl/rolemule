@@ -170,7 +170,7 @@ def patch_redis(fake_redis: FakeRedis):
 class TestRegistrationExtended:
     @pytest.mark.asyncio
     async def test_register_auto_verified_when_disabled(self):
-        with patch("api.auth.settings", "disable_email_verification", True):
+        with patch("api.auth.settings.disable_email_verification", True):
             payload = _reg_payload("_autoverify")
             async with _make_client() as client:
                 resp = await client.post(f"{BASE}/register", json=payload)
@@ -328,7 +328,7 @@ class TestVerifyCode:
         code = "123456"
         patch_redis._store[f"email_verification:{code}"] = email
         try:
-            with patch("api.auth.settings", "disable_email_verification", False):
+            with patch("api.auth.settings.disable_email_verification", False):
                 async with _make_client() as client:
                     resp = await client.post(
                         f"{BASE}/verify-code",

@@ -394,8 +394,9 @@ class CompanyResearchAgent:
             ).total_seconds()
 
             logger.info(
-                f"Company research completed for {company_name} "
-                f"in {result.processing_time:.2f}s"
+                "Company research completed for %s in %.2fs",
+                sanitize_log_value(company_name),
+                result.processing_time,
             )
             return result
 

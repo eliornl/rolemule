@@ -3,20 +3,12 @@
 
     /** @param {string|null|undefined} str */
     function escapeHtml(str) {
-        if (str == null) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;');
+        return window.escapeHtml(str);
     }
 
     /** @param {string} text */
     function stripHtmlForAlert(text) {
-        return String(text)
-            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/<[^>]*>/g, '');
+        return window.stripHtmlForAlert(text);
     }
 
     // =============================================================================
@@ -281,28 +273,32 @@
 
     /** @param {boolean} profileCompleted */
     function redirectUser(profileCompleted) {
+        const defaultDestination = profileCompleted ? '/dashboard' : '/profile/setup';
         try {
             const urlParams = new URLSearchParams(window.location.search);
-            let redirectUrl = urlParams.get('redirect');
-            if (!redirectUrl) {
-                redirectUrl = profileCompleted ? '/dashboard' : '/profile/setup';
-            } else {
-                if (redirectUrl.startsWith('/ui/')) {
-                    redirectUrl = redirectUrl
-                        .replace('/ui/dashboard/index.html', '/dashboard')
-                        .replace('/ui/profile/setup.html', '/profile/setup');
-                }
-                // Only allow relative paths to prevent open redirect
-                if (!redirectUrl.startsWith('/') || redirectUrl.startsWith('//')) {
-                    redirectUrl = profileCompleted ? '/dashboard' : '/profile/setup';
-                }
+            let rawRedirect = urlParams.get('redirect');
+            if (rawRedirect && rawRedirect.startsWith('/ui/')) {
+                rawRedirect = rawRedirect
+                    .replace('/ui/dashboard/index.html', '/dashboard')
+                    .replace('/ui/profile/setup.html', '/profile/setup');
             }
+            const validatedRedirect = window.validateRelativeRedirectPath(rawRedirect);
+            const safeDestination = validatedRedirect ?? defaultDestination;
+            const redirectUrl = new URL(safeDestination, window.location.origin);
+            if (redirectUrl.origin !== window.location.origin) {
+                setTimeout(() => { window.location.assign(defaultDestination); }, CONFIG.REDIRECT_DELAY);
+                return;
+            }
+            const navPath = redirectUrl.pathname + redirectUrl.search + redirectUrl.hash;
             // JWT is stored in localStorage and retrieved by each page on load.
             // Never append it to redirect URLs (leaks into server logs and browser history).
-            setTimeout(() => { window.location.href = window.location.origin + redirectUrl; }, CONFIG.REDIRECT_DELAY);
+            setTimeout(() => { window.location.assign(navPath); }, CONFIG.REDIRECT_DELAY);
         } catch (error) {
-            console.error('Redirect failed:', error);
-            window.location.href = '/dashboard';
+            console.error(
+                'Redirect failed:',
+                window.sanitizeLogValue(error instanceof Error ? error.message : String(error)),
+            );
+            window.location.assign('/dashboard');
         }
     }
 

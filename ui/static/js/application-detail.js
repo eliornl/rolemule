@@ -6,34 +6,12 @@
 
     /** @param {string|null|undefined} str */
     function escapeHtml(str) {
-        if (str == null) return '';
-        // &amp;amp; is the bleach double-encode of a literal & (& → &amp; via html.escape → &amp;amp; via bleach).
-        // Decode that first, then the remaining &amp; covers entities like &amp;#x27; → &#x27; → '.
-        const decoded = String(str)
-            .replace(/&amp;/g, '&')
-            .replace(/&#x27;/g, "'")
-            .replace(/&#039;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
-        return decoded
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+        return window.escapeHtml(str);
     }
 
     /** Decode HTML entities for use with .textContent (doesn't re-encode) */
     function decodeEntities(str) {
-        if (str == null) return '';
-        return String(str)
-            .replace(/&amp;/g, '&')
-            .replace(/&#x27;/g, "'")
-            .replace(/&#039;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
+        return window.decodeEntities(str);
     }
 
     /**
@@ -97,8 +75,6 @@
     let applicationData = null;
     /** @type {string|null} */
     let currentSessionId = null;
-    /** @type {string|null} */
-    let currentApplicationId = null;
     /** Timeout IDs for clearable timers */
     let _processingRefreshTimer = /** @type {number|null} */ (null);
     /** @type {number|null} */
@@ -360,9 +336,6 @@
         const company = data['company_research'] || {};
         const resume = data['resume_recommendations'] || {};
         const cover = data['cover_letter'] || {};
-
-        // Store job URL and application ID
-        currentApplicationId = data['application_id'] || null;
 
         // Original posting link
         const jobUrl = typeof data['job_url'] === 'string' ? data['job_url'] : '';

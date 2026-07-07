@@ -932,7 +932,12 @@ async def start_workflow(
                 user_api_key=user_api_key,
             )
 
-        logger.info(f"Started workflow {sanitize_log_value(session_id)} for user {_mask_email(current_user['email'])}")
+        masked_email = _mask_email(str(current_user.get("email", "")))
+        logger.info(
+            "Started workflow %s for user %s",
+            sanitize_log_value(session_id),
+            masked_email,
+        )
 
         # Release the concurrency lock — session is committed, background task is
         # queued.  The next request for this user is now safe to proceed.

@@ -851,7 +851,7 @@ class TestMainExtended:
         mock_templates.TemplateResponse.side_effect = RuntimeError("dash fail")
         with patch.object(main, "templates", mock_templates), caplog.at_level("ERROR"):
             resp = await api_client.get("/dashboard")
-        assert resp.status_code == 200
+        assert resp.status_code == 503
         assert any("Error serving dashboard" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio

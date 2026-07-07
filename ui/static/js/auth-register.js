@@ -25,9 +25,7 @@
 
     /** @param {string} text */
     function stripHtmlForAlert(text) {
-        return String(text)
-            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/<[^>]*>/g, '');
+        return window.stripHtmlForAlert(text);
     }
 
     // =============================================================================

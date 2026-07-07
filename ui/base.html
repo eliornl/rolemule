@@ -9,7 +9,7 @@
       {% block bg_effects %}   — Background glow divs (override to add bg-grid on landing)
       {% block navbar %}       — Navigation bar (empty by default; include a partial)
       {% block content %}      — Main page content
-      {% block page_scripts %} — Page-specific <script> tags (loaded before shared scripts)
+      {% block page_scripts %} — Page-specific script tags (loaded before shared scripts)
       {% block extra_scripts %}— Extra scripts after shared footer (e.g. onboarding.js)
 #}
 <!DOCTYPE html>
@@ -62,9 +62,12 @@
         window.APP_CONFIG = {
             apiBase: '/api/v1',
             loginUrl: '/auth/login',
-            posthogEnabled: {{ 'true' if posthog_enabled else 'false' }}
+            posthogEnabled: {{ posthog_enabled | tojson }}
         };
     </script>
+
+    <!-- Shared DOM / log sanitization (before page scripts) -->
+    <script src="{{ asset_url('js/dom-security.js') }}"></script>
 
     <!-- Shared confirmation modal (must load before page scripts) -->
     <script src="{{ asset_url('js/confirm-modal.js') }}"></script>

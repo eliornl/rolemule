@@ -155,7 +155,7 @@ test.describe('Error Handling', () => {
       });
       
       // Register and try to start workflow
-      const _registerPage = new RegisterPage(page);
+      const registerPage = new RegisterPage(page);
       const email = generateTestEmail('server_error_test');
       
       await registerPage.navigate();
@@ -444,7 +444,6 @@ test.describe('Error Handling', () => {
     
     test('should handle back button navigation', async ({ page }) => {
       const loginPage = new LoginPage(page);
-      const registerPage = new RegisterPage(page);
       
       await loginPage.navigate();
       await loginPage.goToRegister();

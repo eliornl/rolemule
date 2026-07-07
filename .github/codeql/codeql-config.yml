@@ -2,3 +2,5 @@ name: ApplyPilot CodeQL
 
 paths-ignore:
   - venv-clean/
+  # Alembic revision module-level constants are required by Alembic but unused in Python.
+  - alembic/versions/

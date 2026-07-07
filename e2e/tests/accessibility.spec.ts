@@ -121,7 +121,7 @@ test.describe('Accessibility', () => {
             await page.keyboard.press('Tab');
           }
           
-          const _focusedInModal = await page.evaluate(() => {
+          await page.evaluate(() => {
             const modal = document.querySelector('.modal, [role="dialog"]');
             return modal?.contains(document.activeElement);
           });
@@ -224,7 +224,7 @@ test.describe('Accessibility', () => {
       
       if (tabs.length > 0) {
         // Check for tablist
-        const _tablistCount = await page.locator('[role="tablist"]').count();
+        await page.locator('[role="tablist"]').count();
         // May or may not use ARIA roles
       }
     });
@@ -256,7 +256,7 @@ test.describe('Accessibility', () => {
       await emailInput.focus();
       
       // Check that focus is visible
-      const _outlineStyle = await emailInput.evaluate((el) => {
+      await emailInput.evaluate((el) => {
         const style = getComputedStyle(el);
         return {
           outline: style.outline,
@@ -307,7 +307,7 @@ test.describe('Accessibility', () => {
       await page.waitForTimeout(1000);
       
       // Check for aria-live regions or role="alert"
-      const _liveRegions = await page.locator('[aria-live], [role="alert"], .alert').count();
+      await page.locator('[aria-live], [role="alert"], .alert').count();
       
       // May or may not have live regions, but errors should be visible
     });
@@ -325,7 +325,7 @@ test.describe('Accessibility', () => {
         
         // Should not have vague link text
         const vagueTexts = ['click here', 'here', 'read more', 'more', 'link'];
-        const _isVague = vagueTexts.some(v => 
+        void vagueTexts.some(v =>
           accessibleText.toLowerCase().trim() === v
         );
         
@@ -427,7 +427,7 @@ test.describe('Accessibility', () => {
         const ariaHidden = await icon.getAttribute('aria-hidden');
         
         // Icons should be decorative or have accessible names
-        const _hasAccessibleName = parentText?.trim() || ariaLabel || ariaHidden === 'true';
+        void (parentText?.trim() || ariaLabel || ariaHidden === 'true');
         // Most icons are decorative, so this is usually fine
       }
     });

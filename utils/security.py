@@ -26,17 +26,16 @@ MAX_FIELD_LENGTH = 10000  # 10KB for regular fields
 MAX_NAME_LENGTH = 500  # Names, titles, etc.
 
 # Patterns for potentially dangerous content
-# Avoid nested quantifiers (ReDoS): match script bodies without backtracking.
-SCRIPT_PATTERN = re.compile(
-    r"<script\b[^>]*>(?:(?!</script>).)*</script>",
-    re.IGNORECASE | re.DOTALL,
-)
-# Fence/backtick segments for LLM output — non-backtracking split pattern.
+# Strip script tags via bleach when available (avoids regex tag-filter/ReDoS alerts).
+_EVENT_HANDLER_MAX_LEN = 30
 _CODE_BLOCK_SPLIT_PATTERN = re.compile(
     r"(```(?:(?!```).)*```|`[^`\n]+`)",
     re.DOTALL,
 )
-EVENT_HANDLER_PATTERN = re.compile(r"\s+on\w+\s*=", re.IGNORECASE)
+EVENT_HANDLER_PATTERN = re.compile(
+    rf"\s+on[a-zA-Z][\w]{{0,{_EVENT_HANDLER_MAX_LEN}}}\s*=",
+    re.IGNORECASE,
+)
 JAVASCRIPT_URL_PATTERN = re.compile(r"javascript:", re.IGNORECASE)
 DATA_URL_PATTERN = re.compile(r"data:\s*text/html", re.IGNORECASE)
 STYLE_EXPRESSION_PATTERN = re.compile(r"expression\s*\(", re.IGNORECASE)
@@ -46,6 +45,13 @@ SAFE_TAGS = {
     "p", "br", "b", "i", "u", "strong", "em", "ul", "ol", "li",
     "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre"
 }
+
+
+def _strip_script_tags(content: str) -> str:
+    """Remove script elements using bleach when available."""
+    if _BLEACH_AVAILABLE:
+        return bleach.clean(content, tags=list(SAFE_TAGS), attributes={}, strip=False)
+    return content
 
 
 # =============================================================================
@@ -80,7 +86,7 @@ def sanitize_html(content: str, allow_basic_formatting: bool = False) -> str:
         )
 
     # Remove script tags and their content
-    content = SCRIPT_PATTERN.sub("", content)
+    content = _strip_script_tags(content)
 
     # Remove event handlers (onclick, onmouseover, etc.)
     content = EVENT_HANDLER_PATTERN.sub(" ", content)
@@ -250,33 +256,21 @@ def sanitize_llm_output(content):
     if not content:
         return ""
 
-    # Remove any script tags the LLM might have generated
-    content = SCRIPT_PATTERN.sub("", content)
-
-    # Remove event handlers
-    content = EVENT_HANDLER_PATTERN.sub(" ", content)
-
-    # Remove javascript: URLs
-    content = JAVASCRIPT_URL_PATTERN.sub("", content)
-
-    # Keep markdown formatting but escape HTML in non-code sections
-    # This preserves code blocks while sanitizing regular content
-
-    # Split by code blocks to preserve them
+    # Remove any script tags the LLM might have generated (non-code sections only)
+    # Split by code blocks first so markdown fences are not stripped by bleach
     parts = _CODE_BLOCK_SPLIT_PATTERN.split(content)
 
     sanitized_parts = []
-    for i, part in enumerate(parts):
+    for part in parts:
         if part.startswith("```") or part.startswith("`"):
-            # Code block - keep as is but escape any actual HTML
             sanitized_parts.append(part)
         else:
-            # Regular content - escape HTML entities
-            # But preserve markdown symbols
+            part = _strip_script_tags(part)
+            part = EVENT_HANDLER_PATTERN.sub(" ", part)
+            part = JAVASCRIPT_URL_PATTERN.sub("", part)
             sanitized = html.escape(part)
-            # Unescape markdown symbols that were escaped
-            sanitized = sanitized.replace("&gt;", ">")  # For blockquotes
-            sanitized = sanitized.replace("\\*", "*")  # For emphasis
+            sanitized = sanitized.replace("&gt;", ">")
+            sanitized = sanitized.replace("\\*", "*")
             sanitized_parts.append(sanitized)
 
     return "".join(sanitized_parts)

@@ -422,9 +422,10 @@ class ProfileMatchingAgent:
             # Log summary
             exec_summary = matching_result.get("executive_summary", {})
             logger.info(
-                f"AI profile matching completed for session {state['session_id']} - "
-                f"Recommendation: {exec_summary.get('recommendation', 'N/A')}, "
-                f"Overall Score: {matching_result.get('overall_score', 0):.2f}"
+                "AI profile matching completed for session %s - Recommendation: %s, Overall Score: %.2f",
+                sanitize_log_value(str(state.get("session_id", ""))),
+                sanitize_log_value(str(exec_summary.get("recommendation", "N/A"))),
+                float(matching_result.get("overall_score", 0) or 0),
             )
 
         except asyncio.TimeoutError:

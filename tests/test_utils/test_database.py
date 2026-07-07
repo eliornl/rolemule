@@ -158,7 +158,8 @@ async def test_get_database_yields_session() -> None:
     s = await gen.__anext__()
     assert s is session
     with pytest.raises(StopAsyncIteration):
-        await gen.asend(None)
+        await gen.__anext__()
+    await gen.aclose()
     session.close.assert_awaited()
 
 
@@ -181,7 +182,8 @@ async def test_get_db_session_connects_when_factory_missing() -> None:
         s = await gen.__anext__()
         assert s is session
         with pytest.raises(StopAsyncIteration):
-            await gen.asend(None)
+            await gen.__anext__()
+        await gen.aclose()
         session.commit.assert_awaited()
 
 
@@ -220,7 +222,8 @@ async def test_get_database_connects_when_factory_missing() -> None:
         assert s is session
         connect.assert_awaited_once()
         with pytest.raises(StopAsyncIteration):
-            await gen.asend(None)
+            await gen.__anext__()
+        await gen.aclose()
 
 
 @pytest.mark.asyncio

@@ -187,6 +187,8 @@ class JSONFormatter(logging.Formatter):
           host, trace_id (= request_id), user_id, session_id
         """
         msg = record.getMessage()
+        if isinstance(msg, str):
+            msg = sanitize_log_value(msg)
         if self.redact_sensitive and isinstance(msg, str):
             msg = SENSITIVE_REGEX.sub(r"\1: " + REDACTED, msg)
 
@@ -334,6 +336,8 @@ class DevelopmentFormatter(logging.Formatter):
 
         # --- Message ---
         msg = record.getMessage()
+        if isinstance(msg, str):
+            msg = sanitize_log_value(msg)
         if self.redact_sensitive and isinstance(msg, str):
             msg = SENSITIVE_REGEX.sub(r"\1: " + REDACTED, msg)
 

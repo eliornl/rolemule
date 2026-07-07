@@ -79,7 +79,7 @@ test.describe('Form Edge Cases', () => {
       
       // Email should have proper autocomplete
       const emailAutocomplete = await loginPage.emailInput.getAttribute('autocomplete');
-      const _passwordAutocomplete = await loginPage.passwordInput.getAttribute('autocomplete');
+      void (await loginPage.passwordInput.getAttribute('autocomplete'));
       
       // Should have some autocomplete value (email, username, current-password, etc.)
       // or no autocomplete attribute (browser defaults)

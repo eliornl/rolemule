@@ -234,16 +234,6 @@ async function fillStep4Skills(page: any) {
   }
 }
 
-/** Check one of each required preference group */
-async function _fillStep5Preferences(page: any) {
-  for (const id of ['#job-type-fulltime', '#company-size-small', '#work-arrangement-remote', '#travel-none']) {
-    const el = page.locator(id);
-    if (await el.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await el.check().catch(() => {});
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
 // C. STEP 1 — BASIC INFO
 // ---------------------------------------------------------------------------

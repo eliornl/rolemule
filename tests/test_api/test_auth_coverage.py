@@ -302,7 +302,7 @@ class TestRegisterLoginHandlers:
         req = RegisterRequest(**payload)
         request = _mock_request()
         async with _NullSessionLocal() as db:
-            with patch("api.auth.settings", "disable_email_verification", False), patch(
+            with patch("api.auth.settings.disable_email_verification", False), patch(
                 "api.auth._send_verification_email", AsyncMock(return_value=True)
             ) as mock_send:
                 result = await register_user(request, req, db)
@@ -331,7 +331,7 @@ class TestRegisterLoginHandlers:
         payload = _reg_payload("_emlfail")
         req = RegisterRequest(**payload)
         async with _NullSessionLocal() as db:
-            with patch("api.auth.settings", "disable_email_verification", False), patch(
+            with patch("api.auth.settings.disable_email_verification", False), patch(
                 "api.auth._send_verification_email",
                 AsyncMock(side_effect=RuntimeError("smtp")),
             ):
@@ -400,7 +400,7 @@ class TestRegisterLoginHandlers:
         uid, email = await _create_user(email_verified=False)
         try:
             async with _NullSessionLocal() as db:
-                with patch("api.auth.settings", "disable_email_verification", False), patch(
+                with patch("api.auth.settings.disable_email_verification", False), patch(
                     "api.auth._send_verification_email",
                     AsyncMock(side_effect=RuntimeError("smtp")),
                 ), patch("api.auth.check_account_lockout", AsyncMock(return_value=(False, 0))):
@@ -1422,7 +1422,7 @@ class TestAuthCoverageRemaining:
         payload = _reg_payload("_logauto")
         req = RegisterRequest(**payload)
         async with _NullSessionLocal() as db:
-            with patch("api.auth.settings", "disable_email_verification", True):
+            with patch("api.auth.settings.disable_email_verification", True):
                 result = await register_user(_mock_request(), req, db)
         assert result.user["email_verified"] is True
 

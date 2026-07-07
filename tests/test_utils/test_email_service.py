@@ -5,26 +5,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utils.email_service import (
-    EmailService,
-    _sanitize_email_header,
-    check_email_health,
-    get_email_service,
-)
+import utils.email_service as email_mod
 
 
 @pytest.fixture(autouse=True)
 def reset_email_singleton():
-    import utils.email_service as email_mod
-
     email_mod._email_service = None
     yield
     email_mod._email_service = None
 
 
 def test_sanitize_email_header_strips_crlf() -> None:
-    assert _sanitize_email_header("user@example.com\r\nBcc: evil@x.com") == "user@example.comBcc: evil@x.com"
-    assert _sanitize_email_header("safe\x00subject") == "safesubject"
+    assert email_mod._sanitize_email_header("user@example.com\r\nBcc: evil@x.com") == "user@example.comBcc: evil@x.com"
+    assert email_mod._sanitize_email_header("safe\x00subject") == "safesubject"
 
 
 def test_email_service_disabled_when_no_credentials() -> None:
@@ -38,7 +31,7 @@ def test_email_service_disabled_when_no_credentials() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         assert not svc.is_configured()
         assert svc.enabled is False
 
@@ -56,7 +49,7 @@ def test_email_service_enabled_with_credentials() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         assert svc.is_configured()
         assert svc.password == "app-password"
 
@@ -71,7 +64,7 @@ async def test_send_email_not_configured_returns_false() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         assert await svc.send_email("a@b.com", "Hi", "<p>Hi</p>") is False
 
 
@@ -95,7 +88,7 @@ async def test_send_email_success() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         ok = await svc.send_email(
             "user@example.com",
             "Subject",
@@ -129,7 +122,7 @@ async def test_send_email_smtp_auth_error() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         assert await svc.send_email("u@x.com", "S", "<p>x</p>") is False
 
 
@@ -154,7 +147,7 @@ async def test_send_email_smtp_exception() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         assert await svc.send_email("u@x.com", "S", "<p>x</p>") is False
 
 
@@ -173,7 +166,7 @@ async def test_send_email_generic_exception() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         assert await svc.send_email("u@x.com", "S", "<p>x</p>") is False
 
 
@@ -191,7 +184,7 @@ async def test_template_methods_delegate_to_send_email() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000/",
         )
-        svc = EmailService()
+        svc = email_mod.EmailService()
         with patch.object(svc, "send_email", return_value=True) as send:
             assert await svc.send_password_reset_email(
                 "u@x.com", "tok", "https://app/reset?token=tok", user_name="Jane<script>"
@@ -213,8 +206,8 @@ def test_get_email_service_singleton() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        a = get_email_service()
-        b = get_email_service()
+        a = email_mod.get_email_service()
+        b = email_mod.get_email_service()
         assert a is b
 
 
@@ -228,4 +221,4 @@ async def test_check_email_health() -> None:
             smtp_from_name="ApplyPilot",
             base_url="http://localhost:8000",
         )
-        assert await check_email_health() is True
+        assert await email_mod.check_email_health() is True

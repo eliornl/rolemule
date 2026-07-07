@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage, LoginPage, DashboardPage, ProfileSetupPage } from '../pages';
+import { RegisterPage, LoginPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 
 /**
@@ -337,9 +337,6 @@ test.describe('Performance', () => {
     
     test('should lazy load images', async ({ page }) => {
       await page.goto('/');
-      
-      const _lazyImages = await page.locator('img[loading="lazy"]').count();
-      const _allImages = await page.locator('img').count();
       
       // Some images may be lazy loaded
       // Not strictly required but good practice

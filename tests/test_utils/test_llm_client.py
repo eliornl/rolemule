@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import utils.llm_client as llm_mod
 from utils.llm_client import (
     GeminiClient,
     GeminiError,
@@ -204,8 +205,6 @@ async def test_close_gemini_client() -> None:
         )
         await get_gemini_client()
         await close_gemini_client()
-        import utils.llm_client as llm_mod
-
         assert llm_mod._gemini_client is None
 
 

@@ -294,9 +294,8 @@ class JobAnalyzerAgent:
             ValueError: If input method is invalid or required data is missing
             Exception: Any exception will be caught by _execute_agent_node
         """
-        logger.info(
-            f"Starting job analysis for session {state.get('session_id', 'unknown')}"
-        )
+        session_id = sanitize_log_value(str(state.get("session_id", "unknown")))
+        logger.info("Starting job analysis for session %s", session_id)
         start_time: datetime = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)

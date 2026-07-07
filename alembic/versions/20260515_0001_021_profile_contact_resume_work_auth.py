@@ -17,10 +17,6 @@ down_revision: Union[str, None] = "20260429_020"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-# Alembic reads these module-level identifiers; reference satisfies static analysis.
-_ALEMBIC_METADATA = (revision, down_revision, branch_labels, depends_on)
-
-
 def _profile_columns() -> set[str]:
     bind = op.get_bind()
     return {c["name"] for c in inspect(bind).get_columns("user_profiles")}

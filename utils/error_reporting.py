@@ -24,6 +24,8 @@ from typing import Optional
 
 from fastapi import Request
 
+from utils.logging_config import sanitize_log_value
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -55,7 +57,7 @@ def _get_client() -> Optional[object]:
         _client = _gcp_error_reporting.Client()
         logger.info("Google Cloud Error Reporting client initialised")
     except Exception as exc:
-        logger.warning("Could not initialise Cloud Error Reporting: %s", exc)
+        logger.warning("Could not initialise Cloud Error Reporting: %s", sanitize_log_value(str(exc)))
         _client = None
 
     return _client
@@ -101,7 +103,7 @@ async def report_exception(
         except Exception as http_err:
             logger.debug(
                 "Could not build HTTP context for error reporting: %s",
-                http_err,
+                sanitize_log_value(str(http_err)),
                 exc_info=True,
             )
             http_context = None
@@ -116,7 +118,7 @@ async def report_exception(
                 user=user_id or "",
             )
         except Exception as report_exc:
-            logger.debug("Error Reporting submission failed: %s", report_exc)
+            logger.debug("Error Reporting submission failed: %s", sanitize_log_value(str(report_exc)))
 
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _report)

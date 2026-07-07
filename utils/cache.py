@@ -213,7 +213,7 @@ async def get_redis_or_none():
     try:
         return await get_redis_client()
     except Exception as e:
-        logger.debug(f"Redis not available: {e}")
+        logger.debug("Redis not available: %s", sanitize_log_value(str(e)))
         return None
 
 
@@ -318,7 +318,7 @@ async def cache_delete_pattern(pattern: str) -> int:
         return len(keys)
         
     except Exception as e:
-        logger.warning(f"Cache pattern delete error for {pattern}: {e}")
+        logger.warning("Cache pattern delete error for {pattern}: %s", sanitize_log_value(str(e)))
         return 0
 
 
@@ -657,7 +657,7 @@ def invalidate_all_user_profile_caches_sync() -> int:
     except Exception as e:
         logger.warning(
             "user_profile cache invalidation skipped: %s",
-            e,
+            sanitize_log_value(str(e)),
             exc_info=True,
         )
         return 0
@@ -920,7 +920,7 @@ async def set_interview_prep_generating(session_id: str) -> bool:
         was_set = await redis.set(key, "1", nx=True, ex=TTL_INTERVIEW_PREP_GENERATING)
         return was_set is not None
     except Exception as e:
-        logger.warning(f"Failed to set interview_prep generating flag: {e}")
+        logger.warning("Failed to set interview_prep generating flag: %s", sanitize_log_value(str(e)))
         return True  # Fail open so a Redis outage doesn't block generation
 
 
@@ -942,7 +942,7 @@ async def clear_interview_prep_generating(session_id: str) -> bool:
         await redis.delete(key)
         return True
     except Exception as e:
-        logger.warning(f"Failed to clear interview_prep generating flag: {e}")
+        logger.warning("Failed to clear interview_prep generating flag: %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -964,7 +964,7 @@ async def is_interview_prep_generating(session_id: str) -> bool:
         value = await redis.get(key)
         return value is not None
     except Exception as e:
-        logger.warning(f"Failed to check interview_prep generating flag: {e}")
+        logger.warning("Failed to check interview_prep generating flag: %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -1052,7 +1052,7 @@ async def set_cv_optimization_running(session_id: str) -> bool:
         was_set = await redis.set(key, "1", nx=True, ex=TTL_CV_OPTIMIZATION_RUNNING)
         return was_set is not None
     except Exception as e:
-        logger.warning(f"Failed to set cv_optimization running flag: {e}")
+        logger.warning("Failed to set cv_optimization running flag: %s", sanitize_log_value(str(e)))
         return True
 
 
@@ -1074,7 +1074,7 @@ async def clear_cv_optimization_running(session_id: str) -> bool:
         await redis.delete(key)
         return True
     except Exception as e:
-        logger.warning(f"Failed to clear cv_optimization running flag: {e}")
+        logger.warning("Failed to clear cv_optimization running flag: %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -1096,7 +1096,7 @@ async def is_cv_optimization_running(session_id: str) -> bool:
         value = await redis.get(key)
         return value is not None
     except Exception as e:
-        logger.warning(f"Failed to check cv_optimization running flag: {e}")
+        logger.warning("Failed to check cv_optimization running flag: %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -1147,7 +1147,7 @@ async def get_cached_tool_result(
         structured_logger.log_cache_miss(tool_name, key)
         return None
     except Exception as e:
-        logger.warning(f"Tool result cache get error ({tool_name}): {e}")
+        logger.warning("Tool result cache get error ({tool_name}): %s", sanitize_log_value(str(e)))
         _metrics.record_error(tool_name)
         return None
 
@@ -1175,7 +1175,7 @@ async def cache_tool_result(
         await redis.setex(key, TTL_TOOL_RESULT, json.dumps(result))
         return True
     except Exception as e:
-        logger.warning(f"Tool result cache set error ({tool_name}): {e}")
+        logger.warning("Tool result cache set error ({tool_name}): %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -1255,7 +1255,7 @@ async def check_rate_limit(
         return True, remaining
         
     except Exception as e:
-        logger.warning(f"Rate limit check error: {e} — using in-memory fallback")
+        logger.warning("Rate limit check error: %s — using in-memory fallback", sanitize_log_value(str(e)))
         allowed, remaining, _ = await _fallback_limiter.check(identifier, limit, window_seconds)
         return allowed, remaining
 
@@ -1331,7 +1331,7 @@ async def check_rate_limit_with_headers(
         )
         
     except Exception as e:
-        logger.error(f"Rate limit check error: {e} — using in-memory fallback", exc_info=True)
+        logger.error("Rate limit check error: %s — using in-memory fallback", sanitize_log_value(str(e)), exc_info=True)
         allowed, remaining, reset_secs = await _fallback_limiter.check(
             identifier, limit, window_seconds
         )
@@ -1359,7 +1359,7 @@ async def get_rate_limit_remaining(
         return max(0, limit - current_count)
         
     except Exception as e:
-        logger.warning(f"Rate limit remaining error: {e}")
+        logger.warning("Rate limit remaining error: %s", sanitize_log_value(str(e)))
         return limit
 
 
@@ -1407,7 +1407,7 @@ async def record_failed_login(email: str) -> tuple[int, bool]:
         return current_attempts, is_locked
         
     except Exception as e:
-        logger.warning(f"Failed to record login attempt: {e}")
+        logger.warning("Failed to record login attempt: %s", sanitize_log_value(str(e)))
         return 0, False
 
 
@@ -1442,7 +1442,7 @@ async def check_account_lockout(email: str) -> tuple[bool, int]:
         return False, 0
         
     except Exception as e:
-        logger.warning(f"Failed to check lockout: {e}")
+        logger.warning("Failed to check lockout: %s", sanitize_log_value(str(e)))
         return False, 0
 
 
@@ -1466,7 +1466,7 @@ async def clear_login_attempts(email: str) -> bool:
         return True
         
     except Exception as e:
-        logger.warning(f"Failed to clear login attempts: {e}")
+        logger.warning("Failed to clear login attempts: %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -1490,7 +1490,7 @@ async def get_login_attempts(email: str) -> int:
         return int(attempts) if attempts else 0
         
     except Exception as e:
-        logger.warning(f"Failed to get login attempts: {e}")
+        logger.warning("Failed to get login attempts: %s", sanitize_log_value(str(e)))
         return 0
 
 
@@ -1561,6 +1561,6 @@ async def get_cache_stats() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error("Cache stats error: %s", e, exc_info=True)
+        logger.error("Cache stats error: %s", sanitize_log_value(str(e)), exc_info=True)
         return {"status": "error", "error": "Cache stats unavailable"}
 

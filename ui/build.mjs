@@ -20,7 +20,7 @@ import { createHash } from 'crypto';
 import {
   readFileSync, writeFileSync, mkdirSync, readdirSync, statSync,
 } from 'fs';
-import { join, relative } from 'path';
+import { join } from 'path';
 
 // =============================================================================
 // CONFIG

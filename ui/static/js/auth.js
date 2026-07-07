@@ -20,13 +20,7 @@
  * @returns {string|null}
  */
 function validateRelativeRedirectPath(path) {
-    if (typeof path !== 'string' || path.length === 0) {
-        return null;
-    }
-    if (!/^\/(?!\/)/.test(path)) {
-        return null;
-    }
-    return path;
+    return window.validateRelativeRedirectPath(path);
 }
 
 /**
@@ -1152,16 +1146,28 @@ class AuthManager {
             const urlParams = new URLSearchParams(window.location.search);
             const rawRedirect = urlParams.get('redirect');
             const validatedRedirect = validateRelativeRedirectPath(rawRedirect);
-            if (validatedRedirect) {
+            if (validatedRedirect !== null) {
                 destination = validatedRedirect;
             }
         } catch (error) {
-            console.error('Redirect validation failed:', error);
+            console.error(
+                'Redirect validation failed:',
+                window.sanitizeLogValue(error instanceof Error ? error.message : String(error)),
+            );
         }
 
-        const safeDestination = destination;
+        const safeDestination = validateRelativeRedirectPath(destination) ?? defaultDestination;
+        const redirectUrl = new URL(safeDestination, window.location.origin);
+        if (redirectUrl.origin !== window.location.origin) {
+            setTimeout(() => {
+                window.location.assign(defaultDestination);
+            }, AuthManager.CONFIG.REDIRECT_DELAY);
+            return;
+        }
+
+        const navPath = redirectUrl.pathname + redirectUrl.search + redirectUrl.hash;
         setTimeout(() => {
-            window.location.href = safeDestination;
+            window.location.assign(navPath);
         }, AuthManager.CONFIG.REDIRECT_DELAY);
     }
 

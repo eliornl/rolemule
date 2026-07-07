@@ -41,7 +41,7 @@ test.describe('Profile Setup', () => {
     await expect(pageHeading).toBeVisible({ timeout: 5000 });
   });
   
-  test('should skip resume upload and proceed to manual entry', async ({ page }) => {
+  test('should skip resume upload and proceed to manual entry', async ({ page: _page }) => {
     await profilePage.handleCookieConsent();
     await profilePage.skipResumeUpload();
     
@@ -270,8 +270,6 @@ test.describe('Help & Support', () => {
       await page.waitForTimeout(500);
       
       // Should filter results
-      const _visibleItems = page.locator('.faq-item:visible, [class*="faq"]:visible');
-      // Results should be filtered
     }
   });
   

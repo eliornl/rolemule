@@ -110,7 +110,7 @@ async def get_current_user(
     except (APIError, Exception) as e:
         if isinstance(e, APIError):
             raise
-        logger.error(f"Authentication error: {e}", exc_info=True)
+        logger.error("Authentication error: %s", sanitize_log_value(str(e)), exc_info=True)
         raise APIError(
             ErrorCode.AUTH_UNAUTHORIZED,
             "Authentication failed",
@@ -267,7 +267,7 @@ async def revoke_token(token: str) -> bool:
         redis_client = await get_redis_client()
         if redis_client:
             await redis_client.setex(f"{_BLOCKLIST_PREFIX}{jti}", ttl, "1")
-            logger.info(f"JWT {jti[:8]}… added to blocklist (TTL {ttl}s)")
+            logger.info("JWT %s… added to blocklist (TTL %ss)", sanitize_log_value(jti[:8]), ttl)
             return True
 
         logger.warning("Cannot revoke token: Redis unavailable")
@@ -277,7 +277,7 @@ async def revoke_token(token: str) -> bool:
         logger.debug("Revoke called on already-expired token — no-op")
         return True
     except Exception as e:
-        logger.error(f"Token revocation failed: {e}", exc_info=True)
+        logger.error("Token revocation failed: %s", sanitize_log_value(str(e)), exc_info=True)
         return False
 
 
@@ -319,7 +319,7 @@ async def invalidate_all_user_tokens(user_id: str) -> bool:
         logger.warning("Cannot invalidate user tokens: Redis unavailable")
         return False
     except Exception as e:
-        logger.warning(f"Failed to invalidate user tokens: {e}")
+        logger.warning("Failed to invalidate user tokens: %s", sanitize_log_value(str(e)))
         return False
 
 
@@ -346,7 +346,7 @@ async def _is_token_revoked(jti: str) -> bool:
         logger.warning("Blocklist check: Redis unavailable — failing closed (token treated as revoked)")
         return True
     except Exception as e:
-        logger.warning(f"Blocklist check failed (Redis error): {e} — failing closed (token treated as revoked)")
+        logger.warning("Blocklist check failed (Redis error): %s — failing closed (token treated as revoked)", sanitize_log_value(str(e)))
         return True
 
 
@@ -385,13 +385,13 @@ async def _validate_jwt_token(
         # Reject non-access tokens used as access tokens (e.g., password_reset tokens)
         token_type: Optional[str] = payload.get("type")
         if token_type is not None and token_type != "access":
-            logger.warning("Rejected token with wrong type (type=%s)", token_type)
+            logger.warning("Rejected token with wrong type (type=%s)", sanitize_log_value(str(token_type)))
             return None
 
         # Check revocation blocklist
         jti: Optional[str] = payload.get("jti")
         if jti and await _is_token_revoked(jti):
-            logger.warning("Rejected revoked token (jti=%s)", jti[:8] if jti else "?")
+            logger.warning("Rejected revoked token (jti=%s)", sanitize_log_value(jti[:8] if jti else "?"))
             return None
 
         # Check per-user invalidation timestamp (set on password change, account recovery)
@@ -405,10 +405,16 @@ async def _validate_jwt_token(
                     inv_key = f"{_INVALIDATED_PREFIX}{user_id_for_check}"
                     inv_ts = await redis_client.get(inv_key)
                     if inv_ts and float(inv_ts) > iat:
-                        logger.warning("Rejected token issued before user invalidation (user=%s)", str(user_id_for_check)[:8])
+                        logger.warning(
+                            "Rejected token issued before user invalidation (user=%s)",
+                            sanitize_log_value(str(user_id_for_check)[:8]),
+                        )
                         return None
             except Exception as e:
-                logger.debug(f"User invalidation check skipped (Redis error): {e}")
+                logger.debug(
+                    "User invalidation check skipped (Redis error): %s",
+                    sanitize_log_value(str(e)),
+                )
 
         # Extract user information from token payload
         # Look for user ID in multiple fields for compatibility
@@ -425,7 +431,12 @@ async def _validate_jwt_token(
         try:
             user_id = uuid.UUID(user_id_str)
         except (ValueError, TypeError) as e:
-            logger.error(f"Invalid UUID format for user_id: {user_id_str}, error: {e}", exc_info=True)
+            logger.error(
+                "Invalid UUID format for user_id: %s, error: %s",
+                sanitize_log_value(str(user_id_str)),
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
             return None
 
         # Fetch current user information from database using SQLAlchemy
@@ -433,7 +444,7 @@ async def _validate_jwt_token(
         user: Optional[User] = result.scalar_one_or_none()
 
         if not user:
-            logger.warning(f"User not found in database: {user_id}")
+            logger.warning("User not found in database: %s", sanitize_log_value(str(user_id)))
             return None
 
         # Return comprehensive user information
@@ -460,5 +471,5 @@ async def _validate_jwt_token(
         logger.warning("Token validation failed: Invalid token")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during token validation: {e}", exc_info=True)
+        logger.error("Unexpected error during token validation: %s", sanitize_log_value(str(e)), exc_info=True)
         return None

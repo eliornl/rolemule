@@ -11,10 +11,10 @@ import utils.error_reporting as er
 @pytest.fixture(autouse=True)
 def reset_error_client():
     er._client = None
-    er._client_init_attempted = False
+    er._client_lookup_done = False
     yield
     er._client = None
-    er._client_init_attempted = False
+    er._client_lookup_done = False
 
 
 def test_get_client_unavailable_when_package_missing() -> None:
@@ -61,7 +61,7 @@ async def test_report_exception_skips_non_production() -> None:
     with patch("config.settings.get_settings") as gs:
         gs.return_value = MagicMock(is_production=False)
         await er.report_exception(RuntimeError("x"))
-        assert er._client_init_attempted is False
+        assert er._client_lookup_done is False
 
 
 @pytest.mark.asyncio

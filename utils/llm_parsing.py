@@ -111,8 +111,8 @@ def _try_parse(text: str) -> Optional[Dict[str, Any]]:
             result = json.loads(candidate)
             if isinstance(result, dict):
                 return result
-        except (json.JSONDecodeError, Exception):
-            pass
+        except json.JSONDecodeError:
+            logger.debug("JSON parse candidate failed", exc_info=True)
     return None
 
 

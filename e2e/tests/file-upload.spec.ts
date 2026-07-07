@@ -223,9 +223,7 @@ test.describe('Upload API Integration (Mocked)', () => {
   });
 
   test('resume parse API called on file selection', async ({ page }) => {
-    let parseApiCalled = false;
     await page.route('**/api/v1/resume/upload', (route: any) => {
-      parseApiCalled = true;
       route.fulfill({
         status: 200, contentType: 'application/json',
         body: JSON.stringify({ success: true, confidence: 'HIGH', data: {} }),
@@ -315,7 +313,6 @@ test.describe('File Input Attributes', () => {
     await page.waitForLoadState('domcontentloaded');
     const fileInput = page.locator('input[type="file"]').first();
     if (await fileInput.count() > 0) {
-      const _accept = await fileInput.getAttribute('accept');
       // accept may be null if not specified, that's fine
       await expect(page.locator('body')).toBeVisible();
     }
@@ -358,7 +355,7 @@ test.describe('File Input Attributes', () => {
       if (id) {
         const label = page.locator(`label[for="${id}"]`);
         const ariaLabel = await fileInput.getAttribute('aria-label');
-        const _hasLabel = (await label.count()) > 0 || ariaLabel !== null;
+        void ((await label.count()) > 0 || ariaLabel !== null);
         // Just verify we can check — not mandatory
         await expect(page.locator('body')).toBeVisible();
       }

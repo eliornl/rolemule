@@ -51,6 +51,11 @@ router = APIRouter()
 # =============================================================================
 
 
+def _log_user_email(current_user: Dict[str, Any]) -> str:
+    """Masked email safe for log lines (never pass current_user dict to logging)."""
+    return mask_email(str(current_user.get("email", "")))
+
+
 def get_user_id_from_token(current_user: Dict[str, Any]) -> uuid.UUID:
     """
     Safely extract user ID from current_user object, checking both 'id' and '_id' keys.
@@ -999,7 +1004,10 @@ async def parse_resume_endpoint(
             try:
                 user_api_key = decrypt_api_key(user_record.gemini_api_key_encrypted)
             except Exception as e:
-                logger.warning(f"Failed to decrypt user API key for resume parse: {e}")
+                logger.warning(
+                    "Failed to decrypt user API key for resume parse: %s",
+                    sanitize_log_value(str(e)),
+                )
 
         server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or settings.use_vertex_ai
         if not user_api_key and not server_has_key:
@@ -1033,7 +1041,7 @@ async def parse_resume_endpoint(
             await db.rollback()
             logger.warning(
                 "Resume parse succeeded but persist/merge failed: %s",
-                merge_err,
+                sanitize_log_value(str(merge_err)),
                 exc_info=True,
             )
 
@@ -1049,11 +1057,11 @@ async def parse_resume_endpoint(
         raise
 
     except ValueError as ve:
-        logger.warning(f"Resume parsing validation error: {ve}")
+        logger.warning("Resume parsing validation error: %s", sanitize_log_value(str(ve)))
         raise validation_error(str(ve))
 
     except Exception as e:
-        logger.error(f"Resume parsing failed: {e}", exc_info=True)
+        logger.error("Resume parsing failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to parse resume. Please try again or enter your information manually.")
 
 
@@ -1132,7 +1140,10 @@ async def get_profile_data(
         user_profile = result.scalar_one_or_none()
 
         if not user_profile:
-            logger.info(f"No profile found for user {sanitize_log_value(user_id)}, creating empty profile")
+            logger.info(
+                "No profile found for user %s, creating empty profile",
+                sanitize_log_value(str(user_id)),
+            )
             # Create empty profile
             user_profile = UserProfileModel(
                 id=uuid.uuid4(),
@@ -1185,7 +1196,7 @@ async def get_profile_data(
         raise
 
     except Exception as e:
-        logger.error(f"Failed to get profile data: {e}", exc_info=True)
+        logger.error("Failed to get profile data: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to get profile data")
 
 
@@ -1243,13 +1254,13 @@ async def update_basic_info(
         # Invalidate profile cache
         await invalidate_user_profile(str(user_id))
         
-        logger.info(f"Updated basic info for user: {mask_email(current_user['email'])}")
+        logger.info("Updated basic info for user: %s", _log_user_email(current_user))
 
         return {"message": "Basic information updated successfully"}
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to update basic info: {e}", exc_info=True)
+        logger.error("Failed to update basic info: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to update basic information")
 
 
@@ -1290,7 +1301,7 @@ async def update_work_experience(
         await invalidate_user_profile(str(user_id))
 
         logger.info(
-            f"Updated work experience for user: {mask_email(current_user['email'])} - {len(work_experience)} entries"
+            f"Updated work experience for user: {_log_user_email(current_user)} - {len(work_experience)} entries"
         )
 
         current_positions = [
@@ -1311,7 +1322,7 @@ async def update_work_experience(
     except Exception as e:
         await db.rollback()
         logger.error(
-            f"Failed to update work experience for user {mask_email(current_user['email'])}: {e}",
+            "Failed to update work experience for user %s: %s", _log_user_email(current_user), sanitize_log_value(str(e)),
             exc_info=True,
         )
         raise internal_error("Failed to update work experience")
@@ -1350,7 +1361,7 @@ async def update_education(
         await invalidate_user_profile(str(user_id))
 
         logger.info(
-            f"Updated education for user: {mask_email(current_user['email'])} — {len(education)} entries"
+            f"Updated education for user: {_log_user_email(current_user)} — {len(education)} entries"
         )
 
         return {
@@ -1366,7 +1377,7 @@ async def update_education(
     except Exception as e:
         await db.rollback()
         logger.error(
-            f"Failed to update education for user {mask_email(current_user['email'])}: {e}",
+            "Failed to update education for user %s: %s", _log_user_email(current_user), sanitize_log_value(str(e)),
             exc_info=True,
         )
         raise internal_error("Failed to update education")
@@ -1406,14 +1417,14 @@ async def update_skills_qualifications(
         await invalidate_user_profile(str(user_id))
 
         logger.info(
-            f"Updated skills and qualifications for user: {mask_email(current_user['email'])}"
+            f"Updated skills and qualifications for user: {_log_user_email(current_user)}"
         )
 
         return {"message": "Skills and qualifications updated successfully"}
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to update skills and qualifications: {e}", exc_info=True)
+        logger.error("Failed to update skills and qualifications: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to update skills and qualifications")
 
 
@@ -1473,13 +1484,13 @@ async def update_career_preferences(
         # Invalidate profile cache
         await invalidate_user_profile(str(user_id))
 
-        logger.info(f"Updated career preferences for user: {mask_email(current_user['email'])}")
+        logger.info("Updated career preferences for user: %s", _log_user_email(current_user))
 
         return {"message": "Career preferences updated successfully"}
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to update career preferences: {e}", exc_info=True)
+        logger.error("Failed to update career preferences: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to update career preferences")
 
 
@@ -1556,7 +1567,7 @@ async def complete_profile(
         # Invalidate profile cache
         await invalidate_user_profile(str(user_id))
 
-        logger.info(f"Profile marked as complete for user: {mask_email(current_user['email'])}")
+        logger.info("Profile marked as complete for user: %s", _log_user_email(current_user))
 
         return {
             "success": True,
@@ -1568,7 +1579,7 @@ async def complete_profile(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to complete profile: {e}", exc_info=True)
+        logger.error("Failed to complete profile: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to complete profile")
 
 
@@ -1652,7 +1663,7 @@ async def get_api_key_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get API key status: {e}", exc_info=True)
+        logger.error("Failed to get API key status: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to get API key status")
 
 
@@ -1693,7 +1704,7 @@ async def set_api_key(
         await invalidate_user_profile(str(user_id))
         await invalidate_user_llm_cache(str(user_id))
 
-        logger.info(f"API key updated for user: {mask_email(current_user['email'])}")
+        logger.info("API key updated for user: %s", _log_user_email(current_user))
 
         return {"message": "API key saved successfully"}
 
@@ -1703,7 +1714,7 @@ async def set_api_key(
         raise validation_error(str(e))
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to save API key: {e}", exc_info=True)
+        logger.error("Failed to save API key: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to save API key")
 
 
@@ -1734,13 +1745,13 @@ async def delete_api_key(
         await invalidate_user_profile(str(user_id))
         await invalidate_user_llm_cache(str(user_id))
 
-        logger.info(f"API key deleted for user: {mask_email(current_user['email'])}")
+        logger.info("API key deleted for user: %s", _log_user_email(current_user))
 
         return {"message": "API key deleted successfully"}
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to delete API key: {e}", exc_info=True)
+        logger.error("Failed to delete API key: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to delete API key")
 
 
@@ -1779,7 +1790,7 @@ async def validate_api_key_endpoint(
             if not models:
                 raise validation_error("API key appears valid but returned no models")
         except Exception as api_error:
-            logger.warning(f"API key validation failed: {api_error}")
+            logger.warning("API key validation failed: %s", sanitize_log_value(str(api_error)))
             raise validation_error("API key validation failed. Please check your key is correct and has proper permissions.")
 
         return {
@@ -1791,7 +1802,7 @@ async def validate_api_key_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"API key validation error: {e}", exc_info=True)
+        logger.error("API key validation error: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to validate API key")
 
 
@@ -1833,7 +1844,7 @@ async def get_profile_status(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get profile status: {e}", exc_info=True)
+        logger.error("Failed to get profile status: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to get profile status")
 
 
@@ -2067,7 +2078,7 @@ async def get_application_preferences(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get application preferences: {e}", exc_info=True)
+        logger.error("Failed to get application preferences: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to get application preferences")
 
 
@@ -2145,7 +2156,7 @@ async def update_application_preferences(
         await db.commit()
 
         logger.info(
-            f"Updated workflow preferences for {mask_email(current_user['email'])}: "
+            f"Updated workflow preferences for {_log_user_email(current_user)}: "
             f"gate={prefs_row.workflow_gate_threshold} "
             f"auto_docs={prefs_row.auto_generate_documents} "
             f"tone={prefs_row.cover_letter_tone} "
@@ -2165,7 +2176,7 @@ async def update_application_preferences(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to update application preferences: {e}", exc_info=True)
+        logger.error("Failed to update application preferences: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to update application preferences")
 
 
@@ -2289,7 +2300,8 @@ async def export_user_data(
         
         filename = f"job-assistant-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"
         
-        logger.info(f"User data exported for: {mask_email(user.email)}")
+        masked_email = mask_email(str(user.email))
+        logger.info("User data exported for: %s", masked_email)
         
         return StreamingResponse(
             buffer,
@@ -2303,7 +2315,7 @@ async def export_user_data(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to export user data: {e}", exc_info=True)
+        logger.error("Failed to export user data: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to export user data")
 
 
@@ -2335,7 +2347,7 @@ async def delete_user_account(
 
     try:
         user_id = get_user_id_from_token(current_user)
-        user_email = current_user.get("email", "unknown")
+        masked_user_email = mask_email(str(current_user.get("email", "")))
 
         # Rate limit: 3 attempts per hour per user (destructive endpoint)
         is_allowed, _remaining = await check_rate_limit(
@@ -2369,7 +2381,10 @@ async def delete_user_account(
         try:
             await invalidate_all_user_tokens(user_id)
         except Exception as revoke_error:
-            logger.warning(f"Failed to revoke tokens during account deletion: {revoke_error}")
+            logger.warning(
+                "Failed to revoke tokens during account deletion: %s",
+                sanitize_log_value(str(revoke_error)),
+            )
 
         # Use bulk DELETE statements instead of ORM-level per-object deletes.
         # All statements execute in the same implicit transaction; if any
@@ -2411,10 +2426,13 @@ async def delete_user_account(
             await invalidate_user_profile(str(user_id))
             await invalidate_user_llm_cache(str(user_id))
         except Exception as cache_error:
-            logger.warning(f"Failed to invalidate cache during account deletion: {cache_error}")
+            logger.warning(
+                "Failed to invalidate cache during account deletion: %s",
+                sanitize_log_value(str(cache_error)),
+            )
 
         logger.info(
-            f"Account deleted for user: {mask_email(user_email)} - "
+            f"Account deleted for user: {masked_user_email} - "
             f"Deleted {application_count} applications, {session_count} workflow sessions"
         )
 
@@ -2431,7 +2449,7 @@ async def delete_user_account(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to delete user account: {e}", exc_info=True)
+        logger.error("Failed to delete user account: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to delete account. Please try again or contact support.")
 
 
@@ -2465,7 +2483,7 @@ async def clear_user_data(
             raise validation_error("Set 'confirm' to true to confirm data deletion.")
 
         user_id = get_user_id_from_token(current_user)
-        user_email = current_user.get("email", "unknown")
+        masked_user_email = mask_email(str(current_user.get("email", "")))
 
         # Rate limit: at most once per hour to prevent accidental/abusive calls
         is_allowed, _remaining = await check_rate_limit(
@@ -2495,7 +2513,7 @@ async def clear_user_data(
         await db.commit()
 
         logger.info(
-            f"Data cleared for user: {mask_email(user_email)} - "
+            f"Data cleared for user: {masked_user_email} - "
             f"Deleted {application_count} applications, {session_count} workflow sessions"
         )
 
@@ -2511,7 +2529,7 @@ async def clear_user_data(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to clear user data: {e}", exc_info=True)
+        logger.error("Failed to clear user data: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to clear data. Please try again.")
 
 

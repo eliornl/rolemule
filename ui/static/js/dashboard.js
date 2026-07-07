@@ -13,26 +13,12 @@
 
 /** @param {unknown} value */
 function sanitizeLogValue(value) {
-  if (value == null) return "";
-  return String(value).replace(/[\r\n\x00-\x1f\x7f]/g, " ");
+  return window.sanitizeLogValue(value);
 }
 
 /** @param {string|null|undefined} str */
 function escapeHtml(str) {
-  if (str == null) return "";
-  const decoded = String(str)
-    .replace(/&amp;/g, "&")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#039;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
-  return decoded
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return window.escapeHtml(str);
 }
 
 /**
@@ -227,7 +213,7 @@ class DashboardManager {
         }
       }
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      console.error("Error loading dashboard data:", sanitizeLogValue(error instanceof Error ? error.message : String(error)));
       this.showMessage("Failed to load dashboard data", "error");
     }
   }
@@ -373,7 +359,10 @@ class DashboardManager {
       this.wsSessionId = sessionId;
 
       this.ws.onopen = () => {
-        console.log("WebSocket connected" + (sessionId ? ` for session ${sessionId}` : " for all user updates"));
+        console.log(
+          "WebSocket connected" +
+            (sessionId ? ` for session ${sanitizeLogValue(sessionId)}` : " for all user updates"),
+        );
         this.wsReconnectAttempts = 0;
         this.wsReconnecting = false;
 
@@ -386,12 +375,16 @@ class DashboardManager {
           const data = JSON.parse(event.data);
           this.handleWebSocketMessage(data);
         } catch (e) {
-          console.error("Failed to parse WebSocket message:", e);
+          console.error("Failed to parse WebSocket message:", sanitizeLogValue(e instanceof Error ? e.message : String(e)));
         }
       };
 
       this.ws.onclose = (event) => {
-        console.log("WebSocket disconnected:", event.code, event.reason);
+        console.log(
+          "WebSocket disconnected:",
+          sanitizeLogValue(event.code),
+          sanitizeLogValue(event.reason),
+        );
         this.stopWsPing();
 
         // Guard: only schedule one reconnect timer at a time.
@@ -403,7 +396,7 @@ class DashboardManager {
         // Reconnect with exponential backoff (max 30 seconds)
         this.wsReconnectAttempts = (this.wsReconnectAttempts || 0) + 1;
         const delay = Math.min(1000 * Math.pow(2, this.wsReconnectAttempts), 30000);
-        console.log(`Reconnecting WebSocket in ${delay}ms...`);
+        console.log(`Reconnecting WebSocket in ${sanitizeLogValue(delay)}ms...`);
         setTimeout(() => {
           this.wsReconnecting = false;
           this.connectWebSocket(this.wsSessionId);
@@ -411,10 +404,13 @@ class DashboardManager {
       };
 
       this.ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        console.error("WebSocket error:", sanitizeLogValue(String(error)));
       };
     } catch (error) {
-      console.error("Failed to connect WebSocket:", error);
+      console.error(
+        "Failed to connect WebSocket:",
+        sanitizeLogValue(error instanceof Error ? error.message : String(error)),
+      );
     }
   }
 
@@ -903,7 +899,10 @@ class DashboardManager {
       const response = await this.apiCall(`/workflow/sessions/${sessionId}/status`, "GET");
       return response;
     } catch (error) {
-      console.error('Error getting workflow status:', error);
+      console.error(
+        'Error getting workflow status:',
+        sanitizeLogValue(error instanceof Error ? error.message : String(error)),
+      );
       throw error;
     }
   }
@@ -970,7 +969,7 @@ class DashboardManager {
       } else {
         progressText.textContent = this.getStatusMessage(uiStatus);
       }
-      console.debug(`Updated progress text to: ${progressText.textContent}`);
+      console.debug(`Updated progress text to: ${sanitizeLogValue(progressText.textContent)}`);
     }
 
     // Update action buttons
@@ -1468,7 +1467,7 @@ class DashboardManager {
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <h5 class="card-title job-title mb-1">${this.escapeHtml(workflow.job_title || 'Untitled Job')}</h5>
-                            <span class="status-badge status-${this.escapeHtml(workflow.status)}">${this.formatStatus(workflow.status)}</span>
+                            <span class="status-badge status-${escapeHtml(String(workflow.status))}">${escapeHtml(this.formatStatus(workflow.status))}</span>
                         </div>
                         <p class="company-name text-muted mb-2">
                             <i class="fas fa-building me-1"></i>
@@ -1806,10 +1805,8 @@ class DashboardManager {
   escapeHtml(text) {
     // @ts-ignore
     const app = window.app;
-    if (app && typeof app.escapeHtml === 'function') return app.escapeHtml(text);
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
+    if (app && typeof app.escapeHtml === 'function') return app.escapeHtml(String(text ?? ''));
+    return window.escapeHtml(String(text ?? ''));
   }
 
   /** @param {string} text */

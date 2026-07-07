@@ -239,13 +239,10 @@ test.describe('Journey 3 — Settings API Key', () => {
   });
 
   test('saving API key triggers PATCH/POST to API', async ({ page }) => {
-    let saved = false;
     await page.route('**/api/v1/profile/api-key**', (route: any) => {
-      saved = true;
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'Saved' }) });
     });
     await page.route('**/api/v1/profile/settings**', (route: any) => {
-      saved = true;
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'Saved' }) });
     });
 

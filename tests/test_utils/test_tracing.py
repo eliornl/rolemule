@@ -180,4 +180,4 @@ def test_import_error_sets_otel_unavailable(monkeypatch) -> None:
     reloaded = importlib.import_module("utils.tracing")
     assert reloaded._OTEL_AVAILABLE is False
     sys.modules.pop("utils.tracing", None)
-    importlib.import_module("utils.tracing")
+    _ = importlib.import_module("utils.tracing")

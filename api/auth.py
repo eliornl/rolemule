@@ -526,7 +526,7 @@ async def register_user(
             try:
                 await _send_verification_email(user_data.email.lower(), user_data.full_name)
             except Exception as email_error:
-                logger.warning(f"Failed to send verification email: {email_error}")
+                logger.warning("Failed to send verification email: %s", sanitize_log_value(str(email_error)))
 
         return AuthResponse(
             access_token=access_token,
@@ -546,7 +546,7 @@ async def register_user(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Registration failed: {e}", exc_info=True)
+        logger.error("Registration failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Registration failed")
 
 
@@ -562,7 +562,7 @@ async def login_user(
     Includes account lockout protection after multiple failed attempts.
     """
     try:
-        logger.debug(f"Login attempt for email: {mask_email(user_data.email)}")
+        logger.debug("Login attempt for email: %s", mask_email(str(user_data.email)))
 
         if not user_data.email or not user_data.password:
             raise validation_error("Email and password are required")
@@ -640,9 +640,9 @@ async def login_user(
             # Resend verification code
             try:
                 await _send_verification_email(user.email, user.full_name)
-                logger.info(f"Resent verification code during login for: {mask_email(user.email)}")
+                logger.info("Resent verification code during login for: %s", mask_email(str(user.email)))
             except Exception as e:
-                logger.warning(f"Failed to resend verification code: {e}")
+                logger.warning("Failed to resend verification code: %s", sanitize_log_value(str(e)))
 
             raise APIError(
                 ErrorCode.AUTH_FORBIDDEN,
@@ -671,7 +671,7 @@ async def login_user(
                 expire_hours=expire_hours,
             )
         except Exception as e:
-            logger.error(f"JWT encoding error: {e}", exc_info=True)
+            logger.error("JWT encoding error: %s", sanitize_log_value(str(e)), exc_info=True)
             raise internal_error("Authentication error")
 
         expires_in = expire_hours * SECONDS_PER_HOUR
@@ -695,7 +695,7 @@ async def login_user(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Login failed: {e}", exc_info=True)
+        logger.error("Login failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("An unexpected error occurred. Please try again later.")
 
 
@@ -788,7 +788,7 @@ async def refresh_token(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Token refresh failed: {e}", exc_info=True)
+        logger.error("Token refresh failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to refresh token")
 
 
@@ -916,7 +916,7 @@ async def google_login(
             )
             state_stored = True
     except Exception as e:
-        logger.error(f"Failed to store OAuth state in Redis: {e}", exc_info=True)
+        logger.error("Failed to store OAuth state in Redis: %s", sanitize_log_value(str(e)), exc_info=True)
 
     if not state_stored:
         raise external_service_error("Authentication service temporarily unavailable. Please try again.")
@@ -983,7 +983,6 @@ async def google_callback(
         )
 
     # ── CSRF state verification ──────────────────────────────────────────────
-    redirect_after_login = "/dashboard"
     try:
         from utils.redis_client import get_redis_client
         import json as _json
@@ -1016,7 +1015,7 @@ async def google_callback(
             redirect_after_login = "/dashboard"
 
     except Exception as e:
-        logger.error(f"OAuth state verification failed: {e}", exc_info=True)
+        logger.error("OAuth state verification failed: %s", sanitize_log_value(str(e)), exc_info=True)
         return RedirectResponse(
             url="/auth/login?error=service_unavailable",
             status_code=status.HTTP_302_FOUND,
@@ -1136,7 +1135,7 @@ async def google_callback(
                         status_code=status.HTTP_302_FOUND,
                     )
             except Exception as link_exc:
-                logger.error(f"Failed to store link exchange code: {link_exc}", exc_info=True)
+                logger.error("Failed to store link exchange code: %s", sanitize_log_value(str(link_exc)), exc_info=True)
                 return RedirectResponse(
                     url="/auth/login?error=service_unavailable",
                     status_code=status.HTTP_302_FOUND,
@@ -1174,7 +1173,7 @@ async def google_callback(
             # Enforce the same account lockout rules as email/password login
             _oauth_locked, _oauth_remaining = await check_account_lockout(email)
             if _oauth_locked:
-                logger.warning(f"OAuth login blocked for locked account: {mask_email(email)}")
+                logger.warning("OAuth login blocked for locked account: %s", mask_email(email))
                 return RedirectResponse(
                     url="/auth/login?error=account_locked",
                     status_code=status.HTTP_302_FOUND,
@@ -1210,9 +1209,9 @@ async def google_callback(
                         to_email=email,
                         user_name=full_name,
                     )
-                    logger.info(f"Welcome email sent to new Google user: {mask_email(email)}")
+                    logger.info("Welcome email sent to new Google user: %s", mask_email(email))
             except Exception as _welcome_err:
-                logger.warning(f"Failed to send welcome email for Google user: {_welcome_err}")
+                logger.warning("Failed to send welcome email for Google user: %s", sanitize_log_value(str(_welcome_err)))
 
         # Override redirect if profile is not complete
         if not user.profile_completed:
@@ -1237,7 +1236,7 @@ async def google_callback(
                     status_code=status.HTTP_302_FOUND,
                 )
         except Exception as e:
-            logger.error(f"Failed to store OAuth exchange code: {e}", exc_info=True)
+            logger.error("Failed to store OAuth exchange code: %s", sanitize_log_value(str(e)), exc_info=True)
             return RedirectResponse(
                 url="/auth/login?error=service_unavailable",
                 status_code=status.HTTP_302_FOUND,
@@ -1308,7 +1307,7 @@ async def exchange_oauth_code(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OAuth code exchange failed: {e}", exc_info=True)
+        logger.error("OAuth code exchange failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to exchange code.")
 
 
@@ -1374,7 +1373,7 @@ async def link_google_account(
     except APIError:
         raise
     except Exception as e:
-        logger.error(f"Failed to store link OAuth state: {e}", exc_info=True)
+        logger.error("Failed to store link OAuth state: %s", sanitize_log_value(str(e)), exc_info=True)
         raise external_service_error("Authentication service temporarily unavailable")
 
     callback_url = str(request.url_for("google_callback"))
@@ -1438,7 +1437,7 @@ async def unlink_google_account(
     
     await db.commit()
     
-    logger.info(f"Unlinked Google account for user: {mask_email(user.email)}")
+    logger.info("Unlinked Google account for user: %s", mask_email(str(user.email)))
     
     return {"message": "Google account unlinked successfully"}
 
@@ -1499,7 +1498,7 @@ async def _store_reset_token(email: str, token: str) -> bool:
             return True
         return False
     except Exception as e:
-        logger.error(f"Failed to store reset token: {e}", exc_info=True)
+        logger.error("Failed to store reset token: %s", sanitize_log_value(str(e)), exc_info=True)
         return False
 
 
@@ -1521,7 +1520,7 @@ async def _consume_reset_token(token: str) -> Optional[str]:
             return email
         return None
     except Exception as e:
-        logger.error(f"Failed to consume reset token: {e}", exc_info=True)
+        logger.error("Failed to consume reset token: %s", sanitize_log_value(str(e)), exc_info=True)
         return None
 
 
@@ -1577,12 +1576,12 @@ async def forgot_password(
         }
 
         if not user:
-            logger.info(f"Password reset requested for non-existent email: {mask_email(email)}")
+            logger.info("Password reset requested for non-existent email: %s", mask_email(email))
             return _generic_reset_response
 
         # Check if user has a password (Google OAuth users without password)
         if not user.password_hash and user.auth_method == AuthMethod.GOOGLE.value:
-            logger.info(f"Password reset requested for Google OAuth user without password: {mask_email(email)}")
+            logger.info("Password reset requested for Google OAuth user without password: %s", mask_email(email))
             return _generic_reset_response
 
         # Generate secure reset token
@@ -1591,7 +1590,7 @@ async def forgot_password(
         # Store token in Redis
         token_stored = await _store_reset_token(email, reset_token)
         if not token_stored:
-            logger.error(f"Failed to store password reset token for: {mask_email(email)}")
+            logger.error("Failed to store password reset token for: %s", mask_email(email))
             return {
                 "message": "Something went wrong. Please try again later.",
                 "email_sent": "false"
@@ -1616,7 +1615,7 @@ async def forgot_password(
                 if email_sent:
                     structured_logger.log_password_reset_request(email)
                 else:
-                    logger.warning(f"Failed to send password reset email to: {mask_email(email)}")
+                    logger.warning("Failed to send password reset email to: %s", mask_email(email))
             else:
                 # No SMTP configured — surface the reset URL directly so self-hosted
                 # users are not permanently locked out without an email service.
@@ -1632,13 +1631,13 @@ async def forgot_password(
                     "reset_url": reset_url,
                 }
         except Exception as email_error:
-            logger.error(f"Error sending password reset email: {email_error}", exc_info=True)
+            logger.error("Error sending password reset email: %s", sanitize_log_value(str(email_error)), exc_info=True)
 
         # Always return the same generic message to prevent email enumeration
         return _generic_reset_response
 
     except Exception as e:
-        logger.error(f"Password reset request failed: {e}", exc_info=True)
+        logger.error("Password reset request failed: %s", sanitize_log_value(str(e)), exc_info=True)
         return {
             "message": "If an account exists with this email address, you will receive a password reset link shortly."
         }
@@ -1720,7 +1719,7 @@ async def reset_password(
         try:
             await invalidate_all_user_tokens(str(user.id))
         except Exception as revoke_err:
-            logger.warning(f"Failed to invalidate sessions after password reset: {revoke_err}")
+            logger.warning("Failed to invalidate sessions after password reset: %s", sanitize_log_value(str(revoke_err)))
 
         structured_logger.log_password_reset_complete(email)
 
@@ -1730,7 +1729,7 @@ async def reset_password(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Password reset failed: {e}", exc_info=True)
+        logger.error("Password reset failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to reset password. Please try again.")
 
 
@@ -1816,7 +1815,7 @@ async def change_password(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Password change failed: {e}", exc_info=True)
+        logger.error("Password change failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to change password. Please try again.")
 
 
@@ -1837,7 +1836,7 @@ async def get_email_service_status() -> Dict[str, Any]:
                       else "Email service is not configured. Password reset emails cannot be sent.",
         }
     except Exception as e:
-        logger.error(f"Error checking email status: {e}", exc_info=True)
+        logger.error("Error checking email status: %s", sanitize_log_value(str(e)), exc_info=True)
         return {
             "email_configured": False,
             "message": "Unable to check email service status",
@@ -1885,7 +1884,7 @@ async def _store_verification_token(email: str, token: str) -> bool:
             return True
         return False
     except Exception as e:
-        logger.error(f"Failed to store verification token: {e}", exc_info=True)
+        logger.error("Failed to store verification token: %s", sanitize_log_value(str(e)), exc_info=True)
         return False
 
 
@@ -1916,7 +1915,7 @@ async def _consume_verification_token(token: str) -> Optional[str]:
             return email
         return None
     except Exception as e:
-        logger.error(f"Failed to consume verification token: {e}", exc_info=True)
+        logger.error("Failed to consume verification token: %s", sanitize_log_value(str(e)), exc_info=True)
         return None
 
 
@@ -1939,7 +1938,7 @@ async def _send_verification_email(email: str, user_name: Optional[str] = None) 
         # Store code in Redis (using the code as the token)
         token_stored = await _store_verification_token(email, verification_code)
         if not token_stored:
-            logger.error(f"Failed to store verification code for: {mask_email(email)}")
+            logger.error("Failed to store verification code for: %s", mask_email(email))
             return False
 
         # Send email with code
@@ -1953,13 +1952,13 @@ async def _send_verification_email(email: str, user_name: Optional[str] = None) 
                 user_name=user_name,
             )
             if email_sent:
-                logger.info(f"Verification code email sent to: {mask_email(email)}")
+                logger.info("Verification code email sent to: %s", mask_email(email))
                 return True
             else:
-                logger.warning(f"Failed to send verification code email to: {mask_email(email)}")
+                logger.warning("Failed to send verification code email to: %s", mask_email(email))
                 return False
         else:
-            logger.warning(f"Email service not configured. Verification code generated for {mask_email(email)} but not delivered.")
+            logger.warning("Email service not configured. Verification code generated for %s but not delivered.", mask_email(email))
             if settings.debug:
                 logger.debug(
                     "DEBUG: Verification code generated for %s (value redacted)",
@@ -1967,7 +1966,7 @@ async def _send_verification_email(email: str, user_name: Optional[str] = None) 
                 )
             return False
     except Exception as e:
-        logger.error(f"Error sending verification email: {e}", exc_info=True)
+        logger.error("Error sending verification email: %s", sanitize_log_value(str(e)), exc_info=True)
         return False
 
 
@@ -2052,7 +2051,7 @@ async def verify_email_code(
         # Delete used code
         await _delete_verification_token(code)
 
-        logger.info(f"Email verified via code for: {mask_email(email)}")
+        logger.info("Email verified via code for: %s", mask_email(email))
 
         # Send welcome email now that email is verified
         try:
@@ -2063,9 +2062,9 @@ async def verify_email_code(
                     to_email=email,
                     user_name=user.full_name,
                 )
-                logger.info(f"Welcome email sent to: {mask_email(email)}")
+                logger.info("Welcome email sent to: %s", mask_email(email))
         except Exception as email_error:
-            logger.warning(f"Failed to send welcome email after verification: {email_error}")
+            logger.warning("Failed to send welcome email after verification: %s", sanitize_log_value(str(email_error)))
 
         # Determine redirect based on profile completion
         redirect_url = "/dashboard" if user.profile_completed else "/profile/setup"
@@ -2077,7 +2076,7 @@ async def verify_email_code(
                 expire_hours=security_settings.jwt_config["expire_hours"],
             )
         except Exception as e:
-            logger.error(f"JWT encoding error during verification: {e}", exc_info=True)
+            logger.error("JWT encoding error during verification: %s", sanitize_log_value(str(e)), exc_info=True)
             return {
                 "message": "Email verified successfully! Please log in to continue.",
                 "email_verified": True,
@@ -2107,7 +2106,7 @@ async def verify_email_code(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Email code verification failed: {e}", exc_info=True)
+        logger.error("Email code verification failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to verify email. Please try again.")
 
 
@@ -2159,7 +2158,7 @@ async def verify_email(
         # Delete used token
         await _delete_verification_token(token)
 
-        logger.info(f"Email verified for: {mask_email(email)}")
+        logger.info("Email verified for: %s", mask_email(email))
 
         # Send welcome email now that email is verified
         try:
@@ -2170,9 +2169,9 @@ async def verify_email(
                     to_email=email,
                     user_name=user.full_name,
                 )
-                logger.info(f"Welcome email sent to: {mask_email(email)}")
+                logger.info("Welcome email sent to: %s", mask_email(email))
         except Exception as email_error:
-            logger.warning(f"Failed to send welcome email after verification: {email_error}")
+            logger.warning("Failed to send welcome email after verification: %s", sanitize_log_value(str(email_error)))
             # Don't fail verification if welcome email fails
 
         # Check if user has completed profile setup
@@ -2189,7 +2188,7 @@ async def verify_email(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Email verification failed: {e}", exc_info=True)
+        logger.error("Email verification failed: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to verify email. Please try again.")
 
 
@@ -2232,13 +2231,13 @@ async def resend_verification_email(
         user = result.scalar_one_or_none()
 
         if not user:
-            logger.info(f"Verification resend requested for non-existent email: {mask_email(email)}")
+            logger.info("Verification resend requested for non-existent email: %s", mask_email(email))
             return success_message
 
         # Check if already verified — return the same generic message to prevent
         # leaking whether the account is already verified.
         if user.email_verified:
-            logger.info(f"Verification resend requested for already verified email: {mask_email(email)}")
+            logger.info("Verification resend requested for already verified email: %s", mask_email(email))
             return success_message
 
         # Send verification email
@@ -2247,7 +2246,7 @@ async def resend_verification_email(
         return success_message
 
     except Exception as e:
-        logger.error(f"Resend verification failed: {e}", exc_info=True)
+        logger.error("Resend verification failed: %s", sanitize_log_value(str(e)), exc_info=True)
         return {
             "message": "If an account exists with this email and is not yet verified, you will receive a verification email shortly."
         }
@@ -2286,5 +2285,5 @@ async def get_verification_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get verification status: {e}", exc_info=True)
+        logger.error("Failed to get verification status: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to get verification status")
