@@ -112,6 +112,27 @@ def asset_url(path: str) -> str:
     return f"/static/{path}"
 
 
+def _ensure_templates_initialized() -> None:
+    """Initialize Jinja2 templates for HTML routes and error pages."""
+    global templates
+    if templates is not None:
+        return
+    templates = Jinja2Templates(directory="ui")
+    templates.env.globals["asset_url"] = asset_url
+    templates.env.globals["posthog_enabled"] = settings.posthog_enabled
+
+
+def _template_response(
+    request: Request,
+    name: str,
+    context: Optional[Dict[str, Any]] = None,
+    status_code: int = 200,
+) -> Response:
+    """Render HTML via Jinja2 (Starlette 1.x TemplateResponse API)."""
+    ctx = {k: v for k, v in (context or {}).items() if k != "request"}
+    return templates.TemplateResponse(request, name, ctx, status_code=status_code)
+
+
 def get_analytics_context() -> dict:
     """Get analytics configuration for templates."""
     return {
@@ -241,10 +262,7 @@ async def lifespan(app: FastAPI):
         logger.info("Workflow initialized successfully")
 
         # Initialize templates
-        global templates
-        templates = Jinja2Templates(directory="ui")
-        templates.env.globals["asset_url"] = asset_url
-        templates.env.globals["posthog_enabled"] = settings.posthog_enabled
+        _ensure_templates_initialized()
         manifest = _load_asset_manifest()  # Warm the cache at startup
         logger.info("Loaded asset manifest with %d entries", len(manifest))
 
@@ -318,6 +336,8 @@ def create_app() -> FastAPI:
 
     # Add exception handlers
     add_exception_handlers(app)
+
+    _ensure_templates_initialized()
 
     return app
 
@@ -531,7 +551,7 @@ def configure_middleware(app: FastAPI):
             # For browser requests, serve maintenance page
             if templates is not None:
                 maintenance_info = await get_maintenance_info()
-                return templates.TemplateResponse(
+                return _template_response(request,
                     "maintenance.html",
                     {
                         "request": request,
@@ -747,7 +767,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "index.html",
                 {
                     "request": request,
@@ -774,7 +794,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "dashboard/index.html",
                 {"request": request, "app_name": settings.app_name, **get_analytics_context()},
             )
@@ -792,7 +812,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "dashboard/new-application.html",
                 {"request": request, "app_name": settings.app_name},
             )
@@ -813,7 +833,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "auth/login.html",
                 {
                     "request": request,
@@ -837,7 +857,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "auth/register.html",
                 {
                     "request": request,
@@ -862,7 +882,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "auth/reset-password.html",
                 {
                     "request": request,
@@ -886,7 +906,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "auth/reset-password.html",
                 {
                     "request": request,
@@ -910,7 +930,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "auth/verify-email.html",
                 {
                     "request": request,
@@ -935,7 +955,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "dashboard/tools.html",
                 {
                     "request": request,
@@ -960,7 +980,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "dashboard/interview-prep.html",
                 {
                     "request": request,
@@ -986,7 +1006,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "profile/setup.html",
                 {"request": request, "app_name": settings.app_name, **get_analytics_context()},
             )
@@ -1008,7 +1028,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "help.html",
                 {"request": request, "app_name": settings.app_name, **get_analytics_context()},
             )
@@ -1033,7 +1053,7 @@ def add_custom_routes(app: FastAPI):
 
         try:
             maintenance_info = await get_maintenance_info()
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "maintenance.html",
                 {
                     "request": request,
@@ -1061,7 +1081,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "legal/privacy.html",
                 {"request": request, "app_name": settings.app_name},
             )
@@ -1082,7 +1102,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "legal/terms.html",
                 {"request": request, "app_name": settings.app_name},
             )
@@ -1104,7 +1124,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "dashboard/settings.html",
                 {"request": request, "app_name": settings.app_name},
             )
@@ -1126,7 +1146,7 @@ def add_custom_routes(app: FastAPI):
             )
 
         try:
-            return templates.TemplateResponse(
+            return _template_response(request,
                 "dashboard/application.html",
                 {
                     "request": request,
@@ -1241,7 +1261,7 @@ def add_exception_handlers(app: FastAPI):
         if _is_html_request(request) and templates is not None:
             if exc.status_code == 404:
                 try:
-                    return templates.TemplateResponse(
+                    return _template_response(request,
                         "errors/404.html",
                         {"request": request, "app_name": settings.app_name},
                         status_code=404,
@@ -1251,7 +1271,7 @@ def add_exception_handlers(app: FastAPI):
             elif exc.status_code >= 500:
                 try:
                     error_id = request_id_var.get() or f"ERR-{datetime.now().timestamp()}"
-                    return templates.TemplateResponse(
+                    return _template_response(request,
                         "errors/500.html",
                         {
                             "request": request,
@@ -1292,7 +1312,7 @@ def add_exception_handlers(app: FastAPI):
         if _is_html_request(request) and templates is not None:
             try:
                 error_id = request_id_var.get() or f"ERR-{datetime.now().timestamp()}"
-                return templates.TemplateResponse(
+                return _template_response(request,
                     "errors/500.html",
                     {
                         "request": request,
