@@ -176,7 +176,7 @@ traits==7.0.2
 trio==0.30.0
 trio-websocket==0.12.2
 typing-inspection==0.4.2
-typing_extensions==4.15.0
+typing_extensions==4.16.0
 tzdata==2025.2
 unicorn==2.1.1
 uritemplate==4.2.0
