@@ -183,7 +183,7 @@ uritemplate==4.2.0
 urllib3==2.6.3
 uuid_utils==0.14.0
 uvicorn==0.35.0
-wcwidth==0.2.13
+wcwidth==0.8.2
 webdriver-manager==4.0.2
 webencodings==0.5.1
 websocket-client==1.8.0
