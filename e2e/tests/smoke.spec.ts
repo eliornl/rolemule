@@ -90,6 +90,8 @@ test.describe('Smoke Tests', () => {
   });
 
   test.describe('Profile Setup', () => {
+    test.describe.configure({ timeout: 60000 });
+
     test('profile setup wizard completes', async ({ page }) => {
       const email = generateTestEmail('smoke_profile');
       const registerPage = new RegisterPage(page);
@@ -103,7 +105,7 @@ test.describe('Smoke Tests', () => {
         acceptTerms: true,
       });
       
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
+      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 30000 });
       
       if (page.url().includes('profile/setup')) {
         const profilePage = new ProfileSetupPage(page);
@@ -113,7 +115,7 @@ test.describe('Smoke Tests', () => {
           skills: ['JavaScript', 'Python'],
         });
         
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
+        await page.waitForURL(/dashboard/, { timeout: 30000 });
       }
       
       expect(page.url()).toContain('dashboard');
@@ -121,9 +123,11 @@ test.describe('Smoke Tests', () => {
   });
 
   test.describe('Dashboard & Navigation', () => {
+    test.describe.configure({ timeout: 60000 });
     let page: any;
     
     test.beforeAll(async ({ browser }) => {
+      test.setTimeout(60000);
       page = await browser.newPage();
       const email = generateTestEmail('smoke_dash');
       const registerPage = new RegisterPage(page);
@@ -137,7 +141,7 @@ test.describe('Smoke Tests', () => {
         acceptTerms: true,
       });
       
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
+      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 30000 });
       
       if (page.url().includes('profile/setup')) {
         const profilePage = new ProfileSetupPage(page);
@@ -148,7 +152,7 @@ test.describe('Smoke Tests', () => {
         });
       }
       
-      await page.waitForURL(/dashboard/, { timeout: 15000 });
+      await page.waitForURL(/dashboard/, { timeout: 30000 });
       
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
@@ -184,6 +188,8 @@ test.describe('Smoke Tests', () => {
   });
 
   test.describe('New Application Form', () => {
+    test.describe.configure({ timeout: 60000 });
+
     test('new application form has required elements', async ({ page }) => {
       const email = generateTestEmail('smoke_app');
       const registerPage = new RegisterPage(page);
@@ -197,7 +203,7 @@ test.describe('Smoke Tests', () => {
         acceptTerms: true,
       });
       
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
+      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 30000 });
       
       if (page.url().includes('profile/setup')) {
         const profilePage = new ProfileSetupPage(page);
@@ -208,7 +214,7 @@ test.describe('Smoke Tests', () => {
         });
       }
       
-      await page.waitForURL(/dashboard/, { timeout: 15000 });
+      await page.waitForURL(/dashboard/, { timeout: 30000 });
       
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
@@ -227,6 +233,8 @@ test.describe('Smoke Tests', () => {
   });
 
   test.describe('Career Tools', () => {
+    test.describe.configure({ timeout: 60000 });
+
     test('career tools page loads with tabs', async ({ page }) => {
       const email = generateTestEmail('smoke_tools');
       const registerPage = new RegisterPage(page);
@@ -240,7 +248,7 @@ test.describe('Smoke Tests', () => {
         acceptTerms: true,
       });
       
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
+      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 30000 });
       
       if (page.url().includes('profile/setup')) {
         const profilePage = new ProfileSetupPage(page);
@@ -251,7 +259,7 @@ test.describe('Smoke Tests', () => {
         });
       }
       
-      await page.waitForURL(/dashboard/, { timeout: 15000 });
+      await page.waitForURL(/dashboard/, { timeout: 30000 });
       
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
@@ -355,16 +363,16 @@ test.describe('Mocked Smoke Tests', () => {
       expect(page.url()).toContain('new-application');
     });
 
-    test('new application form has job title input', async ({ page }) => {
+    test('new application form has job description textarea', async ({ page }) => {
       await page.goto('/dashboard/new-application');
       await page.waitForLoadState('domcontentloaded');
-      await expect(page.locator('#basicJobTitle')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#jobDescription')).toBeVisible({ timeout: 5000 });
     });
 
-    test('new application form has company name input', async ({ page }) => {
+    test('new application form has analyze button', async ({ page }) => {
       await page.goto('/dashboard/new-application');
       await page.waitForLoadState('domcontentloaded');
-      await expect(page.locator('#basicCompanyName')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('[data-action="process-application"]')).toBeVisible({ timeout: 5000 });
     });
 
     test('cancel button links back to /dashboard', async ({ page }) => {

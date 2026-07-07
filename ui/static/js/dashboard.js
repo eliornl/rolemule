@@ -1813,8 +1813,10 @@ class DashboardManager {
       if (window.app && typeof window.app.confirm === "function") {
         // @ts-ignore
         window.app.confirm(message, title).then(resolve);
+      } else if (typeof window.showConfirm === "function") {
+        window.showConfirm({ title: title, message: message }).then(resolve);
       } else {
-        resolve(window.confirm(message));
+        resolve(false);
       }
     });
   }

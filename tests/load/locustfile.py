@@ -15,9 +15,7 @@ Install: pip install locust
 """
 
 import uuid
-import json
 from locust import HttpUser, task, between, events
-from locust.runners import MasterRunner
 
 
 # =============================================================================

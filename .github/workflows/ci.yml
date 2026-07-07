@@ -1,0 +1,242 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "22"
+  DATABASE_URL: postgresql+asyncpg://applypilot:applypilot@localhost:5432/applypilot
+  REDIS_URL: redis://localhost:6379/0
+  TESTING: "true"
+  DEBUG: "true"
+  DISABLE_EMAIL_VERIFICATION: "true"
+  BASE_URL: http://localhost:8000
+  CORS_ORIGINS: http://localhost:8000
+  ALLOWED_HOSTS: localhost,127.0.0.1
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+      - run: ruff check .
+
+  python-tests:
+    name: Python tests (coverage)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: applypilot
+          POSTGRES_PASSWORD: applypilot
+          POSTGRES_DB: applypilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U applypilot -d applypilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Generate CI secrets
+        run: |
+          echo "JWT_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> "$GITHUB_ENV"
+      - name: Run database migrations
+        run: bash scripts/ci-migrate.sh
+      - name: Run tests with coverage
+        run: |
+          pytest tests/test_agents/ tests/test_api/ tests/test_utils/ tests/test_workflows/ \
+            tests/test_cv_html_normalize.py tests/test_cv_docx_export.py tests/test_cv_odt_export.py \
+            tests/test_gemini_api_key_format.py tests/test_security.py \
+            -v --cov=. --cov-report=term-missing --cov-report=xml:coverage.xml \
+            --cov-config=.coveragerc --cov-fail-under=97 --override-ini="addopts="
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+        working-directory: ui
+      - run: npm run build
+        working-directory: ui
+
+  security-grep:
+    name: Security conventions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - run: bash scripts/ci-security-grep.sh
+
+  dependency-audit:
+    name: Dependency audit (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Audit Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip-audit -r requirements.txt
+      - name: Audit UI npm dependencies
+        working-directory: ui
+        run: |
+          npm ci
+          npm audit --audit-level=high
+      - name: Audit E2E npm dependencies
+        working-directory: e2e
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+  e2e-smoke:
+    name: E2E smoke tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: applypilot
+          POSTGRES_PASSWORD: applypilot
+          POSTGRES_DB: applypilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U applypilot -d applypilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            ui/package-lock.json
+            e2e/package-lock.json
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Generate CI secrets
+        run: |
+          echo "JWT_SECRET=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" >> "$GITHUB_ENV"
+          echo "ENCRYPTION_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> "$GITHUB_ENV"
+      - name: Run database migrations
+        run: bash scripts/ci-migrate.sh
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
+        working-directory: ui
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run smoke tests
+        working-directory: e2e
+        env:
+          SMOKE: "1"
+          CI: "1"
+        run: npx playwright test tests/smoke.spec.ts --project=chromium
+
+  ci-success:
+    name: CI success
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - python-tests
+      - frontend-build
+      - security-grep
+      - e2e-smoke
+    if: always()
+    steps:
+      - name: Verify required checks passed
+        run: |
+          results=(
+            "${{ needs.lint.result }}"
+            "${{ needs.python-tests.result }}"
+            "${{ needs.frontend-build.result }}"
+            "${{ needs.security-grep.result }}"
+            "${{ needs.e2e-smoke.result }}"
+          )
+          for result in "${results[@]}"; do
+            if [[ "$result" != "success" ]]; then
+              echo "One or more required CI jobs failed."
+              exit 1
+            fi
+          done
+          echo "All required CI jobs passed."

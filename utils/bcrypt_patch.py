@@ -6,7 +6,6 @@ but is missing in newer bcrypt versions (4.0.0+).
 """
 
 import logging
-import sys
 
 logger = logging.getLogger(__name__)
 

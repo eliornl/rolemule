@@ -38,7 +38,7 @@ export default defineConfig({
   // Workers: Playwright tests are I/O bound, so we can use more workers than CPUs
   // GitHub Actions: use 10 workers (tests wait on network/DB, not CPU)
   // Local: use 6 workers (balance between speed and resource usage)
-  workers: isCI ? 10 : 6,
+  workers: isSmoke ? 4 : (isCI ? 10 : 6),
   
   // Reporter configuration - minimal in CI smoke for speed
   reporter: isSmoke 
@@ -49,8 +49,8 @@ export default defineConfig({
         ...(isCI ? [['github'] as const] : []),
       ],
   
-  // Global test timeout - shorter for smoke tests
-  timeout: isSmoke ? 20000 : 30000,
+  // Global test timeout - live-server profile setup needs more than 20s under load
+  timeout: isSmoke ? 45000 : 30000,
   
   // Expect timeout
   expect: {
@@ -89,6 +89,7 @@ export default defineConfig({
     // Setup project - runs before all tests to create auth state
     {
       name: 'setup',
+      testDir: '.',
       testMatch: /global\.setup\.ts/,
     },
     
@@ -153,7 +154,18 @@ export default defineConfig({
   webServer: process.env.SKIP_SERVER ? undefined : {
     command: 'cd .. && uvicorn main:app --host 0.0.0.0 --port 8000',
     url: 'http://localhost:8000/health',
-    reuseExistingServer: true,
+    reuseExistingServer: !isCI,
     timeout: 120000,
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql+asyncpg://applypilot:applypilot@localhost:5432/applypilot',
+      REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379/0',
+      TESTING: 'true',
+      DEBUG: 'true',
+      DISABLE_EMAIL_VERIFICATION: 'true',
+      ALLOWED_HOSTS: 'localhost,127.0.0.1',
+      CORS_ORIGINS: 'http://localhost:8000',
+      ...(process.env.JWT_SECRET ? { JWT_SECRET: process.env.JWT_SECRET } : {}),
+      ...(process.env.ENCRYPTION_KEY ? { ENCRYPTION_KEY: process.env.ENCRYPTION_KEY } : {}),
+    },
   },
 });

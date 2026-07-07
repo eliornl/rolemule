@@ -15,7 +15,7 @@ Make sure the server is running before executing these tests.
 import uuid
 import pytest
 import httpx
-from typing import Dict, Any, Optional
+from typing import Dict
 
 
 # =============================================================================

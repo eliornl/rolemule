@@ -1,5 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
-import { RegisterPage } from './pages';
+import { RegisterPage, ProfileSetupPage } from './pages';
 import { generateTestEmail } from './fixtures/test-data';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,6 +12,7 @@ const AUTH_FILE = path.join(__dirname, 'playwright/.auth/user.json');
  * Skips if valid auth state already exists (for faster runs)
  */
 setup('global setup', async ({ page }) => {
+  setup.setTimeout(60000);
   // Ensure auth directory exists
   const authDir = path.dirname(AUTH_FILE);
   if (!fs.existsSync(authDir)) {
@@ -35,7 +36,7 @@ setup('global setup', async ({ page }) => {
   const testUser = {
     email: generateTestEmail('e2e_global'),
     password: 'E2EGlobalTest123!',
-    name: 'E2E Global Test User',
+    name: 'Playwright Global Test User',
   };
   
   // Save test user info to a file for other tests to use
@@ -64,55 +65,12 @@ setup('global setup', async ({ page }) => {
   // Complete profile setup if needed
   if (page.url().includes('profile/setup')) {
     console.log('📝 Completing profile setup...');
-    
-    // Skip resume upload
-    const skipButton = page.locator('button:has-text("Fill in manually"), button:has-text("Skip"), a:has-text("manual")');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-      await page.waitForLoadState('domcontentloaded');
-    }
-    
-    // Fill minimal required fields and navigate through wizard
-    const steps = [
-      async () => {
-        // Step 1: Basic Info
-        const cityInput = page.locator('input[name="city"], #city');
-        const titleInput = page.locator('input[name="professional_title"], input[name="title"], #title, #professionalTitle');
-        
-        if (await cityInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await cityInput.fill('San Francisco');
-        }
-        if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await titleInput.fill('Software Engineer');
-        }
-      },
-      async () => {
-        // Step 2-4: Can be skipped or have minimal data
-      }
-    ];
-    
-    // Execute setup steps
-    for (const step of steps) {
-      await step();
-    }
-    
-    // Navigate through wizard
-    const nextButton = page.locator('button:has-text("Next"), button:has-text("Continue")');
-    const completeButton = page.locator('button:has-text("Complete"), button:has-text("Finish"), button:has-text("Save")');
-    
-    for (let i = 0; i < 6; i++) {
-      if (await completeButton.isVisible({ timeout: 500 }).catch(() => false)) {
-        await completeButton.click();
-        break;
-      }
-      
-      if (await nextButton.isVisible({ timeout: 500 }).catch(() => false)) {
-        await nextButton.click();
-        await page.waitForLoadState('domcontentloaded');
-      }
-    }
-    
-    // Wait for dashboard
+    const profilePage = new ProfileSetupPage(page);
+    await profilePage.quickSetup({
+      title: 'Software Engineer',
+      yearsExperience: 5,
+      skills: ['JavaScript', 'Python'],
+    });
     await page.waitForURL(/dashboard/, { timeout: 15000 });
   }
   

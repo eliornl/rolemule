@@ -5,7 +5,7 @@ Tests post-interview thank-you email generation with mocked LLM responses.
 
 import pytest
 from unittest.mock import AsyncMock, patch
-from datetime import datetime, timezone
+from datetime import datetime
 
 from agents.thank_you_writer import ThankYouWriterAgent
 

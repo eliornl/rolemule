@@ -15,8 +15,7 @@ import os
 import uuid
 import pytest
 import httpx
-from typing import Dict, Any
-from unittest.mock import patch
+from typing import Dict
 
 
 # =============================================================================

@@ -9,7 +9,7 @@ It's called on-demand when a user requests interview preparation.
 
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 from utils.llm_client import get_gemini_client
 from utils.llm_parsing import parse_json_from_llm_response

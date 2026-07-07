@@ -57,7 +57,6 @@ from utils.cache import (
 from workflows.state_schema import (
     WorkflowPhase,
     WorkflowStatus,
-    AgentStatus,
     InputMethod,
 )
 from workflows.job_application_workflow import JobApplicationWorkflow
@@ -187,6 +186,16 @@ def _job_text_from_uploaded_file(file_content: bytes, matched_ext: str) -> str:
             )
         return text
     raise validation_error(f"Unsupported job file type: {matched_ext}")
+
+
+def _job_text_from_uploaded_file_with_ext(
+    file_content: bytes,
+    matched_ext: Optional[str],
+) -> str:
+    """Extract job text from an uploaded file; ``matched_ext`` must match the upload."""
+    if not matched_ext:
+        raise validation_error("Invalid file upload state.")
+    return _job_text_from_uploaded_file(file_content, matched_ext)
 
 
 def _agent_error_message(exc: Exception, fallback: str, *, debug: bool = False) -> str:
@@ -667,7 +676,6 @@ async def start_workflow(
         resolved_url = job_url or (request.job_url if request else None)
         resolved_text = job_text or (request.job_text if request else None)
         file_content = None
-        file_name = None
         matched_ext: Optional[str] = None
 
         # Process uploaded file
@@ -693,7 +701,6 @@ async def start_workflow(
                 except UnicodeDecodeError:
                     raise validation_error("TXT files must be UTF-8 encoded.")
 
-            file_name = job_file.filename
 
         # Validate at least one input method
         if not resolved_url and not resolved_text and not file_content:
@@ -725,7 +732,9 @@ async def start_workflow(
         # Check if we have an API key available (either user's or server's)
         from config.settings import get_settings
         settings = get_settings()
-        server_has_key = getattr(settings, 'gemini_api_key', None) is not None
+        server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or getattr(
+            settings, 'use_vertex_ai', False
+        )
         
         if not user_api_key and not server_has_key:
             raise no_api_key_error()
@@ -775,9 +784,7 @@ async def start_workflow(
             content_fingerprint: Optional[str] = None
         elif file_content:
             input_method = InputMethod.FILE.value
-            if not matched_ext:
-                raise validation_error("Invalid file upload state.")
-            job_input = _job_text_from_uploaded_file(file_content, matched_ext)
+            job_input = _job_text_from_uploaded_file_with_ext(file_content, matched_ext)
             content_fingerprint = _fingerprint_job_content(job_input)
         elif source == "extension":
             input_method = InputMethod.EXTENSION.value

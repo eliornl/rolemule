@@ -21,7 +21,6 @@ Endpoints:
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
 
 BASE = "/api/v1/profile"
 

@@ -5,7 +5,7 @@ Tests company research with mocked LLM and Redis responses.
 
 import pytest
 from unittest.mock import AsyncMock, patch
-import json
+import asyncio
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
@@ -412,3 +412,88 @@ class TestCompanyResearchAdditional:
 
         assert result["company_research"]["industry"] == "Technology"
         mock_gemini_client.generate.assert_called_once()
+
+
+class TestCompanyResearchHelpersAndEdges:
+    """Cover stampede wait, placeholder names, and timeout propagation."""
+
+    def test_has_usable_company_name_rejects_dashes_and_placeholders(self):
+        from agents.company_research import (
+            _format_job_context_for_unnamed_employer,
+            _has_usable_company_name,
+        )
+
+        assert _has_usable_company_name("---") is False
+        assert _has_usable_company_name("unknown") is False
+        ctx = _format_job_context_for_unnamed_employer(
+            {
+                "job_title": "Founding Engineer",
+                "team_info": "Small platform team building core APIs",
+                "responsibilities": ["Ship features"],
+            }
+        )
+        assert "Team / role context" in ctx
+
+    @pytest.mark.asyncio
+    async def test_stampede_lock_wait_returns_cached(
+        self, mock_gemini_client, workflow_state_with_job_analysis
+    ):
+        agent = CompanyResearchAgent(gemini_client=mock_gemini_client)
+        cached_data = {"industry": "Wait Cached", "company_size": "500+"}
+
+        async def _lookup(*args, **kwargs):
+            _lookup.calls += 1
+            if _lookup.calls >= 2:
+                return cached_data
+            return None
+
+        _lookup.calls = 0
+
+        with patch(
+            "agents.company_research.get_cached_company_research", side_effect=_lookup
+        ), patch(
+            "agents.company_research.acquire_compute_lock", AsyncMock(return_value=False)
+        ), patch(
+            "agents.company_research.release_compute_lock", AsyncMock()
+        ), patch(
+            "agents.company_research.asyncio.sleep", AsyncMock()
+        ):
+            result = await agent.process(workflow_state_with_job_analysis)
+
+        assert result["company_research"]["industry"] == "Wait Cached"
+        mock_gemini_client.generate.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stampede_lock_wait_timeout_computes(
+        self, mock_gemini_client, workflow_state_with_job_analysis
+    ):
+        agent = CompanyResearchAgent(gemini_client=mock_gemini_client)
+
+        with patch(
+            "agents.company_research.get_cached_company_research", AsyncMock(return_value=None)
+        ), patch(
+            "agents.company_research.acquire_compute_lock", AsyncMock(return_value=False)
+        ), patch(
+            "agents.company_research.release_compute_lock", AsyncMock()
+        ), patch(
+            "agents.company_research.cache_company_research", AsyncMock()
+        ), patch(
+            "agents.company_research.asyncio.sleep", AsyncMock()
+        ):
+            result = await agent.process(workflow_state_with_job_analysis)
+
+        assert result["company_research"]["industry"] == "Technology"
+        mock_gemini_client.generate.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_process_timeout_propagates(
+        self, mock_gemini_client, workflow_state_with_job_analysis
+    ):
+        agent = CompanyResearchAgent(gemini_client=mock_gemini_client)
+
+        with patch(
+            "agents.company_research.get_cached_company_research",
+            AsyncMock(side_effect=asyncio.TimeoutError()),
+        ):
+            with pytest.raises(asyncio.TimeoutError):
+                await agent.process(workflow_state_with_job_analysis)

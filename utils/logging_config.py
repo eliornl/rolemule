@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 from uuid import uuid4
 
 # =============================================================================
@@ -725,14 +725,6 @@ class StructuredLogger:
             extra=extra,
             exc_info=True,
         )
-
-    def log_cache_hit(self, cache_type: str, key: str) -> None:
-        """Log cache hit."""
-        self.logger.debug(f"Cache hit: {cache_type} - {key[:20]}...")
-
-    def log_cache_miss(self, cache_type: str, key: str) -> None:
-        """Log cache miss."""
-        self.logger.debug(f"Cache miss: {cache_type} - {key[:20]}...")
 
     def log_external_api_call(
         self,

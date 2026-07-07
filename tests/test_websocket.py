@@ -17,7 +17,7 @@ import json
 import pytest
 import httpx
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 # Try to import websockets, skip tests if not available
 try:
@@ -152,7 +152,7 @@ class TestWebSocketWorkflowConnection:
             async with websockets.connect(
                 f"{WS_BASE_URL}/api/ws/workflow/{session_id}",
                 close_timeout=5,
-            ) as ws:
+            ):
                 # Should not reach here - connection should be rejected
                 pytest.fail("Connection should have been rejected")
         except Exception:
@@ -208,10 +208,10 @@ class TestWebSocketWorkflowConnection:
                 except asyncio.TimeoutError:
                     # No message received - connection might be accepted but no response
                     pass
-        except websockets.exceptions.ConnectionClosed as e:
+        except websockets.exceptions.ConnectionClosed:
             # May be rejected due to connection limits
             pass
-        except Exception as e:
+        except Exception:
             # May fail for various reasons in test environment
             pass
 
@@ -262,7 +262,7 @@ class TestWebSocketUserConnection:
             async with websockets.connect(
                 f"{WS_BASE_URL}/api/ws/user",
                 close_timeout=5,
-            ) as ws:
+            ):
                 pytest.fail("Connection should have been rejected")
         except Exception:
             # Expected - connection rejected
@@ -490,7 +490,7 @@ class TestWebSocketErrorHandling:
         # Get initial stats
         response1 = http_client.get("/api/ws/stats")
         assert response1.status_code == 200
-        initial_count = response1.json()["total_connections"]
+        response1.json()["total_connections"]
         
         # Get stats again (should be consistent)
         response2 = http_client.get("/api/ws/stats")

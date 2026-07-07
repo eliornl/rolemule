@@ -14,7 +14,7 @@ Tests cover:
 import uuid
 import pytest
 import httpx
-from typing import Dict, Any
+from typing import Dict
 
 
 # =============================================================================

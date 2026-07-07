@@ -152,6 +152,8 @@ def _build_cloud_trace_exporter():
         logger.info("OpenTelemetry: using Google Cloud Trace exporter")
         return CloudTraceSpanExporter()
     except ImportError:
+        from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
         logger.warning(
             "opentelemetry-exporter-gcp-trace not installed — "
             "falling back to console span exporter in production. "

@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
 )
-from sqlalchemy.pool import NullPool
 from sqlalchemy import text
 
 from config.settings import get_settings, get_database_settings
@@ -145,7 +144,7 @@ async def connect_to_database() -> None:
     """
     global _engine, _async_session_factory
 
-    settings = get_settings()
+    get_settings()
     db_settings = get_database_settings()
 
     try:

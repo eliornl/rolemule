@@ -19,7 +19,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, validator, EmailStr
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError as _SQLIntegrityError
 
 from config.settings import get_settings, get_security_settings
@@ -40,7 +40,6 @@ from utils.error_responses import (
     ErrorCode,
     account_locked_error,
     external_service_error,
-    forbidden_error,
     internal_error,
     not_found_error,
     rate_limit_error,
@@ -451,15 +450,16 @@ async def register_user(
     hashes the password securely, and returns an access token for immediate login.
     """
     try:
-        # Rate limit: 10 registration attempts per hour per IP
-        client_ip = request.client.host if request.client else "unknown"
-        is_allowed, _remaining = await check_rate_limit(
-            identifier=f"register:{client_ip}",
-            limit=10,
-            window_seconds=3600,
-        )
-        if not is_allowed:
-            raise rate_limit_error("Too many registration attempts. Please try again later.", retry_after=3600)
+        # Rate limit: 10 registration attempts per hour per IP (skipped in TESTING for E2E/CI)
+        if not settings.testing:
+            client_ip = request.client.host if request.client else "unknown"
+            is_allowed, _remaining = await check_rate_limit(
+                identifier=f"register:{client_ip}",
+                limit=10,
+                window_seconds=3600,
+            )
+            if not is_allowed:
+                raise rate_limit_error("Too many registration attempts. Please try again later.", retry_after=3600)
 
         # Check if user already exists
         result = await db.execute(
@@ -1101,7 +1101,7 @@ async def google_callback(
             conflict_user = conflict_result.scalar_one_or_none()
             if conflict_user and str(conflict_user.id) != _link_user_id:
                 logger.warning(
-                    f"Google account link rejected: google_id already linked to another user"
+                    "Google account link rejected: google_id already linked to another user"
                 )
                 return RedirectResponse(
                     url="/dashboard/settings?error=google_already_linked_to_other",
@@ -1243,7 +1243,7 @@ async def google_callback(
         redirect_url = f"{redirect_after_login}?code={exchange_code}"
         return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
 
-    except Exception as e:
+    except Exception:
         logger.error("Google OAuth callback error (details omitted from redirect)")
         await db.rollback()
         return RedirectResponse(

@@ -1606,8 +1606,7 @@ class ProfileManager {
     if (window.app && typeof window.app.showNotification === "function") {
       window.app.showNotification(message, type);
     } else {
-      // Fallback alert
-      alert(message);
+      console.warn(message);
     }
   }
 

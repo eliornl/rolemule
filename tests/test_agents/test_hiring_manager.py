@@ -258,3 +258,26 @@ class TestHiringManagerEvaluationSerialize:
         assert d["gaps"] == ["g1"]
         assert d["action_items"] == ["a1"]
         assert d["reasoning"] == "Good match"
+
+
+class TestHiringManagerBuildEvaluation:
+    def test_build_evaluation_invalid_score_defaults(self):
+        agent = HiringManagerAgent()
+        evaluation = agent._build_evaluation(
+            {
+                "score": "not-a-number",
+                "strengths": ["a"],
+                "gaps": ["b"],
+                "action_items": ["c"],
+                "requirement_scores": "bad",
+            }
+        )
+        assert evaluation.score == pytest.approx(5.0)
+        assert evaluation.requirement_scores == []
+
+    def test_extract_list_non_list_and_empty(self):
+        agent = HiringManagerAgent()
+        assert agent._extract_list({"strengths": "bad"}, "strengths", 1, 3) == [
+            "Unable to parse strengths"
+        ]
+        assert agent._extract_list({"gaps": ["", "  "]}, "gaps", 1, 3) == ["No gaps identified"]

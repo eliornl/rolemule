@@ -20,7 +20,7 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 from config.settings import get_settings
@@ -567,7 +567,7 @@ This is an automated message. Please do not reply.
         greeting = f"Hi {html.escape(user_name)}," if user_name else "Hi there,"
         
         # Format code with spaces for readability (123 456)
-        formatted_code = f"{verification_code[:3]} {verification_code[3:]}"
+        f"{verification_code[:3]} {verification_code[3:]}"
         
         html_content = f"""
 <!DOCTYPE html>

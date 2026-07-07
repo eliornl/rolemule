@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from config.settings import get_security_settings
 from utils.database import get_database
-from utils.error_responses import APIError, ErrorCode, unauthorized_error, forbidden_error
+from utils.error_responses import APIError, ErrorCode, forbidden_error
 from models.database import User
 
 # =============================================================================

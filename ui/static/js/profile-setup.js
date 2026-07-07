@@ -537,7 +537,7 @@
             errorAlert.classList.remove("d-none");
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            alert(message);
+            console.error(message);
         }
     }
 

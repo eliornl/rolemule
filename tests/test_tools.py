@@ -17,11 +17,9 @@ Tests cover Phase 2:
 """
 
 import uuid
-import time
 import pytest
 import httpx
-from typing import Dict, Any, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Dict
 
 
 # =============================================================================

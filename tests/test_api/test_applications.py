@@ -12,11 +12,7 @@ Focus: the new `search` query parameter (searches job_title AND company_name),
 and the `sort` parameter added during the history-page consolidation.
 """
 
-import uuid
 import pytest
-from unittest.mock import AsyncMock, patch
-from sqlalchemy import insert
-from datetime import datetime, timezone
 
 BASE = "/api/v1/applications"
 

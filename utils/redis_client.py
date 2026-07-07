@@ -73,8 +73,8 @@ async def connect_to_redis() -> Redis:
     """
     global _redis_client
 
-    settings: Settings = get_settings()
-    db_settings: DatabaseSettings = get_database_settings()
+    settings = get_settings()
+    db_settings = get_database_settings()
 
     try:
         # Parse Redis URL and create client

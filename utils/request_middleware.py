@@ -6,7 +6,6 @@ Provides request ID generation, logging, and performance tracking.
 import logging
 import re
 from time import perf_counter
-from typing import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint

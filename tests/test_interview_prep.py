@@ -16,8 +16,7 @@ import uuid
 import time
 import pytest
 import httpx
-from typing import Dict, Any, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Dict, Optional
 
 
 # =============================================================================
@@ -336,7 +335,7 @@ Apply now to join {company_name}!
                     print(f"  Completed agents: {completed}")
                     
                     # Show measured agent timings
-                    print(f"\n  Agent Timing (measured by test):")
+                    print("\n  Agent Timing (measured by test):")
                     total_measured = 0
                     for agent in ["job_analyzer", "profile_matching", "company_research", "resume_advisor", "cover_letter_writer"]:
                         if agent in agent_timings:
@@ -344,13 +343,13 @@ Apply now to join {company_name}!
                             if isinstance(duration, (int, float)):
                                 total_measured += duration
                                 print(f"    - {agent}: {duration:.1f}s")
-                    print(f"    ─────────────────────────────────────")
+                    print("    ─────────────────────────────────────")
                     print(f"    Total measured: {total_measured:.1f}s")
                     print(f"    Overhead (polling, network): {elapsed - total_measured:.1f}s")
                     
                     # Also show API-reported durations if available (accurate LLM times)
                     if api_durations:
-                        print(f"\n  Agent Timing (actual LLM processing):")
+                        print("\n  Agent Timing (actual LLM processing):")
                         total_api_time = 0
                         cached_count = 0
                         fresh_count = 0
@@ -367,7 +366,7 @@ Apply now to join {company_name}!
                                     status = "FRESH"
                                     fresh_count += 1
                                 print(f"    - {agent}: {secs:.1f}s [{status}]")
-                        print(f"    ─────────────────────────────────────")
+                        print("    ─────────────────────────────────────")
                         print(f"    Fresh LLM calls: {fresh_count} | Cached/Skipped: {cached_count}")
                         print(f"    Total LLM time: {total_api_time:.1f}s")
                         # Note: resume_advisor and cover_letter_writer run in parallel
@@ -387,20 +386,20 @@ Apply now to join {company_name}!
                     return session_id
                     
                 elif workflow_status == "awaiting_confirmation" and not already_continued:
-                    print(f"  >> Gate decision triggered, attempting to continue...")
+                    print("  >> Gate decision triggered, attempting to continue...")
                     continue_resp = http_client.post(
                         f"/api/v1/workflow/continue/{session_id}",
                         headers=user_with_profile,
                     )
                     print(f"  >> Continue response: {continue_resp.status_code}")
                     if continue_resp.status_code == 200:
-                        print(f"  >> SUCCESS - Workflow continuing past gate")
+                        print("  >> SUCCESS - Workflow continuing past gate")
                         already_continued = True
                     else:
                         print(f"  >> FAILED: {continue_resp.text[:200]}")
                         
                 elif workflow_status in ["failed", "cancelled", "error"]:
-                    print(f"  >> Workflow FAILED!")
+                    print("  >> Workflow FAILED!")
                     print(f"  >> Errors: {errors}")
                     pytest.skip(f"Workflow {workflow_status}: {errors}")
                     return None

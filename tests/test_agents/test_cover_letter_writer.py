@@ -4,7 +4,7 @@ Tests cover letter generation with mocked LLM responses.
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 

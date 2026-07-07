@@ -1,0 +1,12 @@
+# Sensitive areas require maintainer review on pull requests.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+/api/auth.py                    @eliornl
+/utils/auth.py                  @eliornl
+/utils/security.py              @eliornl
+/utils/redis_client.py          @eliornl
+/api/profile.py                 @eliornl
+/config/settings.py             @eliornl
+/main.py                        @eliornl
+/extension/                     @eliornl
+/.github/workflows/             @eliornl

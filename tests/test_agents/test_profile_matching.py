@@ -5,6 +5,7 @@ Tests profile-job matching analysis with mocked LLM responses.
 
 import pytest
 from unittest.mock import AsyncMock, patch
+import asyncio
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
@@ -349,3 +350,17 @@ class TestProfileMatchingAdditional:
         assert "final_scores" in result["profile_matching"]
         scores = result["profile_matching"]["final_scores"]
         assert "overall_match_score" in scores
+
+    @pytest.mark.asyncio
+    async def test_process_timeout_sets_error_and_raises(self, workflow_state):
+        """TimeoutError during matching should store error result and re-raise."""
+        mock_client = AsyncMock()
+        mock_client.generate.side_effect = asyncio.TimeoutError()
+
+        agent = ProfileMatchingAgent()
+
+        with patch("agents.profile_matching.get_gemini_client", return_value=mock_client):
+            with pytest.raises(asyncio.TimeoutError):
+                await agent.process(workflow_state)
+
+        assert workflow_state["profile_matching"]["error"] is True

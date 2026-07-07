@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from enum import Enum
 
-from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, validator, field_validator, ValidationInfo, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -2206,8 +2206,6 @@ async def export_user_data(
     from models.database import (
         User,
         UserProfile as UserProfileModel,
-        JobApplication,
-        WorkflowSession,
     )
     import io
     import json
@@ -2325,8 +2323,6 @@ async def delete_user_account(
     from models.database import (
         User,
         UserProfile as UserProfileModel,
-        JobApplication,
-        WorkflowSession,
         UserResumeAsset,
     )
     from api.auth import pwd_context, _bcrypt_safe
@@ -2457,7 +2453,6 @@ async def clear_user_data(
 
     Use this to start fresh without losing your profile setup.
     """
-    from models.database import JobApplication, WorkflowSession
 
     try:
         if not request_data.confirm:

@@ -1246,7 +1246,7 @@ def add_exception_handlers(app: FastAPI):
                         {"request": request, "app_name": settings.app_name},
                         status_code=404,
                     )
-                except Exception as tpl_err:
+                except Exception:
                     logger.debug("Failed to render 404 template, falling back to JSON", exc_info=True)
             elif exc.status_code >= 500:
                 try:
@@ -1260,7 +1260,7 @@ def add_exception_handlers(app: FastAPI):
                         },
                         status_code=exc.status_code,
                     )
-                except Exception as tpl_err:
+                except Exception:
                     logger.debug("Failed to render 500 template, falling back to JSON", exc_info=True)
 
         # Map HTTP status codes to error codes

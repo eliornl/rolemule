@@ -4,13 +4,11 @@ Tests job analysis from URL, manual text, and extension inputs with mocked LLM r
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 from datetime import datetime, timezone
-from dataclasses import dataclass
 from typing import Dict, Any, Optional
 
-from agents.job_analyzer import JobAnalyzerAgent, MIN_JOB_TEXT_LENGTH, _normalize_string_list
-from workflows.state_schema import InputMethod
+from agents.job_analyzer import JobAnalyzerAgent, _normalize_string_list
 
 
 # =============================================================================

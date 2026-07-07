@@ -5,6 +5,7 @@ Tests resume recommendations generation with mocked LLM responses.
 
 import pytest
 from unittest.mock import AsyncMock, patch
+import asyncio
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
@@ -279,3 +280,19 @@ class TestResumeAdvisorAdditional:
         await agent.process(workflow_state_complete)
         # Verify the call was made (key propagation is internal)
         assert mock_gemini_client.generate.called
+
+    @pytest.mark.asyncio
+    async def test_generate_recommendations_timeout_returns_fallback(
+        self, mock_gemini_client, workflow_state_complete
+    ):
+        agent = ResumeAdvisorAgent(gemini_client=mock_gemini_client)
+        agent._current_user_api_key = None
+        with patch("agents.resume_advisor.asyncio.wait_for", side_effect=asyncio.TimeoutError()):
+            result = await agent._generate_recommendations(
+                workflow_state_complete["user_profile"],
+                workflow_state_complete["job_analysis"],
+                workflow_state_complete["profile_matching"],
+                workflow_state_complete["company_research"],
+            )
+        assert result.get("error") is True
+        assert "timed out" in result.get("error_message", "").lower()

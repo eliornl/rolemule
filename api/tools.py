@@ -9,8 +9,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
-from pydantic import BaseModel, Field, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel, Field
 from enum import Enum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -18,9 +18,7 @@ from sqlalchemy import select, and_
 from utils.auth import get_current_user
 from utils.database import get_database
 from utils.cache import (
-    check_rate_limit,
     check_rate_limit_with_headers,
-    RateLimitResult,
     get_cached_tool_result,
     cache_tool_result,
 )
@@ -266,7 +264,9 @@ async def _check_api_key_available(db: AsyncSession, user_id: uuid.UUID) -> bool
     if user_api_key:
         return True
     
-    server_has_key = getattr(settings, 'gemini_api_key', None) is not None
+    server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or getattr(
+        settings, 'use_vertex_ai', False
+    )
     return server_has_key
 
 

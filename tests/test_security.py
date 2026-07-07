@@ -9,7 +9,6 @@ import pytest
 import uuid
 from httpx import AsyncClient
 
-from main import app
 
 
 # =============================================================================

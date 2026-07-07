@@ -5,7 +5,7 @@ Provides advanced filtering, pagination, search functionality, and detailed anal
 
 import uuid
 import re
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta, timezone
 import logging
 
@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status, Response
 from utils.logging_config import get_structured_logger, mask_email
 from pydantic import BaseModel, Field, validator
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, and_, case, or_, exists
+from sqlalchemy import select, func, and_, case, or_, exists
 
 from utils.auth import get_current_user_with_complete_profile
 from utils.database import get_database

@@ -59,7 +59,7 @@ export class ProfileSetupPage extends BasePage {
     super(page);
     
     // Navigation
-    this.nextButton = page.locator('button:has-text("Next"), button:has-text("Continue"), .next-btn');
+    this.nextButton = page.locator('#next-btn');
     this.backButton = page.locator('button:has-text("Back"), button:has-text("Previous"), .back-btn');
     this.skipButton = page.locator('button:has-text("Skip"), .skip-btn');
     this.progressIndicator = page.locator('.progress-indicator, .step-indicator, .wizard-progress');
@@ -103,7 +103,7 @@ export class ProfileSetupPage extends BasePage {
     this.remotePreferenceSelect = page.locator('input[type="checkbox"]:near(:text("Remote"))').first();
     
     // Completion
-    this.completeButton = page.locator('button:has-text("Complete"), button:has-text("Finish"), button:has-text("Save")');
+    this.completeButton = page.locator('#complete-btn');
     this.successMessage = page.locator('.success-message, .alert-success');
   }
   
@@ -116,13 +116,29 @@ export class ProfileSetupPage extends BasePage {
   }
   
   /**
-   * Skip resume upload step
+   * Skip resume upload step (step 0 → step 1)
    */
   async skipResumeUpload() {
-    if (await this.isVisible(this.fillManuallyButton)) {
-      await this.fillManuallyButton.click();
-      await this.page.waitForTimeout(500);
+    if (await this.cityInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      return;
     }
+    await this.handleCookieConsent();
+    await this.page.waitForLoadState('domcontentloaded');
+    // Skip handler is registered only after async loadUserData() in profile-setup.js
+    await Promise.race([
+      this.page.waitForResponse(
+        (resp) => resp.url().includes('/api/v1/profile') && resp.ok(),
+        { timeout: 20000 },
+      ),
+      this.page.waitForFunction(() => {
+        const next = document.getElementById('next-btn');
+        return next !== null && getComputedStyle(next).display === 'none';
+      }, { timeout: 20000 }),
+    ]).catch(() => {});
+    const skipBtn = this.page.locator('#skip-resume-btn');
+    await expect(skipBtn).toBeVisible({ timeout: 10000 });
+    await skipBtn.click();
+    await expect(this.cityInput).toBeVisible({ timeout: 15000 });
   }
   
   /**
@@ -239,6 +255,9 @@ export class ProfileSetupPage extends BasePage {
     
     // Travel preference - select "Minimal travel"
     await this.page.getByLabel(/Minimal travel/i).check().catch(() => {});
+
+    // Work authorization (required since migration)
+    await this.page.locator('input[name="work-authorization"][value="has_work_authorization"]').check().catch(() => {});
   }
   
   /**
@@ -290,8 +309,7 @@ export class ProfileSetupPage extends BasePage {
     
     await this.skipResumeUpload();
     
-    // Step 1: Basic Info (wait for step to be active)
-    await this.waitForStep(1).catch(() => {});
+    // Step 1: Basic Info
     await this.fillBasicInfo({
       city: 'San Francisco',
       state: 'CA',

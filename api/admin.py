@@ -18,10 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.database import User, WorkflowSession, JobApplication, WorkflowStatusEnum
 from utils.auth import require_admin
 from utils.database import get_database, get_session
-from utils.error_responses import internal_error, unauthorized_error
+from utils.error_responses import APIError, internal_error, unauthorized_error
 from utils.logging_config import mask_email
 from utils.maintenance import (
-    is_maintenance_mode,
     get_maintenance_info,
     enable_maintenance_mode,
     disable_maintenance_mode,
@@ -140,7 +139,7 @@ async def set_maintenance_mode(
             estimated_end=info.get("estimated_end"),
         )
         
-    except HTTPException:
+    except APIError:
         raise
     except Exception as e:
         logger.error(f"Failed to set maintenance mode: {e}", exc_info=True)
@@ -172,7 +171,7 @@ async def clear_maintenance_mode(
         logger.info(f"Maintenance mode DISABLED by {mask_email(user_email)}")
         return {"message": "Maintenance mode disabled successfully"}
         
-    except HTTPException:
+    except APIError:
         raise
     except Exception as e:
         logger.error(f"Failed to disable maintenance mode: {e}", exc_info=True)

@@ -13,7 +13,6 @@ Key selection priority:
 import base64
 import hashlib
 import logging
-from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 

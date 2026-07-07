@@ -4,7 +4,7 @@ CVOptimizationOrchestrator, and _compose_cv_from_profile.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 from agents.hiring_manager import HiringManagerEvaluation
 from agents.cv_optimizer_loop import (
@@ -12,10 +12,11 @@ from agents.cv_optimizer_loop import (
     CoverLetterFinalizer,
     CVOptimizationOrchestrator,
     OptimizationConfig,
-    OptimizationResult,
     _accept_cv_revision,
     _compose_cv_from_profile,
     _employment_dates_preserved,
+    _profile_date_markers,
+    _strip_editor_annotations,
     sanitize_application_text,
 )
 
@@ -148,6 +149,20 @@ class TestComposeCvFromProfile:
         cv = _compose_cv_from_profile(profile)
         assert "Present" in cv
 
+    def test_accomplishments_as_string_included(self):
+        profile = {
+            "full_name": "Bob",
+            "work_experience": [
+                {
+                    "title": "Engineer",
+                    "company": "BigCo",
+                    "accomplishments": "Single paragraph of achievements",
+                }
+            ],
+        }
+        cv = _compose_cv_from_profile(profile)
+        assert "Single paragraph of achievements" in cv
+
 
 # =============================================================================
 # Factuality guardrails
@@ -167,6 +182,10 @@ class TestSanitizeApplicationText:
         cleaned = sanitize_application_text(raw)
         assert "Adjusted start date" not in cleaned
         assert "2020-12" in cleaned
+
+    def test_empty_input_returns_empty(self):
+        assert _strip_editor_annotations("") == ""
+        assert sanitize_application_text("") == ""
 
 
 class TestEmploymentDatesPreserved:
@@ -190,6 +209,29 @@ class TestEmploymentDatesPreserved:
         revised = baseline + "\n- Highlighted relevant backend work"
         assert _employment_dates_preserved(baseline, revised, profile)
 
+    def test_education_date_markers_collected(self):
+        profile = {
+            "education": [
+                {
+                    "institution": "State U",
+                    "start_date": "2014-09",
+                    "end_date": "2018-05",
+                }
+            ],
+        }
+        markers = _profile_date_markers(profile)
+        assert "2014-09" in markers
+        assert "2018-05" in markers
+
+    def test_education_current_enrollment_adds_present_marker(self):
+        profile = {
+            "education": [
+                {"institution": "Online U", "start_date": "2024-01", "is_current": True},
+            ],
+        }
+        markers = _profile_date_markers(profile)
+        assert "Present" in markers
+
 
 class TestAcceptCvRevision:
     def test_rejects_revision_that_changes_dates(self):
@@ -211,6 +253,15 @@ class TestAcceptCvRevision:
         result, accepted = _accept_cv_revision(baseline, revised, baseline, profile)
         assert accepted
         assert "NEEDS CLARIFICATION" not in result
+
+    def test_rejects_revision_that_sanitizes_to_empty(self):
+        profile = {"full_name": "Bob", "summary": "Engineer"}
+        baseline = _compose_cv_from_profile(profile)
+        result, accepted = _accept_cv_revision(
+            baseline, "[NEEDS CLARIFICATION: only note]", baseline, profile
+        )
+        assert not accepted
+        assert result == baseline
 
 
 # =============================================================================
@@ -364,6 +415,26 @@ class TestCoverLetterFinalizer:
                 user_api_key="byok-key",
             )
         assert result == ""
+
+
+    @pytest.mark.asyncio
+    async def test_includes_culture_context_without_overview(self):
+        client = AsyncMock()
+        client.generate.return_value = {
+            "response": "Dear Hiring Team,\nCulture fit...\nBest regards,",
+            "filtered": False,
+        }
+        finalizer = CoverLetterFinalizer()
+        with patch("agents.cv_optimizer_loop.get_gemini_client", return_value=client):
+            await finalizer.generate_cover_letter(
+                optimized_cv=SAMPLE_CV,
+                job_description=SAMPLE_JD,
+                job_analysis=SAMPLE_JOB_ANALYSIS,
+                company_research={"culture_and_values": "Collaborative, async-friendly team"},
+                user_api_key="byok-key",
+            )
+        prompt = client.generate.call_args.kwargs.get("prompt", "")
+        assert "Culture:" in prompt
 
 
 # =============================================================================
@@ -544,6 +615,89 @@ class TestCVOptimizationOrchestratorConvergence:
         )
 
         assert len(broadcasts) == 3
+
+    @pytest.mark.asyncio
+    async def test_broadcast_failure_does_not_stop_loop(self):
+        evaluations = [
+            HiringManagerEvaluation(score=6.0, strengths=["s"], gaps=["g"], action_items=["a"], reasoning="r"),
+            HiringManagerEvaluation(score=6.1, strengths=["s"], gaps=["g"], action_items=["a"], reasoning="r"),
+        ]
+
+        async def _failing_broadcast(record):
+            raise RuntimeError("websocket down")
+
+        orchestrator = CVOptimizationOrchestrator()
+        orchestrator._hiring_manager = _make_hiring_manager_mock(evaluations)
+        orchestrator._cv_optimizer = _make_cv_optimizer_mock()
+        orchestrator._cover_letter_finalizer = _make_cover_letter_mock()
+
+        config = OptimizationConfig(max_iterations=2, score_threshold=9.5)
+        result = await orchestrator.run(
+            session_id="test-session",
+            user_id="test-user",
+            initial_cv=SAMPLE_CV,
+            job_description=SAMPLE_JD,
+            job_analysis=SAMPLE_JOB_ANALYSIS,
+            company_research=None,
+            config=config,
+            user_api_key="test-key",
+            broadcast_iteration_fn=_failing_broadcast,
+        )
+
+        assert len(result.iteration_history) == 2
+
+    @pytest.mark.asyncio
+    async def test_revise_non_quota_exception_propagates(self):
+        orchestrator = CVOptimizationOrchestrator()
+        orchestrator._hiring_manager = _make_hiring_manager_mock([SAMPLE_EVALUATION])
+        cv_optimizer = AsyncMock()
+        cv_optimizer.revise = AsyncMock(side_effect=RuntimeError("revise failed"))
+        orchestrator._cv_optimizer = cv_optimizer
+        orchestrator._cover_letter_finalizer = _make_cover_letter_mock()
+
+        config = OptimizationConfig(max_iterations=3, score_threshold=9.5)
+        with pytest.raises(RuntimeError, match="revise failed"):
+            await orchestrator.run(
+                session_id="test-session",
+                user_id="test-user",
+                initial_cv=SAMPLE_CV,
+                job_description=SAMPLE_JD,
+                job_analysis=SAMPLE_JOB_ANALYSIS,
+                company_research=None,
+                config=config,
+                user_api_key="test-key",
+                broadcast_iteration_fn=_noop_broadcast,
+            )
+
+    @pytest.mark.asyncio
+    async def test_cover_letter_non_quota_exception_propagates(self):
+        cover_letter_mock = AsyncMock()
+        cover_letter_mock.generate_cover_letter = AsyncMock(
+            side_effect=RuntimeError("cover letter failed")
+        )
+
+        orchestrator = CVOptimizationOrchestrator()
+        orchestrator._hiring_manager = _make_hiring_manager_mock([HIGH_SCORE_EVALUATION])
+        orchestrator._cv_optimizer = _make_cv_optimizer_mock()
+        orchestrator._cover_letter_finalizer = cover_letter_mock
+
+        config = OptimizationConfig(max_iterations=5, score_threshold=8.5)
+        with pytest.raises(RuntimeError, match="cover letter failed"):
+            await orchestrator.run(
+                session_id="test-session",
+                user_id="test-user",
+                initial_cv=SAMPLE_CV,
+                job_description=SAMPLE_JD,
+                job_analysis=SAMPLE_JOB_ANALYSIS,
+                company_research=None,
+                config=config,
+                user_api_key="test-key",
+                broadcast_iteration_fn=_noop_broadcast,
+            )
+
+    def test_compute_gap_analysis_empty_history(self):
+        orchestrator = CVOptimizationOrchestrator()
+        assert orchestrator._compute_gap_analysis([], 0) == []
 
 
 # =============================================================================

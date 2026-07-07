@@ -14,15 +14,11 @@ Endpoints covered:
 
 import uuid
 import pytest
-import bcrypt
 from unittest.mock import AsyncMock, patch
-from datetime import datetime, timezone
 
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy import delete
 
 from main import app
-from models.database import User, AuthMethod
 
 
 # ---------------------------------------------------------------------------

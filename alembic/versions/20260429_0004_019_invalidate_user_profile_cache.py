@@ -12,7 +12,6 @@ Best-effort: if Redis is down, upgrade still succeeds (see
 ``invalidate_all_user_profile_caches_sync``).
 """
 
-from alembic import op
 
 revision = "20260429_019"
 down_revision = "20260429_018"

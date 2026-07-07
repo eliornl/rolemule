@@ -66,6 +66,8 @@ npm-debug.log*
 .coverage
 .coverage.*
 coverage.xml
+coverage.json
+coverage_test_api.json
 *.cover
 htmlcov/
 .pytest_cache/

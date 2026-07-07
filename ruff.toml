@@ -1,0 +1,8 @@
+# Ruff configuration — matches `make lint` and CI (`ruff check .`).
+target-version = "py313"
+
+# Intentional late imports (env/bootstrap before app imports, circular-import avoidance).
+[lint.per-file-ignores]
+"config/settings.py" = ["E402"]
+"tests/conftest.py" = ["E402"]
+"workflows/job_application_workflow.py" = ["E402"]

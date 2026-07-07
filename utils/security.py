@@ -6,7 +6,7 @@ Provides input sanitization, XSS prevention, and security helpers.
 import html
 import re
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 try:
     import bleach

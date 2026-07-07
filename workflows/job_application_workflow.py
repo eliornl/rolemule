@@ -55,8 +55,6 @@ from workflows.state_schema import (
     WorkflowPhase,
     WorkflowStatus,
     Agent,
-    UserProfile,
-    JobInputData,
     create_initial_state,
     add_error,
     get_current_time_string,

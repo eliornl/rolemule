@@ -6,7 +6,7 @@ Creates personalized, actionable resume advice by analyzing user profile against
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from workflows.state_schema import WorkflowState, ResumeRecommendationsResult
 from utils.llm_parsing import parse_json_from_llm_response
 

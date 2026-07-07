@@ -4,27 +4,25 @@ Pytest configuration and fixtures for the ApplyPilot tests.
 Uses local PostgreSQL and Redis for testing to match production environment.
 """
 
-import os
 import uuid
 import pytest
 import pytest_asyncio
 from datetime import datetime, timedelta, timezone
 from typing import AsyncGenerator, Dict, Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy import text, delete
+from sqlalchemy import delete
 
 # Load environment variables before importing app modules
 from dotenv import load_dotenv
 load_dotenv()
 
 from main import app
-from models.database import Base, User, UserProfile, AuthMethod
+from models.database import User, AuthMethod
 from utils.database import get_database
-from config.settings import get_settings, get_security_settings, clear_settings_cache
+from config.settings import get_settings, get_security_settings
 
 
 # =============================================================================

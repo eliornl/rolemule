@@ -336,7 +336,7 @@ class TestWorkflowE2E:
         profile_matching = results["profile_matching"]
         assert "overall_score" in profile_matching or "final_scores" in profile_matching
         
-        print(f"\nWorkflow completed successfully!")
+        print("\nWorkflow completed successfully!")
         print(f"Job: {job_analysis.get('job_title')} at {job_analysis.get('company_name')}")
         
         exec_summary = profile_matching.get("executive_summary", {})

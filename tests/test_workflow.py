@@ -160,7 +160,7 @@ def user_with_complete_profile(http_client: httpx.Client, authenticated_user: Di
     assert prefs_response.status_code == 200
     
     # Verify profile is complete
-    status_response = http_client.get(
+    http_client.get(
         "/api/v1/profile/status",
         headers=authenticated_user,
     )

@@ -432,7 +432,7 @@ class CoverLetterWriterAgent:
         # Key requirements - these are CRITICAL for the cover letter
         required_skills = job.get("required_skills", [])
         if required_skills:
-            sections.append(f"\n*** KEY TECHNICAL SKILLS REQUIRED (address these!): ***")
+            sections.append("\n*** KEY TECHNICAL SKILLS REQUIRED (address these!): ***")
             sections.append(f"{', '.join(required_skills[:12])}")
 
         soft_skills = job.get("soft_skills", [])
@@ -526,7 +526,7 @@ class CoverLetterWriterAgent:
                         can_learn = gap.get("can_learn_quickly", False)
                         sections.append(f"  • {skill_name} ({importance})")
                         if can_learn:
-                            sections.append(f"    → Note: Can be learned quickly - mention willingness to learn")
+                            sections.append("    → Note: Can be learned quickly - mention willingness to learn")
                     else:
                         sections.append(f"  • {gap}")
 

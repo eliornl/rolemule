@@ -29,7 +29,7 @@ from utils.cache import (
 from utils.encryption import decrypt_api_key
 from utils.security import sanitize_llm_output
 from utils.error_responses import APIError, ErrorCode, internal_error, not_found_error, rate_limit_error, validation_error
-from models.database import WorkflowSession, User, WorkflowStatusEnum
+from models.database import WorkflowSession, User
 from agents.interview_prep import InterviewPrepAgent
 from api.websocket import (
     broadcast_interview_prep_started,
@@ -128,7 +128,9 @@ async def _check_api_key_available(db: AsyncSession, user_id: uuid.UUID) -> bool
         return True
     
     # Check for server API key
-    server_has_key = getattr(settings, 'gemini_api_key', None) is not None
+    server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or getattr(
+        settings, 'use_vertex_ai', False
+    )
     return server_has_key
 
 

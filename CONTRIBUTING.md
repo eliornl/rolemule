@@ -450,6 +450,28 @@ Issue and PR templates live under [`.github/`](.github/). Templates reference th
 |-------|---------|
 | `bug` | Bug Report template |
 | `enhancement` | Feature Request template |
+| `dependencies` | Dependabot pull requests |
+
+### Continuous integration (GitHub Actions)
+
+Workflows under [`.github/workflows/`](.github/workflows/):
+
+| Workflow | What it checks |
+|----------|----------------|
+| `ci.yml` | Ruff lint, agent unit tests, API integration tests (Postgres + Redis), frontend build, security grep, E2E smoke tests |
+| `codeql.yml` | Static security analysis for Python and JavaScript (weekly + on PRs) |
+
+Dependabot opens weekly dependency PRs ([`.github/dependabot.yml`](.github/dependabot.yml)). Sensitive paths use [`.github/CODEOWNERS`](.github/CODEOWNERS).
+
+**After merging CI for the first time**, enable branch protection on `main`:
+
+1. **Settings → Branches → Add rule** for `main`
+2. Require pull request before merging (1 approval recommended)
+3. Require status check **`CI success`** (the aggregate job in `ci.yml`)
+4. Optionally require CodeQL checks to pass
+5. Enable **Require approval for first-time contributors** under **Settings → Actions → General → Fork pull request workflows**
+
+The dependency-audit job is **advisory** (`continue-on-error`) until the Dependabot backlog is cleared — it still surfaces CVEs in the Actions log.
 
 ---
 

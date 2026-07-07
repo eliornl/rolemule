@@ -5,8 +5,7 @@ Tests interview preparation generation with mocked LLM responses.
 
 import pytest
 from unittest.mock import AsyncMock, patch
-from datetime import datetime, timezone
-from typing import Dict, Any
+from datetime import datetime
 
 from agents.interview_prep import InterviewPrepAgent
 

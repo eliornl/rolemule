@@ -12,8 +12,8 @@ no running server is required.  The key fixtures provided here:
   • no_account_lockout  — autouse: account-lockout check always returns not-locked
 
 NullPool note:
-  asyncio_default_fixture_loop_scope=function (in pytest.ini) means each test
-  function gets its own event loop.  asyncpg connections are loop-bound, so the
+  asyncio_default_fixture_loop_scope=session (in pytest.ini) means each test
+  function shares the session event loop. asyncpg connections are loop-bound, so the
   shared test_engine pool would try to reuse connections from a closed loop.
   We override get_database here with a NullPool engine to ensure every request
   creates a fresh connection for the current event loop.
@@ -23,8 +23,8 @@ import uuid
 import pytest
 import pytest_asyncio
 from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator, Dict, Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import AsyncGenerator
+from unittest.mock import AsyncMock, patch
 
 import jwt
 from httpx import AsyncClient, ASGITransport

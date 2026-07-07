@@ -7,9 +7,8 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Set
-from uuid import UUID
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Request, Depends, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends, status
 from starlette.websockets import WebSocketState
 import jwt
 

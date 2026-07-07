@@ -1584,3 +1584,179 @@ class TestExtensionAutofillDeterministicEndpoint:
 
         assert resp.status_code == 200
         assert resp.json()["assignments"][0]["value"] == "Elior Nataf Lackritz"
+
+
+class TestExtensionAutofillHelperFunctions:
+    """Pure helpers and profile bundle loading."""
+
+    @pytest.mark.asyncio
+    async def test_load_profile_bundle_truncates_summary_and_resume(
+        self, authed_client_with_user,
+    ):
+        from api.extension_autofill import _load_profile_bundle
+        from models.database import User, UserResumeAsset
+
+        uid = await _ensure_profile_for_token(
+            authed_client_with_user,
+            summary="x" * 3000,
+            work_experience=[{"title": f"Role {i}"} for i in range(20)],
+        )
+        async with _NullSessionLocal() as session:
+            user_row = await session.get(User, uid)
+            session.add(
+                UserResumeAsset(
+                    id=uuid.uuid4(),
+                    user_id=uid,
+                    original_filename="resume.pdf",
+                    mime_type="application/pdf",
+                    byte_size=1234,
+                    storage_relative_path="users/resume.pdf",
+                )
+            )
+            await session.commit()
+
+        async with _NullSessionLocal() as session:
+            user_row = await session.get(User, uid)
+            bundle, prof_sig = await _load_profile_bundle(session, uid, user_row)
+        assert bundle["resume_file"]["has_file"] is True
+        assert len(bundle["profile"]["summary"]) <= 2501
+        assert len(bundle["profile"]["work_experience"]) == 12
+        assert prof_sig
+
+    def test_sanitize_extras_and_build_prompt(self):
+        from api.extension_autofill import _build_user_prompt, _sanitize_extras
+
+        extras = _sanitize_extras({" source ": "value"})
+        assert "source" in extras
+        prompt = _build_user_prompt(
+            [{"field_uid": "0", "label_text": "Name"}],
+            {"full_name": "Jane"},
+            extras,
+            "https://example.com/apply",
+        )
+        assert "PROFILE_JSON" in prompt
+        assert "Jane" in prompt
+
+    def test_get_user_uuid_from_uuid_object(self):
+        from api.extension_autofill import _get_user_uuid
+
+        uid = uuid.uuid4()
+        assert _get_user_uuid({"_id": uid}) == uid
+
+    @pytest.mark.asyncio
+    async def test_map_internal_error_on_unexpected_exception(self, authed_client_with_user):
+        uid = await _ensure_profile_for_token(authed_client_with_user)
+        token = authed_client_with_user.headers["Authorization"].split(" ", 1)[1]
+        sec = get_security_settings()
+        payload = jwt.decode(
+            token,
+            sec.jwt_config["secret_key"],
+            algorithms=[sec.jwt_config["algorithm"]],
+        )
+        mock_user = _complete_user_override(uid, payload)
+        app.dependency_overrides[get_current_user] = mock_user
+        app.dependency_overrides[get_current_user_with_complete_profile] = mock_user
+
+        try:
+            with (
+                patch("api.extension_autofill.get_cached_tool_result", AsyncMock(return_value=None)),
+                patch("api.extension_autofill.get_gemini_client", AsyncMock(side_effect=RuntimeError("boom"))),
+                patch("api.extension_autofill._get_user_api_key", AsyncMock(return_value=None)),
+                patch("api.extension_autofill._server_has_llm", return_value=True),
+            ):
+                resp = await authed_client_with_user.post(
+                    f"{BASE}/autofill/map",
+                    json=_single_field_body(),
+                )
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)
+            app.dependency_overrides.pop(get_current_user_with_complete_profile, None)
+
+        assert resp.status_code == 500
+        assert resp.json().get("error_code") == "INT_9001"
+
+
+class TestExtensionAutofillRulesExtended:
+    """Additional deterministic rule branches."""
+
+    def _field(self, uid: str, **kwargs):
+        from api.extension_autofill import AutofillFieldIn
+
+        base = {
+            "field_uid": uid,
+            "tag": "input",
+            "input_type": "text",
+            "label_text": "",
+        }
+        base.update(kwargs)
+        return AutofillFieldIn(**base)
+
+    def test_single_token_name_splits(self):
+        from api.extension_autofill_rules import deterministic_value_for_field
+
+        f = self._field("0", label_text="First name*")
+        bundle = {"full_name": "Madonna", "profile": {}}
+        assert deterministic_value_for_field(f, bundle) == "Madonna"
+
+    def test_nyc_commute_no_when_not_relocating(self):
+        from api.extension_autofill_rules import deterministic_value_for_field
+
+        f = self._field(
+            "1",
+            input_type="yes_no_buttons",
+            tag="div",
+            label_text="This position is based in NYC. Are you located in the tri-state area and able to commute?",
+            options=[{"value": "Yes", "text": "Yes"}, {"value": "No", "text": "No"}],
+        )
+        bundle = {
+            "full_name": "Jane Doe",
+            "profile": {"city": "Austin", "state": "TX", "willing_to_relocate": False},
+        }
+        assert deterministic_value_for_field(f, bundle) == "No"
+
+    def test_central_office_relocation_not_willing(self):
+        from api.extension_autofill_rules import deterministic_value_for_field
+
+        f = self._field(
+            "2",
+            input_type="combobox",
+            label_text="If you are currently not local to one of our central offices, are you willing to relocate?*",
+            options=[{"value": "yes", "text": "Yes"}, {"value": "no", "text": "No"}],
+        )
+        bundle = {
+            "full_name": "Jane Doe",
+            "profile": {"city": "Austin", "state": "TX", "willing_to_relocate": False},
+        }
+        assert deterministic_value_for_field(f, bundle) == "No"
+
+    def test_years_experience_exact_match_option(self):
+        from api.extension_autofill_rules import deterministic_value_for_field
+
+        f = self._field(
+            "3",
+            input_type="combobox",
+            label_text="Years of experience",
+            options=[{"value": "a", "text": "3"}, {"value": "b", "text": "5"}],
+        )
+        bundle = {"full_name": "Jane", "profile": {"years_experience": 5}}
+        assert deterministic_value_for_field(f, bundle) == "5"
+
+    def test_country_two_letter_code(self):
+        from api.extension_autofill_rules import deterministic_value_for_field
+
+        f = self._field("4", input_type="combobox", label_text="Country")
+        bundle = {"full_name": "Jane", "profile": {"country": "us"}}
+        assert deterministic_value_for_field(f, bundle) == "United States"
+
+    def test_sponsorship_unknown_when_profile_ambiguous(self):
+        from api.extension_autofill_rules import deterministic_value_for_field
+
+        f = self._field(
+            "5",
+            input_type="combobox",
+            label_text="Will you require visa sponsorship?",
+            options=None,
+        )
+        bundle = {"full_name": "Jane", "profile": {}}
+        assert deterministic_value_for_field(f, bundle) is None
+
