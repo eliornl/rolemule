@@ -52,7 +52,7 @@ Flask-Login==0.6.3
 fonttools==4.62.1
 frozenlist==1.8.0
 gevent==24.11.1
-geventhttpclient==2.3.7
+geventhttpclient==2.3.9
 google-ai-generativelanguage==0.6.15
 google-api-core==2.25.1
 google-api-python-client==2.176.0
