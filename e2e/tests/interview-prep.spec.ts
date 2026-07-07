@@ -854,7 +854,7 @@ test.describe('O. Generate Form Fields', () => {
     await mockExistingPrep(page);
     await page.goto(PAGE_URL);
     await waitForMainContent(page);
-    const btn = page.locator('button:has-text("Print"), button:has-text("Export"), a:has-text("Print")').first();
+    const _btn = page.locator('button:has-text("Print"), button:has-text("Export"), a:has-text("Print")').first();
     // Not all designs have print; just check it's not throwing errors
     await expect(page.locator('body')).toBeVisible();
   });

@@ -5,15 +5,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import utils.llm_client as llm_mod
 from utils.llm_client import (
     GeminiClient,
     GeminiError,
     check_gemini_health,
+    close_gemini_client,
     get_gemini_client,
+    is_llm_quota_or_rate_limit_exception,
     reset_gemini_client,
     user_facing_message_from_llm_exception,
     _GEMINI_QUOTA_USER_MESSAGE,
+    _exception_chain_text,
     _text_indicates_gemini_quota_exhausted,
 )
 
@@ -201,7 +203,9 @@ async def test_close_gemini_client() -> None:
             gemini_api_key=None,
         )
         await get_gemini_client()
-        await llm_mod.close_gemini_client()
+        await close_gemini_client()
+        import utils.llm_client as llm_mod
+
         assert llm_mod._gemini_client is None
 
 
@@ -218,7 +222,7 @@ def test_text_indicates_gemini_quota_429_rate() -> None:
 
 
 def test_is_llm_quota_or_rate_limit_exception() -> None:
-    assert llm_mod.is_llm_quota_or_rate_limit_exception(RuntimeError("RESOURCE_EXHAUSTED"))
+    assert is_llm_quota_or_rate_limit_exception(RuntimeError("RESOURCE_EXHAUSTED"))
 
 
 def test_user_facing_message_non_quota() -> None:
@@ -488,7 +492,7 @@ async def test_generate_google_ai_with_system_prompt() -> None:
 def test_exception_chain_includes_gemini_original_error() -> None:
     inner = RuntimeError("RESOURCE_EXHAUSTED")
     wrapped = GeminiError("outer", original_error=inner)
-    text = llm_mod._exception_chain_text(wrapped)
+    text = _exception_chain_text(wrapped)
     assert "RESOURCE_EXHAUSTED" in text
 
 

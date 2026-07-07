@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any, List, TypeVar
 
 from config.settings import get_settings
 from utils.redis_client import get_redis_client
-from utils.logging_config import get_structured_logger, mask_email
+from utils.logging_config import get_structured_logger, mask_email, sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -186,8 +186,26 @@ _metrics = _CacheMetrics()
 
 
 def generate_hash(content: str) -> str:
-    """Generate MD5 hash for cache key generation."""
-    return hashlib.md5(content.encode('utf-8')).hexdigest()
+    """Generate SHA-256 hash for cache key generation."""
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def _safe_log_key(key: str) -> str:
+    """Return a truncated, log-injection-safe cache key label."""
+    return sanitize_log_value(key[:80])
+
+
+def _safe_log_identifier(identifier: str) -> str:
+    """Mask PII in rate-limit identifiers before logging."""
+    safe = sanitize_log_value(identifier)
+    if "@" in safe:
+        local_part = safe.split("@", 1)[0]
+        if ":" in local_part:
+            prefix, email_part = safe.split(":", 1)
+            if "@" in email_part:
+                return f"{sanitize_log_value(prefix)}:{mask_email(email_part)}"
+        return mask_email(safe)
+    return safe[:64]
 
 
 async def get_redis_or_none():
@@ -217,12 +235,12 @@ async def cache_get(key: str) -> Optional[Dict[str, Any]]:
         cached = await redis.get(key)
         if cached:
             data = json.loads(cached)
-            logger.debug(f"Cache hit: {key}")
+            logger.debug("Cache hit: %s", _safe_log_key(key))
             return data
         return None
         
     except Exception as e:
-        logger.warning(f"Cache get error for {key}: {e}")
+        logger.warning("Cache get error for %s: %s", _safe_log_key(key), sanitize_log_value(str(e)))
         return None
 
 
@@ -250,11 +268,11 @@ async def cache_set(key: str, data: Dict[str, Any], ttl: int) -> bool:
         }
         
         await redis.set(key, json.dumps(cache_data), ex=ttl)
-        logger.debug(f"Cache set: {key} (TTL: {ttl}s)")
+        logger.debug("Cache set: %s (TTL: %ss)", _safe_log_key(key), ttl)
         return True
         
     except Exception as e:
-        logger.warning(f"Cache set error for {key}: {e}")
+        logger.warning("Cache set error for %s: %s", _safe_log_key(key), sanitize_log_value(str(e)))
         return False
 
 
@@ -266,11 +284,11 @@ async def cache_delete(key: str) -> bool:
             return False
             
         await redis.delete(key)
-        logger.debug(f"Cache deleted: {key}")
+        logger.debug("Cache deleted: %s", _safe_log_key(key))
         return True
         
     except Exception as e:
-        logger.warning(f"Cache delete error for {key}: {e}")
+        logger.warning("Cache delete error for %s: %s", _safe_log_key(key), sanitize_log_value(str(e)))
         return False
 
 
@@ -433,7 +451,10 @@ async def get_cached_company_research(company_name: str) -> Optional[Dict[str, A
     if cached and "data" in cached:
         data = cached["data"]
         if not _validate_cache_data(CACHE_PREFIX_COMPANY_RESEARCH, data):
-            logger.warning(f"company_research cache entry for '{company_name}' failed schema validation — evicting")
+            logger.warning(
+                "company_research cache entry for %r failed schema validation — evicting",
+                sanitize_log_value(company_name[:50]),
+            )
             await cache_delete(key)
             _metrics.record_miss(CACHE_PREFIX_COMPANY_RESEARCH, latency_ms)
             structured_logger.log_cache_miss("company_research", key[:30])
@@ -505,7 +526,11 @@ async def acquire_compute_lock(cache_key: str) -> bool:
         was_set = await redis.set(lock_key, "1", nx=True, ex=TTL_COMPUTE_LOCK)
         return was_set is not None
     except Exception as e:
-        logger.warning(f"acquire_compute_lock failed for {cache_key}: {e}")
+        logger.warning(
+            "acquire_compute_lock failed for %s: %s",
+            _safe_log_key(cache_key),
+            sanitize_log_value(str(e)),
+        )
         return True  # Fail open
 
 
@@ -527,7 +552,11 @@ async def release_compute_lock(cache_key: str) -> bool:
         await redis.delete(lock_key)
         return True
     except Exception as e:
-        logger.warning(f"release_compute_lock failed for {cache_key}: {e}")
+        logger.warning(
+            "release_compute_lock failed for %s: %s",
+            _safe_log_key(cache_key),
+            sanitize_log_value(str(e)),
+        )
         return False
 
 
@@ -662,7 +691,11 @@ async def invalidate_user_llm_cache(user_id: str) -> int:
             if cursor == 0:
                 break
     except Exception as e:
-        logger.warning(f"Failed to invalidate LLM cache for user {user_id}: {e}")
+        logger.warning(
+            "Failed to invalidate LLM cache for user %s: %s",
+            sanitize_log_value(str(user_id)[:8]),
+            sanitize_log_value(str(e)),
+        )
 
     return deleted
 
@@ -1208,7 +1241,7 @@ async def check_rate_limit(
         current_count = int(current) if current else 0
         
         if current_count >= limit:
-            logger.warning(f"Rate limit exceeded for {identifier}")
+            logger.warning("Rate limit exceeded for %s", _safe_log_identifier(identifier))
             return False, 0
             
         # Increment counter
@@ -1274,7 +1307,7 @@ async def check_rate_limit_with_headers(
         reset_seconds = ttl if ttl and ttl > 0 else window_seconds
         
         if current_count >= limit:
-            logger.warning(f"Rate limit exceeded for {identifier}")
+            logger.warning("Rate limit exceeded for %s", _safe_log_identifier(identifier))
             return RateLimitResult(
                 allowed=False,
                 limit=limit,
@@ -1528,6 +1561,6 @@ async def get_cache_stats() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Cache stats error: {e}", exc_info=True)
-        return {"status": "error", "error": str(e)}
+        logger.error("Cache stats error: %s", e, exc_info=True)
+        return {"status": "error", "error": "Cache stats unavailable"}
 

@@ -31,7 +31,7 @@ from utils.request_middleware import RequestLoggingMiddleware, SlowRequestMiddle
 from api.auth import router as auth_router
 from api.profile import router as profile_router
 from api.applications import router as applications_router
-from api.workflow import router as workflow_router
+from api.workflow import router as workflow_router, _safe_error_msg
 from api.websocket import router as websocket_router
 from api.interview_prep import router as interview_prep_router
 from api.cv_optimizer import router as cv_optimizer_router
@@ -673,7 +673,7 @@ def include_routers(app: FastAPI):
             from utils.cache import get_cache_stats
             return await get_cache_stats()
         except Exception as e:
-            logger.warning(f"Failed to get cache stats: {e}")
+            logger.warning("Failed to get cache stats: %s", e)
             return {"status": "unavailable", "error": "Cache unavailable"}
 
 
@@ -800,8 +800,10 @@ def add_custom_routes(app: FastAPI):
             )
         except Exception as e:
             logger.error(f"Error serving dashboard: {e}", exc_info=True)
-
-    # New Application endpoint
+            return HTMLResponse(
+                content="<h1>Dashboard</h1><p>Service temporarily unavailable</p>",
+                status_code=503,
+            )
     @app.get("/dashboard/new-application", response_class=HTMLResponse)
     async def new_application(request: Request):
         """Serve the new application page."""
@@ -1190,12 +1192,11 @@ def add_custom_routes(app: FastAPI):
 
     # API documentation redirect
     @app.get("/docs")
-    async def docs_redirect():
+    async def docs_redirect() -> JSONResponse:
         """Redirect to API documentation."""
-        if settings.debug:
-            return JSONResponse({"message": "API documentation available at /api/docs"})
-        else:
+        if not settings.debug:
             raise not_found_error("Documentation")
+        return JSONResponse({"message": "API documentation available at /api/docs"})
 
 
 def _is_html_request(request: Request) -> bool:
@@ -1296,9 +1297,13 @@ def add_exception_handlers(app: FastAPI):
         }
         error_code = error_code_map.get(exc.status_code, ErrorCode.UNKNOWN_ERROR)
 
+        message = str(exc.detail)
+        if exc.status_code >= 500:
+            message = _safe_error_msg(exc, debug=settings.debug)
+
         return create_error_response(
             error_code=error_code,
-            message=str(exc.detail),
+            message=message,
             status_code=exc.status_code,
         )
 
@@ -1324,9 +1329,7 @@ def add_exception_handlers(app: FastAPI):
             except Exception:
                 logger.debug("Failed to render 500 template in general handler, falling back to JSON", exc_info=True)
 
-        message = "An unexpected error occurred"
-        if not settings.is_production:
-            message = str(exc)
+        message = _safe_error_msg(exc, debug=settings.debug)
 
         return create_error_response(
             error_code=ErrorCode.INTERNAL_ERROR,

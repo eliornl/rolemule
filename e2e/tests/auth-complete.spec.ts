@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage, DashboardPage } from '../pages';
 import { setupAllMocks, setupAuthMocks, setupCookieConsent, MOCK_JWT } from '../utils/api-mocks';
-import { generateTestEmail } from '../fixtures/test-data';
+
 
 /**
  * Complete authentication tests with mocked APIs

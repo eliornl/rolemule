@@ -9,11 +9,9 @@ import unicodedata
 import uuid
 from datetime import datetime, timezone
 import logging
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
-
-from utils.logging_config import mask_email as _mask_email
-from typing import Dict, Any, List, Optional
 import asyncio
+from typing import Dict, Any, List, Optional
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from fastapi import (
     APIRouter,
@@ -87,6 +85,7 @@ from utils.error_responses import (
 from utils.security import sanitize_llm_output
 from utils.application_dedupe import normalize_title_company_key as _normalize_title_company_key
 from utils.resume_parser import extract_text_from_docx, extract_text_from_pdf
+from utils.logging_config import mask_email as _mask_email, sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -96,7 +95,12 @@ from utils.resume_parser import extract_text_from_docx, extract_text_from_pdf
 MIN_URL_LENGTH: int = 10
 MAX_URL_LENGTH: int = 2000
 MAX_TEXT_LENGTH: int = 50000
-VALID_URL_PREFIXES: tuple = ("http://", "https://")
+
+
+def _is_http_or_https_url(url: str) -> bool:
+    """Return True when url uses http(s) and has a host (not substring-only checks)."""
+    parsed = urlparse(url.strip())
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 # File processing
 MAX_FILE_SIZE: int = 5 * 1024 * 1024  # 5 MB
@@ -516,12 +520,13 @@ class WorkflowStartRequest(BaseModel):
 
     @validator("job_url")
     def validate_url(cls, v):
-        """Validate URL format and ensure it starts with http:// or https://."""
+        """Validate URL format and ensure it uses http:// or https://."""
         if v is None:
             return v
-        if not v.startswith(VALID_URL_PREFIXES):
+        trimmed = v.strip()
+        if not _is_http_or_https_url(trimmed):
             raise ValueError("URL must start with http:// or https://")
-        return v
+        return trimmed
 
 
 class WorkflowStatusResponse(BaseModel):
@@ -669,7 +674,11 @@ async def start_workflow(
         except _APIError:
             raise
         except Exception as _lock_err:
-            logger.warning(f"Could not acquire workflow-creation lock for {user_id}: {_lock_err}")
+            logger.warning(
+                "Could not acquire workflow-creation lock for %s: %s",
+                sanitize_log_value(user_id),
+                sanitize_log_value(_lock_err),
+            )
             # Fail open (best-effort) — proceed without the lock if Redis is unavailable
 
         # Resolve input from multiple sources
@@ -771,7 +780,7 @@ async def start_workflow(
         # Never persist a non-http(s) URL as job_url. Unlike WorkflowStartRequest.job_url,
         # the form job_url field and source_url (JSON body or Form) are not schema-validated,
         # so the extension or a manual submit could supply an arbitrary scheme.
-        if effective_job_url and not effective_job_url.startswith(VALID_URL_PREFIXES):
+        if effective_job_url and not _is_http_or_https_url(effective_job_url):
             logger.warning("Discarding job URL with unsupported scheme on workflow start")
             effective_job_url = None
             source_url = None
@@ -923,7 +932,7 @@ async def start_workflow(
                 user_api_key=user_api_key,
             )
 
-        logger.info(f"Started workflow {session_id} for user {_mask_email(current_user['email'])}")
+        logger.info(f"Started workflow {sanitize_log_value(session_id)} for user {_mask_email(current_user['email'])}")
 
         # Release the concurrency lock — session is committed, background task is
         # queued.  The next request for this user is now safe to proceed.
@@ -1202,7 +1211,7 @@ async def regenerate_cover_letter(
         flag_modified(workflow_session, "cover_letter")
         await db.commit()
 
-        logger.info(f"Regenerated cover letter for session {session_id}")
+        logger.info(f"Regenerated cover letter for session {sanitize_log_value(session_id)}")
 
         return RegenerateCoverLetterResponse(
             session_id=session_id,
@@ -1308,7 +1317,7 @@ async def regenerate_resume(
         flag_modified(workflow_session, "resume_recommendations")
         await db.commit()
 
-        logger.info(f"Regenerated resume recommendations for session {session_id}")
+        logger.info(f"Regenerated resume recommendations for session {sanitize_log_value(session_id)}")
 
         return RegenerateAgentResponse(
             session_id=session_id,
@@ -1490,7 +1499,7 @@ Generate 4-6 interview stages, 8-10 likely questions with personalized suggested
         flag_modified(workflow_session, "company_research")
         await db.commit()
 
-        logger.info(f"Generated interview prep for session {session_id}")
+        logger.info(f"Generated interview prep for session {sanitize_log_value(session_id)}")
 
         return RegenerateAgentResponse(
             session_id=session_id,
@@ -1584,7 +1593,7 @@ async def continue_workflow_after_gate(
                 user_id=str(user_id),
             )
 
-        logger.info(f"Continuing workflow {session_id} after user confirmation")
+        logger.info(f"Continuing workflow {sanitize_log_value(session_id)} after user confirmation")
 
         return WorkflowContinueResponse(
             session_id=session_id,
@@ -1662,7 +1671,7 @@ async def generate_documents(
             user_id=str(user_id),
         )
 
-        logger.info(f"Document generation started for session {session_id}")
+        logger.info(f"Document generation started for session {sanitize_log_value(session_id)}")
 
         return WorkflowContinueResponse(
             session_id=session_id,
@@ -1700,7 +1709,7 @@ async def _execute_workflow_background(
             workflow_session = result.scalar_one_or_none()
 
             if not workflow_session:
-                logger.error(f"Workflow session {session_id} not found")
+                logger.error(f"Workflow session {sanitize_log_value(session_id)} not found")
                 return
 
             # Idempotency guard: if a Cloud Tasks retry fires after the workflow
@@ -1740,7 +1749,7 @@ async def _execute_workflow_background(
                 try:
                     await _update_workflow_session_with_state(db, session_id, final_state)
                 except Exception as session_err:
-                    logger.error(f"Workflow {session_id}: Failed to update workflow session: {session_err}")
+                    logger.error(f"Workflow {sanitize_log_value(session_id)}: Failed to update workflow session: {session_err}")
                     # Continue to update job application even if session update fails
                     # (workflow's _save_workflow_state already saved the data)
                     try:
@@ -1755,7 +1764,7 @@ async def _execute_workflow_background(
                         db, session_id, final_state
                     )
                 except Exception as app_err:
-                    logger.error(f"Workflow {session_id}: Failed to update job application: {app_err}", exc_info=True)
+                    logger.error(f"Workflow {sanitize_log_value(session_id)}: Failed to update job application: {app_err}", exc_info=True)
                     try:
                         await db.rollback()
                     except Exception as rb_err:
@@ -1767,12 +1776,12 @@ async def _execute_workflow_background(
                         "session reverted and application hidden"
                     )
                 else:
-                    logger.info(f"Workflow {session_id} completed successfully")
+                    logger.info(f"Workflow {sanitize_log_value(session_id)} completed successfully")
                 # Clear stale in-progress cache so the next poll sees the terminal state immediately
                 await invalidate_workflow_state(session_id)
 
             except Exception as e:
-                logger.error(f"Workflow {session_id} failed: {e}", exc_info=True)
+                logger.error(f"Workflow {sanitize_log_value(session_id)} failed: {e}", exc_info=True)
                 try:
                     await db.rollback()
                 except Exception as rb_err:
@@ -1787,7 +1796,7 @@ async def _execute_workflow_background(
                     _strip_agent_outputs_on_session_model(workflow_session)
                     await db.commit()
                 except Exception as rollback_err:
-                    logger.error(f"Workflow {session_id}: Failed to save error state: {rollback_err}")
+                    logger.error(f"Workflow {sanitize_log_value(session_id)}: Failed to save error state: {rollback_err}")
                 # Clear stale cache on failure too
                 await invalidate_workflow_state(session_id)
 
@@ -1843,7 +1852,7 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
             workflow_session = result.scalar_one_or_none()
 
             if not workflow_session:
-                logger.error(f"Workflow session {session_id} not found for continuation")
+                logger.error(f"Workflow session {sanitize_log_value(session_id)} not found for continuation")
                 return
 
             # Idempotency guard: only continue from AWAITING_CONFIRMATION or IN_PROGRESS.
@@ -1893,7 +1902,7 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
                 try:
                     await _update_workflow_session_with_state(db, session_id, final_state)
                 except Exception as session_err:
-                    logger.error(f"Workflow {session_id} continuation: Failed to update session: {session_err}")
+                    logger.error(f"Workflow {sanitize_log_value(session_id)} continuation: Failed to update session: {session_err}")
                     try:
                         await db.rollback()
                     except Exception as rb_err:
@@ -1906,7 +1915,7 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
                         db, session_id, final_state
                     )
                 except Exception as app_err:
-                    logger.error(f"Workflow {session_id} continuation: Failed to update application: {app_err}")
+                    logger.error(f"Workflow {sanitize_log_value(session_id)} continuation: Failed to update application: {app_err}")
                     try:
                         await db.rollback()
                     except Exception as rb_err:
@@ -1918,11 +1927,11 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
                         "session reverted and application hidden"
                     )
                 else:
-                    logger.info(f"Workflow {session_id} continuation completed successfully")
+                    logger.info(f"Workflow {sanitize_log_value(session_id)} continuation completed successfully")
                 await invalidate_workflow_state(session_id)
 
             except Exception as e:
-                logger.error(f"Workflow {session_id} continuation failed: {e}", exc_info=True)
+                logger.error(f"Workflow {sanitize_log_value(session_id)} continuation failed: {e}", exc_info=True)
                 try:
                     await db.rollback()
                 except Exception as rb_err:
@@ -1937,7 +1946,7 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
                     await _soft_delete_job_application_for_failed_workflow(db, session_id)
                     await db.commit()
                 except Exception as rollback_err:
-                    logger.error(f"Workflow {session_id}: Failed to save continuation error state: {rollback_err}")
+                    logger.error(f"Workflow {sanitize_log_value(session_id)}: Failed to save continuation error state: {rollback_err}")
                 await invalidate_workflow_state(session_id)
 
     except Exception as e:
@@ -1982,7 +1991,7 @@ async def _generate_documents_background(
             workflow_session = result.scalar_one_or_none()
 
             if not workflow_session:
-                logger.error(f"Session {session_id} not found for document generation")
+                logger.error(f"Session {sanitize_log_value(session_id)} not found for document generation")
                 return
 
             # Idempotency guard: skip if documents were already generated or if
@@ -2026,7 +2035,7 @@ async def _generate_documents_background(
                 try:
                     await _update_workflow_session_with_state(db, session_id, final_state)
                 except Exception as session_err:
-                    logger.error(f"Session {session_id}: failed to persist document results: {session_err}")
+                    logger.error(f"Session {sanitize_log_value(session_id)}: failed to persist document results: {session_err}")
                     try:
                         await db.rollback()
                     except Exception as rb_err:
@@ -2038,7 +2047,7 @@ async def _generate_documents_background(
                         db, session_id, final_state
                     )
                 except Exception as app_err:
-                    logger.error(f"Session {session_id}: failed to update application after documents: {app_err}")
+                    logger.error(f"Session {sanitize_log_value(session_id)}: failed to update application after documents: {app_err}")
                     try:
                         await db.rollback()
                     except Exception as rb_err:
@@ -2050,10 +2059,10 @@ async def _generate_documents_background(
                         "session reverted and application hidden"
                     )
                 else:
-                    logger.info(f"Document generation completed for session {session_id}")
+                    logger.info(f"Document generation completed for session {sanitize_log_value(session_id)}")
 
             except Exception as e:
-                logger.error(f"Document generation failed for session {session_id}: {e}", exc_info=True)
+                logger.error(f"Document generation failed for session {sanitize_log_value(session_id)}: {e}", exc_info=True)
                 try:
                     await db.rollback()
                 except Exception as rb_err:
@@ -2068,7 +2077,7 @@ async def _generate_documents_background(
                     await _soft_delete_job_application_for_failed_workflow(db, session_id)
                     await db.commit()
                 except Exception as rollback_err:
-                    logger.error(f"Session {session_id}: failed to persist error state: {rollback_err}")
+                    logger.error(f"Session {sanitize_log_value(session_id)}: failed to persist error state: {rollback_err}")
 
     except Exception as e:
         logger.error(f"Background document generation task failed: {e}", exc_info=True)
@@ -2183,7 +2192,7 @@ async def _update_job_application_with_final_state(
         completed in the session row — the session was reverted to failed and the
         application soft-deleted (duplicate job). Caller should not log success.
     """
-    logger.info(f"Updating job application for session {session_id}")
+    logger.info(f"Updating job application for session {sanitize_log_value(session_id)}")
 
     # Get job analysis for title and company.
     # Use `or {}` instead of a default — when a workflow fails, job_analysis is

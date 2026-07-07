@@ -92,7 +92,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-async function clearAuth(page: any) {
+async function _clearAuth(page: any) {
   await page.context().clearCookies();
   await page.evaluate(() => {
     try { localStorage.clear(); } catch (_) {}

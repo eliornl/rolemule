@@ -46,7 +46,7 @@ from utils.error_responses import (
     unauthorized_error,
     validation_error,
 )
-from utils.logging_config import get_structured_logger, mask_email
+from utils.logging_config import get_structured_logger, mask_email, sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -894,7 +894,10 @@ async def google_login(
         if candidate.startswith("/") and not candidate.startswith("//"):
             safe_redirect = candidate
         else:
-            logger.warning(f"OAuth: ignoring non-relative redirect_url: {redirect_url!r}")
+            logger.warning(
+                "OAuth: ignoring non-relative redirect_url: %s",
+                sanitize_log_value(redirect_url),
+            )
 
     # Generate a cryptographically secure state token for CSRF protection
     state = secrets.token_urlsafe(32)
@@ -1528,8 +1531,8 @@ async def _verify_reset_token(token: str) -> Optional[str]:
 
 
 async def _delete_reset_token(token: str) -> None:
-    # No-op: token is already deleted by _consume_reset_token.
-    pass
+    """No-op: token is already deleted by _consume_reset_token."""
+    return None
 
 
 @router.post("/forgot-password")
@@ -1923,8 +1926,8 @@ async def _verify_verification_token(token: str) -> Optional[str]:
 
 
 async def _delete_verification_token(token: str) -> None:
-    # No-op: token already consumed atomically by _consume_verification_token.
-    pass
+    """No-op: token already consumed atomically by _consume_verification_token."""
+    return None
 
 
 async def _send_verification_email(email: str, user_name: Optional[str] = None) -> bool:
@@ -1958,7 +1961,10 @@ async def _send_verification_email(email: str, user_name: Optional[str] = None) 
         else:
             logger.warning(f"Email service not configured. Verification code generated for {mask_email(email)} but not delivered.")
             if settings.debug:
-                logger.debug(f"DEBUG: Verification code for {mask_email(email)}: {verification_code}")
+                logger.debug(
+                    "DEBUG: Verification code generated for %s (value redacted)",
+                    mask_email(email),
+                )
             return False
     except Exception as e:
         logger.error(f"Error sending verification email: {e}", exc_info=True)

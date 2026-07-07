@@ -622,7 +622,8 @@ class JobApplicationAssistant {
         } else {
             btn.disabled = false;
             btn.classList.remove('btn-loading');
-            btn.innerHTML = originalText || btn.getAttribute('data-original-text') || 'Submit';
+            const restoredText = originalText || btn.getAttribute('data-original-text') || 'Submit';
+            btn.textContent = restoredText;
         }
     }
 

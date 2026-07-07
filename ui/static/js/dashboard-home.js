@@ -81,20 +81,22 @@
     // HELPERS — auth / notify / escape
     // =============================================================================
 
+    /** Decode HTML entities for use with .textContent (doesn't re-encode) */
+    function decodeEntities(str) {
+        if (str == null) return '';
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = String(str);
+        return textarea.value;
+    }
+
     /** @param {string|null|undefined} str */
     function escapeHtml(str) {
         if (str == null) return '';
-        // Decode server-side HTML entities first (Python's html.escape / bleach double-encode)
-        const decoded = String(str)
-            .replace(/&amp;/g, '&')
-            .replace(/&#x27;/g, "'")
-            .replace(/&#039;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
+        const decoded = decodeEntities(str);
         return decoded
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')            .replace(/'/g, '&#039;');
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     /**
@@ -402,20 +404,6 @@
             merged: appended.length ? [...existing, ...appended] : existing,
             appended,
         };
-    }
-
-    // =============================================================================
-    // SKELETON / LOADING
-    // =============================================================================
-
-    function skeletonHtml() {
-        return Array.from({ length: 3 }, () => `
-            <div class="skeleton-card" aria-hidden="true">
-                <div class="skeleton-line skeleton-title"></div>
-                <div class="skeleton-line skeleton-subtitle"></div>
-                <div class="skeleton-line skeleton-meta"></div>
-                <div class="skeleton-line skeleton-actions"></div>
-            </div>`).join('');
     }
 
     // =============================================================================
@@ -1011,13 +999,6 @@
     // SELECTION
     // =============================================================================
 
-    /** @param {string} id */
-    function toggleSelectApp(id) {
-        if (_selected.has(id)) _selected.delete(id);
-        else                   _selected.add(id);
-        updateBulkBar();
-    }
-
     function toggleSelectAll() {
         const selAll = /** @type {HTMLInputElement|null} */ (document.getElementById('selectAllCheckbox'));
         const visibleIds = _loadedApps.map(a => String(a['id'] ?? ''));
@@ -1165,46 +1146,6 @@
         _selected.clear();
         loadApplications(true);
         loadStats();
-    }
-
-    /** @param {string} applicationId */
-    async function downloadApplication(applicationId) {
-        const token = getAuthToken();
-        try {
-            const urls = [
-                `${API_BASE}/applications/${encodeURIComponent(applicationId)}/download`,
-                `${API_BASE}/${encodeURIComponent(applicationId)}/download`,
-                `/api/applications/${encodeURIComponent(applicationId)}/download`,
-            ];
-            let response = null;
-            for (const url of urls) {
-                try {
-                    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-                    if (r.ok) { response = r; break; }
-                } catch (e) { /* try next */ }
-            }
-            if (!response || !response.ok) throw new Error('Could not connect to download endpoint');
-
-            const blob     = await response.blob();
-            let filename   = 'application-data.txt';
-            const cd       = response.headers.get('Content-Disposition');
-            if (cd) {
-                const m = /filename[^;=\n]*=((['"']).*?\2|[^;\n]*)/i.exec(cd);
-                if (m?.[1]) filename = m[1].replace(/['"]/g, '');
-            }
-            const url  = window.URL.createObjectURL(blob);
-            const a    = document.createElement('a');
-            a.href     = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            notify('Downloaded successfully.', 'success');
-        } catch (error) {
-            const err = /** @type {Error} */ (error);
-            notify(`Download failed: ${err.message || 'Unknown error'}`, 'error');
-        }
     }
 
     // =============================================================================

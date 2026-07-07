@@ -93,28 +93,51 @@ function detectJobPage() {
   }
 }
 
+function parseUrlParts(url) {
+  try {
+    const parsed = new URL(url);
+    return { pathname: parsed.pathname, hostname: parsed.hostname };
+  } catch (_e) {
+    return null;
+  }
+}
+
+function isLinkedInJobsUrl(url) {
+  const parts = parseUrlParts(url);
+  if (!parts) return false;
+  const host = parts.hostname.replace(/^www\./i, '');
+  return /(?:^|\.)linkedin\.com$/i.test(host) && /^\/jobs/i.test(parts.pathname);
+}
+
 function isJobRelatedURL(url) {
-  const patterns = [
-    /\/careers?\//i,
-    /\/jobs?\//i,
-    /\/job-/i,
-    /\/positions?\//i,
-    /\/openings?\//i,
-    /\/vacancies?\//i,
-    /\/apply\//i,
-    /\/hiring\//i,
-    /\/opportunities?\//i,
-    /workday\.com/i,
-    /greenhouse\.io/i,
-    /lever\.co/i,
-    /ashbyhq\.com/i,
-    /bamboohr\.com/i,
-    /smartrecruiters\.com/i,
-    /icims\.com/i,
-    /taleo/i
+  if (!url) return false;
+  const parts = parseUrlParts(url);
+  if (!parts) return false;
+
+  const pathPatterns = [
+    /^\/careers?\//i,
+    /^\/jobs?\//i,
+    /^\/job-/i,
+    /^\/positions?\//i,
+    /^\/openings?\//i,
+    /^\/vacancies?\//i,
+    /^\/apply\//i,
+    /^\/hiring\//i,
+    /^\/opportunities?\//i,
   ];
-  
-  return patterns.some(pattern => pattern.test(url));
+  const hostPatterns = [
+    /(?:^|\.)workday\.com$/i,
+    /(?:^|\.)greenhouse\.io$/i,
+    /(?:^|\.)lever\.co$/i,
+    /(?:^|\.)ashbyhq\.com$/i,
+    /(?:^|\.)bamboohr\.com$/i,
+    /(?:^|\.)smartrecruiters\.com$/i,
+    /(?:^|\.)icims\.com$/i,
+    /(?:^|\.)jobvite\.com$/i,
+  ];
+
+  return pathPatterns.some((pattern) => pattern.test(parts.pathname))
+    || hostPatterns.some((pattern) => pattern.test(parts.hostname));
 }
 
 // =============================================================================

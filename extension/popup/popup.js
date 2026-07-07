@@ -55,7 +55,7 @@ async function runExtractPageContent(tabId, options = {}) {
   try {
     const tabInfo = await chrome.tabs.get(tabId);
     const tabUrl = tabInfo.url || '';
-    if (/linkedin\.com\/jobs/i.test(tabUrl)) {
+    if (isLinkedInJobsUrl(tabUrl)) {
       await chrome.scripting.executeScript({
         target: { tabId },
         files: [JAA_LI_MAIN_HOOK_FILE],
@@ -1025,29 +1025,51 @@ async function detectJobOnCurrentPage() {
   }
 }
 
+function parseUrlParts(url) {
+  try {
+    const parsed = new URL(url);
+    return { pathname: parsed.pathname, hostname: parsed.hostname };
+  } catch (_e) {
+    return null;
+  }
+}
+
+function isLinkedInJobsUrl(url) {
+  const parts = parseUrlParts(url);
+  if (!parts) return false;
+  const host = parts.hostname.replace(/^www\./i, '');
+  return /(?:^|\.)linkedin\.com$/i.test(host) && /^\/jobs/i.test(parts.pathname);
+}
+
 function isJobRelatedURL(url) {
   if (!url) return false;
-  const jobPatterns = [
-    /\/careers?\//i,
-    /\/jobs?\//i,
-    /\/job-/i,
-    /\/positions?\//i,
-    /\/openings?\//i,
-    /\/vacancies?\//i,
-    /\/apply\//i,
-    /\/hiring\//i,
-    /\/opportunities?\//i,
-    /workday\.com/i,
-    /greenhouse\.io/i,
-    /lever\.co/i,
-    /ashbyhq\.com/i,
-    /bamboohr\.com/i,
-    /smartrecruiters\.com/i,
-    /icims\.com/i,
-    /jobvite\.com/i
+  const parts = parseUrlParts(url);
+  if (!parts) return false;
+
+  const pathPatterns = [
+    /^\/careers?\//i,
+    /^\/jobs?\//i,
+    /^\/job-/i,
+    /^\/positions?\//i,
+    /^\/openings?\//i,
+    /^\/vacancies?\//i,
+    /^\/apply\//i,
+    /^\/hiring\//i,
+    /^\/opportunities?\//i,
+  ];
+  const hostPatterns = [
+    /(?:^|\.)workday\.com$/i,
+    /(?:^|\.)greenhouse\.io$/i,
+    /(?:^|\.)lever\.co$/i,
+    /(?:^|\.)ashbyhq\.com$/i,
+    /(?:^|\.)bamboohr\.com$/i,
+    /(?:^|\.)smartrecruiters\.com$/i,
+    /(?:^|\.)icims\.com$/i,
+    /(?:^|\.)jobvite\.com$/i,
   ];
 
-  return jobPatterns.some(pattern => pattern.test(url));
+  return pathPatterns.some((pattern) => pattern.test(parts.pathname))
+    || hostPatterns.some((pattern) => pattern.test(parts.hostname));
 }
 
 // =============================================================================

@@ -15,7 +15,7 @@ import jwt
 from config.settings import get_settings
 from utils.auth import get_current_user
 from utils.error_reporting import report_exception
-from utils.logging_config import get_structured_logger
+from utils.logging_config import get_structured_logger, sanitize_log_value, sanitize_log_value
 
 _WS_MAX_MESSAGE_BYTES = 64 * 1024  # 64 KB — reject oversized client messages
 
@@ -175,7 +175,11 @@ class ConnectionManager:
                 if websocket.client_state == WebSocketState.CONNECTED:
                     await websocket.send_json(message)
             except Exception as e:
-                logger.warning(f"Failed to send to user {user_id[:8]}...: {e}")
+                logger.warning(
+                    "Failed to send to user %s...: %s",
+                    sanitize_log_value(user_id)[:8],
+                    sanitize_log_value(e),
+                )
                 dead_connections.append(websocket)
         
         # Clean up dead connections
@@ -199,7 +203,11 @@ class ConnectionManager:
                 if websocket.client_state == WebSocketState.CONNECTED:
                     await websocket.send_json(message)
             except Exception as e:
-                logger.warning(f"Failed to send to session {session_id[:8]}...: {e}")
+                logger.warning(
+                    "Failed to send to session %s...: %s",
+                    sanitize_log_value(session_id)[:8],
+                    sanitize_log_value(e),
+                )
                 dead_connections.append(websocket)
         
         # Clean up dead connections

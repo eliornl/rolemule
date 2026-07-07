@@ -95,7 +95,7 @@ test.describe('Security', () => {
       await page.goto('/auth/login');
       
       // Check for CSRF token in form or meta tag
-      const csrfToken = await page.locator('input[name="_csrf"], input[name="csrf_token"], meta[name="csrf-token"]').count();
+      const _csrfToken = await page.locator('input[name="_csrf"], input[name="csrf_token"], meta[name="csrf-token"]').count();
       
       // May or may not use CSRF tokens (API uses JWT instead)
     });
@@ -225,7 +225,7 @@ test.describe('Security', () => {
       await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
       
       // Get token before logout
-      const tokenBefore = await page.evaluate(() => {
+      const _tokenBefore = await page.evaluate(() => {
         return localStorage.getItem('authToken') || localStorage.getItem('access_token');
       });
       
@@ -299,7 +299,7 @@ test.describe('Security', () => {
       await page.waitForTimeout(2000);
       
       // Should not be on admin page
-      const isAdminPage = page.url().includes('/admin');
+      const _isAdminPage = page.url().includes('/admin');
       // May or may not have admin routes
     });
     
@@ -458,7 +458,7 @@ test.describe('Security', () => {
     
     test('should have Content-Security-Policy header', async ({ page }) => {
       const response = await page.goto('/');
-      const headers = response?.headers();
+      const _headers = response?.headers();
       
       // CSP header should be present (may not be in dev)
       // Just check page loads
@@ -469,7 +469,7 @@ test.describe('Security', () => {
       await page.goto('/');
       
       // Try to execute inline script
-      const result = await page.evaluate(() => {
+      const _result = await page.evaluate(() => {
         try {
           // This should work if CSP allows eval
           return eval('1 + 1');

@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List
 from utils.text_processing import clean_text
 from workflows.state_schema import WorkflowState, InputMethod, JobAnalysisResult
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.logging_config import sanitize_log_value
 from utils.cache import (
     get_cached_job_analysis,
     cache_job_analysis,
@@ -361,7 +362,7 @@ class JobAnalyzerAgent:
                     datetime.now(timezone.utc) - start_time
                 ).total_seconds()
                 analysis_result.processing_time = processing_time
-                logger.info(f"Job analysis completed in {processing_time:.2f} seconds")
+                logger.info("Job analysis completed in %.2f seconds", processing_time)
 
                 # Update state with successful results
                 analysis_dict = analysis_result.to_dict()
@@ -383,7 +384,7 @@ class JobAnalyzerAgent:
             logger.error("Job analyzer timed out", exc_info=True)
             raise
         except Exception as e:
-            logger.error(f"Job analyzer failed: {str(e)}", exc_info=True)
+            logger.error("Job analyzer failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
         return state
@@ -404,7 +405,7 @@ class JobAnalyzerAgent:
         Raises:
             ValueError: If job text is too short or processing fails
         """
-        logger.info(f"Processing {source_type} job input")
+        logger.info("Processing %s job input", sanitize_log_value(str(source_type)))
 
         # Validate minimum content length to ensure quality analysis
         if not job_text or len(job_text.strip()) < MIN_JOB_TEXT_LENGTH:

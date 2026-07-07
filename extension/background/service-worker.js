@@ -32,6 +32,22 @@ const JAA_EXTRACT_FILE = 'lib/extract-page-content.js';
 const JAA_LI_MAIN_HOOK_FILE = 'lib/linkedin-voyager-hook.js';
 const JAA_LI_GUEST_PREFETCH_FILE = 'lib/linkedin-guest-prefetch.js';
 
+function parseUrlParts(url) {
+  try {
+    const parsed = new URL(url);
+    return { pathname: parsed.pathname, hostname: parsed.hostname };
+  } catch (_e) {
+    return null;
+  }
+}
+
+function isLinkedInJobsUrl(url) {
+  const parts = parseUrlParts(url);
+  if (!parts) return false;
+  const host = parts.hostname.replace(/^www\./i, '');
+  return /(?:^|\.)linkedin\.com$/i.test(host) && /^\/jobs/i.test(parts.pathname);
+}
+
 // =============================================================================
 // STATE
 // =============================================================================
@@ -431,7 +447,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       }
 
       try {
-        if (tab.url && /linkedin\.com\/jobs/i.test(tab.url)) {
+        if (tab.url && isLinkedInJobsUrl(tab.url)) {
           await chrome.scripting.executeScript({
             target: { tabId: tab.id },
             files: [JAA_LI_MAIN_HOOK_FILE],
@@ -510,7 +526,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
 
         // Start workflow
-        const workflowResult = await startWorkflow(data.content, data.url, {
+        await startWorkflow(data.content, data.url, {
           detected_title: data.title,
           detected_company: data.company
         });

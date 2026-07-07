@@ -40,7 +40,7 @@ from langgraph.graph import StateGraph, END
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
-from utils.logging_config import get_structured_logger, session_id_var, set_request_context, clear_request_context
+from utils.logging_config import get_structured_logger, session_id_var, set_request_context, clear_request_context, sanitize_log_value
 from api.websocket import (
     broadcast_agent_update,
     broadcast_phase_change,
@@ -398,10 +398,13 @@ class JobApplicationWorkflow:
         )
 
         workflow_start = perf_counter()
+        safe_session = sanitize_log_value(str(session_id)[:8])
+        safe_input_method = sanitize_log_value(str(input_method))
         logger.info(
-            f"[WORKFLOW] Start  session={session_id[:8]}..."
-            f"  input={input_method}"
-            f"  byok={'yes' if user_api_key else 'no'}"
+            "[WORKFLOW] Start  session=%s...  input=%s  byok=%s",
+            safe_session,
+            safe_input_method,
+            "yes" if user_api_key else "no",
         )
 
         try:
@@ -436,8 +439,10 @@ class JobApplicationWorkflow:
                 )
             except asyncio.TimeoutError:
                 logger.error(
-                    f"Workflow timed out after {_WORKFLOW_TOTAL_TIMEOUT_SECONDS}s "
-                    f"(session={session_id[:8]}...)"
+                    "Workflow timed out after %ss (session=%s...)",
+                    _WORKFLOW_TOTAL_TIMEOUT_SECONDS,
+                    safe_session,
+                    exc_info=True,
                 )
                 raise
 
@@ -449,18 +454,21 @@ class JobApplicationWorkflow:
                 f"{k}={v/1000:.1f}s" for k, v in durations.items()
             )
             logger.info(
-                f"[WORKFLOW] Done  session={session_id[:8]}..."
-                f"  status={status_label}"
-                f"  total={total_ms/1000:.1f}s"
-                f"  agents=[{duration_parts}]"
+                "[WORKFLOW] Done  session=%s...  status=%s  total=%.1fs  agents=[%s]",
+                safe_session,
+                sanitize_log_value(status_label),
+                total_ms / 1000,
+                sanitize_log_value(duration_parts),
             )
 
             return self._state_to_dict(final_state)
         except Exception as exc:
             total_ms = (perf_counter() - workflow_start) * 1000
             logger.error(
-                f"[WORKFLOW] Failed  session={session_id[:8]}..."
-                f"  after={total_ms/1000:.1f}s  error={exc}",
+                "[WORKFLOW] Failed  session=%s...  after=%.1fs  error=%s",
+                safe_session,
+                total_ms / 1000,
+                sanitize_log_value(str(exc)),
                 exc_info=True,
             )
             raise
@@ -519,7 +527,9 @@ class JobApplicationWorkflow:
                 )
             except asyncio.TimeoutError:
                 logger.error(
-                    f"Continuation workflow timed out after {_WORKFLOW_TOTAL_TIMEOUT_SECONDS}s"
+                    "Continuation workflow timed out after %ss",
+                    _WORKFLOW_TOTAL_TIMEOUT_SECONDS,
+                    exc_info=True,
                 )
                 raise
 
@@ -1463,7 +1473,10 @@ class JobApplicationWorkflow:
             doc = result.scalar_one_or_none()
 
             if not doc:
-                logger.warning(f"No workflow state found for session {session_id}")
+                logger.warning(
+                    "No workflow state found for session %s",
+                    sanitize_log_value(str(session_id)),
+                )
                 return None
 
             # Reconstruct WorkflowState from database record
@@ -1515,11 +1528,19 @@ class JobApplicationWorkflow:
                 agent_durations=doc.agent_durations or {},
             )
 
-            logger.info(f"Loaded workflow state for session {session_id}")
+            logger.info(
+                "Loaded workflow state for session %s",
+                sanitize_log_value(str(session_id)),
+            )
             return state
 
         except Exception as e:
-            logger.error(f"Failed to load workflow state for session {session_id}: {e}", exc_info=True)
+            logger.error(
+                "Failed to load workflow state for session %s: %s",
+                sanitize_log_value(str(session_id)),
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
             return None
 
 

@@ -37,6 +37,7 @@ from api.websocket import (
     broadcast_interview_prep_error,
 )
 from config.settings import get_settings
+from utils.logging_config import sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -357,7 +358,7 @@ async def generate_interview_prep(
             user_api_key=user_api_key,
         )
         
-        logger.info(f"Started interview prep generation for session {session_id}")
+        logger.info(f"Started interview prep generation for session {sanitize_log_value(session_id)}")
         
         return InterviewPrepGenerateResponse(
             session_id=session_id,
@@ -416,7 +417,7 @@ async def delete_interview_prep(
         # Clear from cache
         await invalidate_interview_prep(session_id)
         
-        logger.info(f"Deleted interview prep for session {session_id}")
+        logger.info(f"Deleted interview prep for session {sanitize_log_value(session_id)}")
         
     except HTTPException:
         raise
@@ -452,7 +453,7 @@ async def _generate_interview_prep_background(
             workflow_session = result.scalar_one_or_none()
 
             if not workflow_session:
-                logger.error(f"Workflow session {session_id} not found for interview prep")
+                logger.error(f"Workflow session {sanitize_log_value(session_id)} not found for interview prep")
                 return
 
             ws_user_id = user_id or str(workflow_session.user_id)
@@ -486,13 +487,13 @@ async def _generate_interview_prep_background(
             # Cache result
             await cache_interview_prep(session_id, interview_prep)
 
-            logger.info(f"Interview prep generated successfully for session {session_id}")
+            logger.info(f"Interview prep generated successfully for session {sanitize_log_value(session_id)}")
 
             # Notify clients that generation completed
             await broadcast_interview_prep_complete(ws_user_id, session_id)
 
     except Exception as e:
-        logger.error(f"Interview prep generation failed for session {session_id}: {e}", exc_info=True)
+        logger.error(f"Interview prep generation failed for session {sanitize_log_value(session_id)}: {e}", exc_info=True)
         await report_exception(e, user_id=user_id)
         # Mark session as errored so it can be retried
         try:

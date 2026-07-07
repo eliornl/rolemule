@@ -17,10 +17,13 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-import api.profile as profile_module
 from api.profile import (
+    ApiKeyRequest,
+    ApplicationPreferencesRequest,
     BasicInfoRequest,
     CareerPreferencesRequest,
+    ClearDataRequest,
+    DeleteAccountRequest,
     EducationItem,
     EducationRequest,
     SkillsQualificationsRequest,
@@ -35,6 +38,7 @@ from api.profile import (
     _validate_profile_url_field,
     _validate_text_field,
     clear_user_data,
+    delete_api_key,
     delete_stored_resume,
     delete_user_account,
     download_stored_resume,
@@ -968,7 +972,7 @@ class TestApiKeyCoverage:
                     "api.profile.decrypt_api_key", return_value=VALID_KEY
                 ):
                     await set_api_key(
-                        profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                        ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                         db,
                     )
@@ -1017,7 +1021,7 @@ class TestApiKeyCoverage:
                 with patch("api.profile.validate_gemini_api_key", return_value=False):
                     with pytest.raises(Exception) as exc:
                         await set_api_key(
-                            profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                            ApiKeyRequest(api_key=VALID_KEY),
                             _current_user(uid, email),
                             db,
                         )
@@ -1035,7 +1039,7 @@ class TestApiKeyCoverage:
                 ):
                     with pytest.raises(Exception) as exc:
                         await set_api_key(
-                            profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                            ApiKeyRequest(api_key=VALID_KEY),
                             _current_user(uid, email),
                             db,
                         )
@@ -1045,7 +1049,7 @@ class TestApiKeyCoverage:
                 ), patch.object(db, "commit", AsyncMock(side_effect=RuntimeError("db"))):
                     with pytest.raises(Exception) as exc2:
                         await set_api_key(
-                            profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                            ApiKeyRequest(api_key=VALID_KEY),
                             _current_user(uid, email),
                             db,
                         )
@@ -1060,7 +1064,7 @@ class TestApiKeyCoverage:
             async with _NullSessionLocal() as db:
                 with patch.object(db, "commit", AsyncMock(side_effect=RuntimeError("db"))):
                     with pytest.raises(Exception) as exc:
-                        await profile_module.delete_api_key(_current_user(uid, email), db)
+                        await delete_api_key(_current_user(uid, email), db)
                 assert exc.value.status_code == 500
         finally:
             await _delete_user_data(uid)
@@ -1072,7 +1076,7 @@ class TestApiKeyCoverage:
             with patch("api.profile.check_rate_limit", AsyncMock(return_value=(False, 0))):
                 with pytest.raises(Exception) as exc:
                     await validate_api_key_endpoint(
-                        profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                        ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                     )
             assert exc.value.status_code == 429
@@ -1090,7 +1094,7 @@ class TestApiKeyCoverage:
             ):
                 with pytest.raises(Exception) as exc:
                     await validate_api_key_endpoint(
-                        profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                        ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                     )
             assert exc.value.status_code == 422
@@ -1108,14 +1112,14 @@ class TestApiKeyCoverage:
             ):
                 with pytest.raises(Exception) as exc:
                     await validate_api_key_endpoint(
-                        profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                        ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                     )
             assert exc.value.status_code == 422
             with patch("api.profile.validate_gemini_api_key", side_effect=RuntimeError("boom")):
                 with pytest.raises(Exception) as exc2:
                     await validate_api_key_endpoint(
-                        profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                        ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                     )
             assert exc2.value.status_code == 500
@@ -1161,7 +1165,7 @@ class TestPreferencesCoverage:
         uid, email = await _create_user_with_password()
         try:
             async with _NullSessionLocal() as db:
-                req = profile_module.ApplicationPreferencesRequest(
+                req = ApplicationPreferencesRequest(
                     cover_letter_tone="conversational",
                     resume_length="detailed",
                     preferred_model="gemini-2.5-flash",
@@ -1170,21 +1174,21 @@ class TestPreferencesCoverage:
                 assert resp.cover_letter_tone == "conversational"
                 with pytest.raises(Exception) as exc:
                     await update_application_preferences(
-                        profile_module.ApplicationPreferencesRequest(cover_letter_tone="angry"),
+                        ApplicationPreferencesRequest(cover_letter_tone="angry"),
                         _current_user(uid, email),
                         db,
                     )
                 assert exc.value.status_code == 422
                 with pytest.raises(Exception) as exc2:
                     await update_application_preferences(
-                        profile_module.ApplicationPreferencesRequest(resume_length="verbose"),
+                        ApplicationPreferencesRequest(resume_length="verbose"),
                         _current_user(uid, email),
                         db,
                     )
                 assert exc2.value.status_code == 422
                 with pytest.raises(Exception) as exc3:
                     await update_application_preferences(
-                        profile_module.ApplicationPreferencesRequest(preferred_model="bad-model"),
+                        ApplicationPreferencesRequest(preferred_model="bad-model"),
                         _current_user(uid, email),
                         db,
                     )
@@ -1214,7 +1218,7 @@ class TestPreferencesCoverage:
 
                 with patch.object(db, "begin_nested", return_value=FakeNested()):
                     resp = await update_application_preferences(
-                        profile_module.ApplicationPreferencesRequest(auto_generate_documents=True),
+                        ApplicationPreferencesRequest(auto_generate_documents=True),
                         _current_user(uid, email),
                         db,
                     )
@@ -1230,7 +1234,7 @@ class TestPreferencesCoverage:
                 with patch.object(db, "commit", AsyncMock(side_effect=RuntimeError("db"))):
                     with pytest.raises(Exception) as exc:
                         await update_application_preferences(
-                            profile_module.ApplicationPreferencesRequest(resume_length="concise"),
+                            ApplicationPreferencesRequest(resume_length="concise"),
                             _current_user(uid, email),
                             db,
                         )
@@ -1314,7 +1318,7 @@ class TestAccountDataCoverage:
                 with patch("api.profile.check_rate_limit", AsyncMock(return_value=(False, 0))):
                     with pytest.raises(Exception) as exc:
                         await delete_user_account(
-                            profile_module.DeleteAccountRequest(password="SecurePass123!"),
+                            DeleteAccountRequest(password="SecurePass123!"),
                             _current_user(uid, email),
                             db,
                         )
@@ -1343,7 +1347,7 @@ class TestAccountDataCoverage:
             async with _NullSessionLocal() as db:
                 with pytest.raises(Exception) as exc:
                     await delete_user_account(
-                        profile_module.DeleteAccountRequest(password="wrong"),
+                        DeleteAccountRequest(password="wrong"),
                         _current_user(uid, email, auth_method="google", has_password=False),
                         db,
                     )
@@ -1352,7 +1356,7 @@ class TestAccountDataCoverage:
                     "api.profile.invalidate_user_profile", AsyncMock(side_effect=RuntimeError("cache"))
                 ), patch("api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)):
                     result = await delete_user_account(
-                        profile_module.DeleteAccountRequest(password=""),
+                        DeleteAccountRequest(password=""),
                         _current_user(uid, email, auth_method="google", has_password=False),
                         db,
                     )
@@ -1370,7 +1374,7 @@ class TestAccountDataCoverage:
                 with patch.object(db, "execute", AsyncMock(side_effect=RuntimeError("db"))):
                     with pytest.raises(Exception) as exc:
                         await delete_user_account(
-                            profile_module.DeleteAccountRequest(password="SecurePass123!"),
+                            DeleteAccountRequest(password="SecurePass123!"),
                             _current_user(uid, email),
                             db,
                         )
@@ -1386,7 +1390,7 @@ class TestAccountDataCoverage:
                 with patch("api.profile.check_rate_limit", AsyncMock(return_value=(False, 0))):
                     with pytest.raises(Exception) as exc:
                         await clear_user_data(
-                            profile_module.ClearDataRequest(confirm=True),
+                            ClearDataRequest(confirm=True),
                             _current_user(uid, email),
                             db,
                         )
@@ -1402,7 +1406,7 @@ class TestAccountDataCoverage:
                 with patch.object(db, "execute", AsyncMock(side_effect=RuntimeError("db"))):
                     with pytest.raises(Exception) as exc:
                         await clear_user_data(
-                            profile_module.ClearDataRequest(confirm=True),
+                            ClearDataRequest(confirm=True),
                             _current_user(uid, email),
                             db,
                         )
@@ -1532,16 +1536,16 @@ class TestProfileCoverageRemaining:
 
     def test_career_enum_transform_edge_cases(self) -> None:
         info_empty = MagicMock(field_name="job_types")
-        assert profile_module.CareerPreferencesRequest.transform_enums([], info_empty) == []
+        assert CareerPreferencesRequest.transform_enums([], info_empty) == []
         info_unknown = MagicMock(field_name="unknown_field")
-        assert profile_module.CareerPreferencesRequest.transform_enums(["x"], info_unknown) == ["x"]
+        assert CareerPreferencesRequest.transform_enums(["x"], info_unknown) == ["x"]
         info_job = MagicMock(field_name="job_types")
-        out = profile_module.CareerPreferencesRequest.transform_enums(["full-time"], info_job)
+        out = CareerPreferencesRequest.transform_enums(["full-time"], info_job)
         assert out[0].value == "Full-time"
         info_travel = MagicMock(field_name="max_travel_preference")
-        assert profile_module.CareerPreferencesRequest.transform_enums("25", info_travel).value == "25"
+        assert CareerPreferencesRequest.transform_enums("25", info_travel).value == "25"
         info_bad = MagicMock(field_name="job_types")
-        assert profile_module.CareerPreferencesRequest.transform_enums(["not-an-enum"], info_bad) == ["not-an-enum"]
+        assert CareerPreferencesRequest.transform_enums(["not-an-enum"], info_bad) == ["not-an-enum"]
 
     def test_career_salary_edge_cases(self) -> None:
         assert CareerPreferencesRequest.validate_desired_salary_range(None) is None
@@ -1714,7 +1718,7 @@ class TestProfileCoverageRemaining:
         try:
             async with _NullSessionLocal() as db:
                 resp = await update_application_preferences(
-                    profile_module.ApplicationPreferencesRequest(workflow_gate_threshold=0.75),
+                    ApplicationPreferencesRequest(workflow_gate_threshold=0.75),
                     _current_user(uid, email),
                     db,
                 )
@@ -1743,7 +1747,7 @@ class TestProfileCoverageRemaining:
             with patch.object(db, "execute", AsyncMock(return_value=user_result)):
                 with pytest.raises(Exception) as exc:
                     await delete_user_account(
-                        profile_module.DeleteAccountRequest(password=""),
+                        DeleteAccountRequest(password=""),
                         _current_user(uid, "ghost@example.com", auth_method="google"),
                         db,
                     )
@@ -1770,7 +1774,7 @@ class TestProfileCoverageRemaining:
                     "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
                 ):
                     result = await delete_user_account(
-                        profile_module.DeleteAccountRequest(password="SecurePass123!"),
+                        DeleteAccountRequest(password="SecurePass123!"),
                         _current_user(uid2, email2),
                         db,
                     )
@@ -1807,7 +1811,7 @@ class TestProfileCoverageRemaining:
                 )
                 await db.commit()
                 result = await clear_user_data(
-                    profile_module.ClearDataRequest(confirm=True),
+                    ClearDataRequest(confirm=True),
                     _current_user(uid, email),
                     db,
                 )
@@ -1870,7 +1874,7 @@ class TestProfileCoverageRemaining:
 
     def test_career_enum_value_error_fallback(self) -> None:
         info = MagicMock(field_name="job_types")
-        out = profile_module.CareerPreferencesRequest.transform_enums(["__invalid__"], info)
+        out = CareerPreferencesRequest.transform_enums(["__invalid__"], info)
         assert out == ["__invalid__"]
 
     @pytest.mark.asyncio
@@ -1954,7 +1958,7 @@ class TestProfileCoverageRemaining:
                 with patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)), patch(
                     "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
                 ) as mock_llm:
-                    await profile_module.delete_api_key(_current_user(uid, email), db)
+                    await delete_api_key(_current_user(uid, email), db)
                 mock_llm.assert_awaited()
         finally:
             await _delete_user_data(uid)
@@ -1966,7 +1970,7 @@ class TestProfileCoverageRemaining:
             with patch("api.profile.validate_gemini_api_key", return_value=False):
                 with pytest.raises(Exception) as exc:
                     await validate_api_key_endpoint(
-                        profile_module.ApiKeyRequest(api_key=VALID_KEY),
+                        ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                     )
             assert exc.value.status_code == 422
@@ -1993,17 +1997,9 @@ class TestProfileCoverageRemaining:
                     async def __aexit__(self, *args):
                         return False
 
-                original_execute = db.execute
-
-                async def execute_side_effect(stmt, *args, **kwargs):
-                    result = await original_execute(stmt, *args, **kwargs)
-                    if result.scalar_one_or_none() is None:
-                        return result
-                    return result
-
                 with patch.object(db, "begin_nested", return_value=FakeNested()):
                     resp = await update_application_preferences(
-                        profile_module.ApplicationPreferencesRequest(auto_generate_documents=True),
+                        ApplicationPreferencesRequest(auto_generate_documents=True),
                         _current_user(uid, email),
                         db,
                     )
@@ -2049,7 +2045,7 @@ class TestProfileCoverageRemaining:
                     db, "begin_nested", return_value=FakeNested()
                 ), patch.object(db, "commit", AsyncMock(return_value=None)):
                     resp = await update_application_preferences(
-                        profile_module.ApplicationPreferencesRequest(cover_letter_tone="enthusiastic"),
+                        ApplicationPreferencesRequest(cover_letter_tone="enthusiastic"),
                         _current_user(uid, email),
                         db,
                     )
@@ -2064,7 +2060,7 @@ class TestProfileCoverageRemaining:
             async with _NullSessionLocal() as db:
                 with pytest.raises(Exception) as exc:
                     await delete_user_account(
-                        profile_module.DeleteAccountRequest(password="WrongPass99!"),
+                        DeleteAccountRequest(password="WrongPass99!"),
                         _current_user(uid, email),
                         db,
                     )
@@ -2167,7 +2163,7 @@ class TestProfileCoverageRemaining:
 
     def test_career_enum_non_string_passthrough(self) -> None:
         info = MagicMock(field_name="job_types")
-        out = profile_module.CareerPreferencesRequest.transform_enums([123], info)
+        out = CareerPreferencesRequest.transform_enums([123], info)
         assert out == [123]
 
     @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { RegisterPage, DashboardPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
-import { setupAuth, setupAllMocks, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 
 test.describe('Dashboard', () => {
   let email: string;

@@ -270,7 +270,7 @@
                 sessionStorage.setItem('new_application_toast', 'Application submitted! AI agents are analyzing it in the background.');
                 window.location.href = '/dashboard';
             } else {
-                let errorDetail = 'Server error occurred';
+                let errorDetail;
                 let errorCode = '';
                 try {
                     const errorJson = JSON.parse(responseText);

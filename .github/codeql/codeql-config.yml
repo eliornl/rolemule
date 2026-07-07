@@ -1,0 +1,4 @@
+name: ApplyPilot CodeQL
+
+paths-ignore:
+  - venv-clean/

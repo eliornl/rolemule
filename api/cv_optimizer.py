@@ -15,6 +15,7 @@ import subprocess
 import tempfile
 import uuid
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from fastapi.exceptions import HTTPException
@@ -28,8 +29,9 @@ from agents.cv_optimizer_loop import (
     CVOptimizationOrchestrator,
     IterationRecord,
     OptimizationConfig,
+    _compose_cv_from_profile,
+    sanitize_application_text,
 )
-from agents.cv_optimizer_loop import _compose_cv_from_profile, sanitize_application_text
 from api.websocket import (
     broadcast_cv_optimization_complete,
     broadcast_cv_optimization_error,
@@ -53,6 +55,7 @@ from utils.cache import (
     check_rate_limit,
 )
 from utils.database import get_database, get_session
+from utils.logging_config import sanitize_log_value
 from utils.encryption import decrypt_api_key
 from utils.security import sanitize_llm_output
 from utils.cv_html_normalize import normalize_cv_export_html
@@ -119,6 +122,11 @@ CV_TO_HTML_PROMPT_TEMPLATE: str = """Convert this markdown CV to professional HT
 {cv_markdown}
 
 Return only the complete HTML document."""
+
+
+def _is_http_or_https_url(url: str) -> bool:
+    parsed = urlparse(url.strip())
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 
 # =============================================================================
@@ -447,7 +455,11 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
         if user and user.gemini_api_key_encrypted:
             return decrypt_api_key(user.gemini_api_key_encrypted)
     except Exception as e:
-        logger.warning("Failed to decrypt user API key for user %s: %s", user_id, e)
+        logger.warning(
+            "Failed to decrypt user API key for user %s: %s",
+            sanitize_log_value(user_id),
+            sanitize_log_value(e),
+        )
     return None
 
 
@@ -609,7 +621,7 @@ async def start_cv_optimization(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to start CV optimization for session %s: %s", session_id, e, exc_info=True)
+        logger.error("Failed to start CV optimization for session %s: %s", sanitize_log_value(session_id), e, exc_info=True)
         raise internal_error("Failed to start CV optimization")
 
 
@@ -674,7 +686,7 @@ async def get_cv_optimization(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to get CV optimization for session %s: %s", session_id, e, exc_info=True)
+        logger.error("Failed to get CV optimization for session %s: %s", sanitize_log_value(session_id), e, exc_info=True)
         raise internal_error("Failed to get CV optimization result")
 
 
@@ -890,12 +902,12 @@ async def delete_cv_optimization(
 
         await invalidate_cv_optimization(session_id)
 
-        logger.info("Cleared CV optimization for session %s", session_id)
+        logger.info("Cleared CV optimization for session %s", sanitize_log_value(session_id))
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to delete CV optimization for session %s: %s", session_id, e, exc_info=True)
+        logger.error("Failed to delete CV optimization for session %s: %s", sanitize_log_value(session_id), e, exc_info=True)
         raise internal_error("Failed to delete CV optimization result")
 
 
@@ -938,7 +950,7 @@ async def _run_cv_optimization_background(
             workflow_session = result.scalar_one_or_none()
 
             if not workflow_session:
-                logger.error("CV optimization: session %s not found", session_id)
+                logger.error("CV optimization: session %s not found", sanitize_log_value(session_id))
                 return
 
             ws_user_id = user_id or str(workflow_session.user_id)
@@ -954,7 +966,7 @@ async def _run_cv_optimization_background(
             # store "[file content]".  For those cases synthesize from job_analysis instead.
             job_input = workflow_session.job_input_data or {}
             raw_input = job_input.get("job_input") or ""
-            if raw_input and raw_input != "[file content]" and not raw_input.startswith("http"):
+            if raw_input and raw_input != "[file content]" and not _is_http_or_https_url(raw_input):
                 job_description = raw_input
             else:
                 job_description = _synthesize_jd_from_analysis(workflow_session.job_analysis or {})

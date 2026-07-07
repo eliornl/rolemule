@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from redis.exceptions import ConnectionError
 
-import utils.redis_client as redis_mod
 from utils.redis_client import (
     check_redis_health,
     close_redis_connection,
@@ -16,6 +15,8 @@ from utils.redis_client import (
 
 @pytest.fixture(autouse=True)
 def reset_redis_global():
+    import utils.redis_client as redis_mod
+
     redis_mod._redis_client = None
     yield
     redis_mod._redis_client = None

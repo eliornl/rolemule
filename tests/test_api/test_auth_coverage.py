@@ -9,13 +9,14 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import delete, select, update
 
-import api.auth as auth_module
 from api.auth import (
+    ExchangeCodeRequest,
     ForgotPasswordRequest,
     LoginRequest,
     RegisterRequest,
@@ -51,6 +52,7 @@ from api.auth import (
     verify_email,
     verify_email_code,
     pwd_context,
+    _SQLIntegrityError,
 )
 from models.database import AuthMethod, User
 from tests.test_api.conftest import _NullSessionLocal
@@ -264,8 +266,8 @@ class TestRedisHelpers:
             mock_svc.return_value = svc
             assert await _send_verification_email("a@b.com") is False
 
-        with patch("utils.email_service.get_email_service") as mock_svc, patch.object(
-            auth_module.settings, "debug", True
+        with patch("utils.email_service.get_email_service") as mock_svc, patch(
+            "api.auth.settings.debug", True
         ):
             svc = MagicMock()
             svc.is_configured.return_value = False
@@ -300,7 +302,7 @@ class TestRegisterLoginHandlers:
         req = RegisterRequest(**payload)
         request = _mock_request()
         async with _NullSessionLocal() as db:
-            with patch.object(auth_module.settings, "disable_email_verification", False), patch(
+            with patch("api.auth.settings", "disable_email_verification", False), patch(
                 "api.auth._send_verification_email", AsyncMock(return_value=True)
             ) as mock_send:
                 result = await register_user(request, req, db)
@@ -329,7 +331,7 @@ class TestRegisterLoginHandlers:
         payload = _reg_payload("_emlfail")
         req = RegisterRequest(**payload)
         async with _NullSessionLocal() as db:
-            with patch.object(auth_module.settings, "disable_email_verification", False), patch(
+            with patch("api.auth.settings", "disable_email_verification", False), patch(
                 "api.auth._send_verification_email",
                 AsyncMock(side_effect=RuntimeError("smtp")),
             ):
@@ -398,7 +400,7 @@ class TestRegisterLoginHandlers:
         uid, email = await _create_user(email_verified=False)
         try:
             async with _NullSessionLocal() as db:
-                with patch.object(auth_module.settings, "disable_email_verification", False), patch(
+                with patch("api.auth.settings", "disable_email_verification", False), patch(
                     "api.auth._send_verification_email",
                     AsyncMock(side_effect=RuntimeError("smtp")),
                 ), patch("api.auth.check_account_lockout", AsyncMock(return_value=(False, 0))):
@@ -536,14 +538,14 @@ def _oauth_http_mocks(
 class TestOAuthCoverage:
     @pytest.mark.asyncio
     async def test_google_login_not_configured(self):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(False)):
+        with patch("api.auth.settings", _oauth_mock_settings(False)):
             with pytest.raises(Exception) as exc:
                 await google_login(_mock_request(), None)
         assert exc.value.status_code == 503
 
     @pytest.mark.asyncio
     async def test_google_login_redis_store_failure(self):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "utils.redis_client.get_redis_client",
             AsyncMock(side_effect=RuntimeError("redis")),
         ):
@@ -553,7 +555,7 @@ class TestOAuthCoverage:
 
     @pytest.mark.asyncio
     async def test_google_login_redis_unavailable(self):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "utils.redis_client.get_redis_client", AsyncMock(return_value=None)
         ):
             with pytest.raises(Exception) as exc:
@@ -569,7 +571,7 @@ class TestOAuthCoverage:
 
     @pytest.mark.asyncio
     async def test_google_callback_not_configured(self):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(False)):
+        with patch("api.auth.settings", _oauth_mock_settings(False)):
             resp = await google_callback(
                 _mock_request(), code="x", state="y", error=None, db=_NullSessionLocal()
             )
@@ -577,7 +579,7 @@ class TestOAuthCoverage:
 
     @pytest.mark.asyncio
     async def test_google_callback_redis_unavailable(self, patch_redis):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "utils.redis_client.get_redis_client", AsyncMock(return_value=None)
         ):
             resp = await google_callback(
@@ -589,7 +591,7 @@ class TestOAuthCoverage:
     async def test_google_callback_bad_redirect_in_state(self, patch_redis):
         state = "st-bad-redir"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "//evil.com"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient", return_value=_oauth_http_mocks()
         ), patch("utils.email_service.get_email_service") as mock_email:
             mock_email.return_value.is_configured.return_value = False
@@ -602,7 +604,7 @@ class TestOAuthCoverage:
     async def test_google_callback_state_verification_exception(self, patch_redis):
         state = "st-exc"
         patch_redis._store[f"oauth_state:{state}"] = "not-json"
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)):
+        with patch("api.auth.settings", _oauth_mock_settings(True)):
             resp = await google_callback(
                 _mock_request(), code="c", state=state, error=None, db=_NullSessionLocal()
             )
@@ -612,7 +614,7 @@ class TestOAuthCoverage:
     async def test_google_callback_token_exchange_failed(self, patch_redis):
         state = "st-tok"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(token_status=400),
         ):
@@ -625,7 +627,7 @@ class TestOAuthCoverage:
     async def test_google_callback_no_access_token(self, patch_redis):
         state = "st-noat"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(token_body={}),
         ):
@@ -638,7 +640,7 @@ class TestOAuthCoverage:
     async def test_google_callback_userinfo_failed(self, patch_redis):
         state = "st-ui"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(userinfo_status=500),
         ):
@@ -651,7 +653,7 @@ class TestOAuthCoverage:
     async def test_google_callback_missing_user_info(self, patch_redis):
         state = "st-miss"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(userinfo_body={"email": ""}),
         ):
@@ -667,7 +669,7 @@ class TestOAuthCoverage:
         state = "st-existing"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": gid, "email": email, "name": "OAuth User"}
@@ -687,7 +689,7 @@ class TestOAuthCoverage:
         state = "st-linkreq"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": "new-gid", "email": email, "name": "OAuth User"}
@@ -710,7 +712,7 @@ class TestOAuthCoverage:
         state = "st-locked"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": gid, "email": email, "name": "OAuth User"}
@@ -733,7 +735,7 @@ class TestOAuthCoverage:
         )
         gid = f"link-gid-{uuid.uuid4().hex[:8]}"
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": gid, "email": email, "name": "Linker"}
@@ -753,7 +755,7 @@ class TestOAuthCoverage:
         patch_redis._store[f"oauth_state:{state}"] = json.dumps(
             {"redirect": "/dashboard/settings", "link_user_id": str(uuid.uuid4())}
         )
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(userinfo_body={"id": "g1", "email": "x@y.com", "name": "X"}),
         ):
@@ -772,7 +774,7 @@ class TestOAuthCoverage:
             {"redirect": "/dashboard/settings", "link_user_id": str(uid2)}
         )
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": "conflict-gid", "email": email1, "name": "Conflict"}
@@ -791,7 +793,7 @@ class TestOAuthCoverage:
     async def test_google_callback_exchange_code_redis_down(self, patch_redis):
         state = "st-rc-down"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient", return_value=_oauth_http_mocks()
         ), patch("utils.email_service.get_email_service") as mock_email, patch(
             "utils.redis_client.get_redis_client", AsyncMock(return_value=None)
@@ -806,7 +808,7 @@ class TestOAuthCoverage:
     async def test_google_callback_general_exception(self, patch_redis):
         state = "st-gen"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient", side_effect=RuntimeError("network")
         ):
             resp = await google_callback(
@@ -818,19 +820,19 @@ class TestOAuthCoverage:
     async def test_exchange_code_redis_unavailable(self):
         with patch("utils.redis_client.get_redis_client", AsyncMock(return_value=None)):
             with pytest.raises(Exception) as exc:
-                await exchange_oauth_code(auth_module.ExchangeCodeRequest(code="abc"))
+                await exchange_oauth_code(ExchangeCodeRequest(code="abc"))
         assert exc.value.status_code == 503
 
     @pytest.mark.asyncio
     async def test_exchange_code_internal_error(self, patch_redis):
         patch_redis.getdel = AsyncMock(side_effect=RuntimeError("redis"))  # type: ignore[method-assign]
         with pytest.raises(Exception) as exc:
-            await exchange_oauth_code(auth_module.ExchangeCodeRequest(code="abc"))
+            await exchange_oauth_code(ExchangeCodeRequest(code="abc"))
         assert exc.value.status_code == 500
 
     @pytest.mark.asyncio
     async def test_link_google_not_configured(self):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(False)):
+        with patch("api.auth.settings", _oauth_mock_settings(False)):
             with pytest.raises(Exception) as exc:
                 await link_google_account(
                     _mock_request(), {"id": str(uuid.uuid4())}, _NullSessionLocal()
@@ -841,7 +843,7 @@ class TestOAuthCoverage:
     async def test_link_google_rate_limited(self):
         uid, email = await _create_user()
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.check_rate_limit", AsyncMock(return_value=(False, 0))
             ):
                 with pytest.raises(Exception) as exc:
@@ -854,7 +856,7 @@ class TestOAuthCoverage:
 
     @pytest.mark.asyncio
     async def test_link_google_user_not_found(self):
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)):
+        with patch("api.auth.settings", _oauth_mock_settings(True)):
             with pytest.raises(Exception) as exc:
                 await link_google_account(
                     _mock_request(), {"id": str(uuid.uuid4())}, _NullSessionLocal()
@@ -865,7 +867,7 @@ class TestOAuthCoverage:
     async def test_link_google_already_linked(self):
         uid, email = await _create_user(google_id="already")
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)):
+            with patch("api.auth.settings", _oauth_mock_settings(True)):
                 with pytest.raises(Exception) as exc:
                     await link_google_account(
                         _mock_request(), {"id": str(uid)}, _NullSessionLocal()
@@ -878,7 +880,7 @@ class TestOAuthCoverage:
     async def test_link_google_redis_failure(self):
         uid, email = await _create_user()
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "utils.redis_client.get_redis_client", AsyncMock(return_value=None)
             ):
                 with pytest.raises(Exception) as exc:
@@ -1409,7 +1411,7 @@ class TestAuthCoverageRemaining:
             with patch.object(
                 db,
                 "commit",
-                AsyncMock(side_effect=auth_module._SQLIntegrityError("", "", "")),
+                AsyncMock(side_effect=_SQLIntegrityError("", "", "")),
             ):
                 with pytest.raises(Exception) as exc:
                     await register_user(_mock_request(), req, db)
@@ -1420,7 +1422,7 @@ class TestAuthCoverageRemaining:
         payload = _reg_payload("_logauto")
         req = RegisterRequest(**payload)
         async with _NullSessionLocal() as db:
-            with patch.object(auth_module.settings, "disable_email_verification", True):
+            with patch("api.auth.settings", "disable_email_verification", True):
                 result = await register_user(_mock_request(), req, db)
         assert result.user["email_verified"] is True
 
@@ -1448,7 +1450,7 @@ class TestAuthCoverageRemaining:
         state = "st-welcome"
         email = f"newoauth_{uuid.uuid4().hex[:8]}@example.com"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(
                 userinfo_body={"id": f"gid-{uuid.uuid4().hex[:6]}", "email": email, "name": "New"}
@@ -1481,7 +1483,7 @@ class TestAuthCoverageRemaining:
             return await FakeRedis.setex(patch_redis, key, ttl, value)
 
         patch_redis.setex = _boom_setex  # type: ignore[method-assign]
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient", return_value=_oauth_http_mocks()
         ), patch("utils.email_service.get_email_service") as mock_email:
             mock_email.return_value.is_configured.return_value = False
@@ -1508,7 +1510,7 @@ class TestAuthCoverageRemaining:
 
         gid = f"link-redis-{uuid.uuid4().hex[:8]}"
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": gid, "email": email, "name": "Linker"}
@@ -1538,7 +1540,7 @@ class TestAuthCoverageRemaining:
 
         patch_redis.setex = _bad_setex  # type: ignore[method-assign]
         try:
-            with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+            with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                 "api.auth.httpx.AsyncClient",
                 return_value=_oauth_http_mocks(
                     userinfo_body={"id": gid, "email": email, "name": "Linker"}
@@ -1557,12 +1559,12 @@ class TestAuthCoverageRemaining:
         uid, email = await _create_user()
         try:
             async with _NullSessionLocal() as db:
-                with patch.object(auth_module, "settings", _oauth_mock_settings(True)):
+                with patch("api.auth.settings", _oauth_mock_settings(True)):
                     result = await link_google_account(
                         _mock_request(), {"id": str(uid)}, db
                     )
             assert "oauth_url" in result
-            assert "accounts.google.com" in result["oauth_url"]
+            assert urlparse(result["oauth_url"]).hostname == "accounts.google.com"
         finally:
             await _delete_user(uid)
 
@@ -1571,7 +1573,7 @@ class TestAuthCoverageRemaining:
         uid, email = await _create_user()
         try:
             async with _NullSessionLocal() as db:
-                with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+                with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
                     "utils.redis_client.get_redis_client",
                     AsyncMock(side_effect=RuntimeError("redis")),
                 ):
@@ -1851,7 +1853,7 @@ class TestAuthCoverageRemaining:
         state = "st-wel-fail"
         email = f"wel_fail_{uuid.uuid4().hex[:8]}@example.com"
         patch_redis._store[f"oauth_state:{state}"] = json.dumps({"redirect": "/dashboard"})
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient",
             return_value=_oauth_http_mocks(
                 userinfo_body={"id": f"gid-{uuid.uuid4().hex[:6]}", "email": email, "name": "New"}
@@ -1886,7 +1888,7 @@ class TestAuthCoverageRemaining:
                 return patch_redis
             return None
 
-        with patch.object(auth_module, "settings", _oauth_mock_settings(True)), patch(
+        with patch("api.auth.settings", _oauth_mock_settings(True)), patch(
             "api.auth.httpx.AsyncClient", return_value=_oauth_http_mocks()
         ), patch("utils.email_service.get_email_service") as mock_email, patch(
             "utils.redis_client.get_redis_client", side_effect=_get_redis

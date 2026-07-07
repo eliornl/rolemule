@@ -24,7 +24,7 @@ from typing import Optional
 from datetime import datetime
 
 from config.settings import get_settings
-from utils.logging_config import mask_email
+from utils.logging_config import mask_email, sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -119,17 +119,27 @@ class EmailService:
                 server.login(self.username, self.password)
                 server.sendmail(self.from_email, safe_to_email, message.as_string())
 
-            logger.info(f"Email sent successfully to {mask_email(to_email)}: {subject}")
+            logger.info("Email sent successfully to %s", mask_email(to_email))
             return True
 
-        except smtplib.SMTPAuthenticationError as e:
-            logger.error(f"SMTP authentication failed: {e}", exc_info=True)
+        except smtplib.SMTPAuthenticationError:
+            logger.error("SMTP authentication failed", exc_info=True)
             return False
         except smtplib.SMTPException as e:
-            logger.error(f"SMTP error sending email to {mask_email(to_email)}: {e}", exc_info=True)
+            logger.error(
+                "SMTP error sending email to %s: %s",
+                mask_email(to_email),
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
             return False
         except Exception as e:
-            logger.error(f"Failed to send email to {mask_email(to_email)}: {e}", exc_info=True)
+            logger.error(
+                "Failed to send email to %s: %s",
+                mask_email(to_email),
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
             return False
 
     async def send_password_reset_email(
@@ -567,7 +577,7 @@ This is an automated message. Please do not reply.
         greeting = f"Hi {html.escape(user_name)}," if user_name else "Hi there,"
         
         # Format code with spaces for readability (123 456)
-        f"{verification_code[:3]} {verification_code[3:]}"
+        formatted_code = f"{verification_code[:3]} {verification_code[3:]}"
         
         html_content = f"""
 <!DOCTYPE html>
@@ -643,7 +653,7 @@ VERIFY YOUR EMAIL ADDRESS
 
 Thanks for signing up! Enter this verification code in the app to activate your account:
 
-Your Verification Code: {verification_code}
+Your Verification Code: {formatted_code}
 
 ⏰ This code will expire in 15 minutes for security reasons.
 

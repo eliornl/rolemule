@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage, RegisterPage, DashboardPage, ProfileSetupPage } from '../pages';
-import { generateTestEmail, testUsers } from '../fixtures/test-data';
+import { generateTestEmail } from '../fixtures/test-data';
 
 test.describe('Authentication', () => {
   

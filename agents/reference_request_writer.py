@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 
 from utils.llm_client import get_gemini_client
 from utils.llm_parsing import parse_json_from_llm_response
-from utils.logging_config import get_structured_logger
+from utils.logging_config import get_structured_logger, sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -124,7 +124,6 @@ class ReferenceRequestWriterAgent:
             
             # Format optional inputs
             reference_company_str = reference_company if reference_company else "Not specified"
-            years_str = str(years_worked_together) if years_worked_together else "Not specified"
             target_job_str = target_job_title if target_job_title else "Not specified"
             target_company_str = target_company if target_company else "Not specified"
             accomplishments_str = (
@@ -140,7 +139,6 @@ class ReferenceRequestWriterAgent:
                 reference_name=reference_name,
                 reference_relationship=reference_relationship,
                 reference_company=reference_company_str,
-                years_worked_together=years_str,
                 target_job_title=target_job_str,
                 target_company=target_company_str,
                 key_accomplishments=accomplishments_str,
@@ -173,7 +171,10 @@ class ReferenceRequestWriterAgent:
             parsed = parse_json_from_llm_response(response_text)
             
             if not parsed:
-                logger.error(f"Failed to parse reference request response: {response_text[:200]}")
+                logger.error(
+                    "Failed to parse reference request response: %s",
+                    sanitize_log_value(response_text[:200]),
+                )
                 structured_logger.log_agent_error(
                     "reference_request_writer", None,
                     Exception("JSON parse failed"), duration_ms
@@ -199,7 +200,7 @@ class ReferenceRequestWriterAgent:
             }
             
         except Exception as e:
-            logger.error(f"Reference request generation failed: {e}", exc_info=True)
+            logger.error("Reference request generation failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
     def _create_filtered_result(

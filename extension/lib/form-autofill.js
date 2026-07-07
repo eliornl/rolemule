@@ -77,8 +77,8 @@
     wi: 'Wisconsin',
     wy: 'Wyoming'
   };
-  var ASHBY_HOST_RE = /ashbyhq\.com|jobs\.ashby/i;
-  var GREENHOUSE_HOST_RE = /greenhouse\.io/i;
+  var ASHBY_HOST_RE = /(?:^|\.)ashbyhq\.com$|^jobs\.ashby$/i;
+  var GREENHOUSE_HOST_RE = /(?:^|\.)greenhouse\.io$/i;
   var ASHBY_RESUME_AUTOFILL_RE = /autofill\s+from\s+resume/i;
   var ASHBY_AUTOFILL_DONE_RE = /autofill\s+completed/i;
   var EEO_CHECKBOX_RE =
@@ -163,7 +163,7 @@
 
   function isAshbyHost() {
     try {
-      return ASHBY_HOST_RE.test(String(location.hostname || '') + String(location.href || ''));
+      return ASHBY_HOST_RE.test(String(location.hostname || ''));
     } catch (eHost) {
       return false;
     }
@@ -290,7 +290,7 @@
 
   function isGreenhouseHost() {
     try {
-      return GREENHOUSE_HOST_RE.test(String(location.hostname || '') + String(location.href || ''));
+      return GREENHOUSE_HOST_RE.test(String(location.hostname || ''));
     } catch (eGh) {
       return false;
     }
@@ -2084,7 +2084,6 @@
   function decodeHtmlEntities(str) {
     if (str == null) return '';
     return String(str)
-      .replace(/&amp;amp;/g, '&')
       .replace(/&amp;/g, '&')
       .replace(/&#x27;/gi, "'")
       .replace(/&#039;/g, "'")
@@ -2488,64 +2487,6 @@
     });
   }
 
-  /**
-   * Open each combobox briefly during scan so the API receives real option labels.
-   * @param {Array} fields
-   * @returns {Promise<Array>}
-   */
-  function enrichFieldsWithComboboxOptionsAsync(fields) {
-    if (!Array.isArray(fields) || !fields.length) return Promise.resolve(fields);
-    var chain = Promise.resolve();
-    for (var fi = 0; fi < fields.length; fi++) {
-      (function (field) {
-        chain = chain.then(function () {
-          if (!field || field.input_type !== 'combobox') {
-            return new Promise(function (resolve) {
-              setTimeout(resolve, 0);
-            });
-          }
-          if (isEeoFieldLabel(field.label_text)) {
-            return new Promise(function (resolve) {
-              setTimeout(resolve, 0);
-            });
-          }
-          var el = document.querySelector('[data-jaa-fid="' + String(field.field_uid) + '"]');
-          if (!(el instanceof HTMLElement)) {
-            return new Promise(function (resolve) {
-              setTimeout(resolve, 80);
-            });
-          }
-          try {
-            el.scrollIntoView({ block: 'center', behavior: 'instant' });
-          } catch (eScroll) {
-            try {
-              el.scrollIntoView();
-            } catch (eScroll2) {
-              /* ignore */
-            }
-          }
-          return new Promise(function (resolve) {
-            setTimeout(function () {
-              closeAllComboboxMenus();
-              var texts = harvestComboboxOptionsSync(el);
-              if (texts.length) {
-                field.options = texts.slice(0, 40).map(function (t) {
-                  return { value: t, text: t };
-                });
-              }
-              closeAllComboboxMenus();
-              resolve();
-            }, 150);
-          });
-        });
-      })(fields[fi]);
-    }
-    return chain.then(function () {
-      closeAllComboboxMenus();
-      return fields;
-    });
-  }
-
   function isDegreeFieldLabel(labelText) {
     var lab = normalizeLabelKey(labelText || '');
     return lab === 'degree' || lab.indexOf('degree') === 0;
@@ -2629,15 +2570,11 @@
   }
 
   function selectLooksLikeNycCommuteDuplicate(row) {
-    if (!row || !row.options) return false;
+    if (!row.options) return false;
     if (isNycCommuteScreeningLabel(row.label_text)) return true;
     var lab = String(row.label_text || '').toLowerCase();
     if (/\bnyc\b/.test(lab) && /\bhq\b/.test(lab) && isYesNoOptions(row.options)) return true;
     return false;
-  }
-
-  function isLocationCityLabel(labelText) {
-    return isProfileApplicantLocationLabel(labelText);
   }
 
   /** Applicant city/location (Greenhouse Location (City), Ashby Location, etc.). */
@@ -3760,7 +3697,6 @@
     var delay = typeof extraDelayMs === 'number' ? extraDelayMs : 420;
     var target = String(value || '').toLowerCase().trim();
     if (target !== 'yes' && target !== 'no') return Promise.resolve(false);
-    var beforeText = comboboxSelectedText(el);
 
     return new Promise(function (resolve) {
       dismissOpenSelectMenus();

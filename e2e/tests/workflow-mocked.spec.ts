@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAllMocks, setupAuth, setupWebSocketMock } from '../utils/api-mocks';
+import { setupAllMocks, setupAuth } from '../utils/api-mocks';
 
 /**
  * Workflow tests with mocked APIs

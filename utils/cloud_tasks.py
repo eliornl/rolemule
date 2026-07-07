@@ -23,6 +23,7 @@ import secrets
 from typing import Any, Dict, Optional
 
 from config.settings import get_settings
+from utils.logging_config import sanitize_log_value
 
 # Optional import — package is only needed when Cloud Tasks is actually configured.
 # Without it the app starts normally and falls back to FastAPI BackgroundTasks.
@@ -111,7 +112,10 @@ async def enqueue_workflow_task(
     }
 
     await _enqueue_task(settings=settings, payload=payload)
-    logger.info(f"Enqueued initial workflow task for session {session_id}")
+    logger.info(
+        "Enqueued initial workflow task for session %s",
+        sanitize_log_value(session_id),
+    )
 
 
 async def enqueue_continue_workflow_task(
@@ -137,7 +141,10 @@ async def enqueue_continue_workflow_task(
     }
 
     await _enqueue_task(settings=settings, payload=payload)
-    logger.info(f"Enqueued continuation workflow task for session {session_id}")
+    logger.info(
+        "Enqueued continuation workflow task for session %s",
+        sanitize_log_value(session_id),
+    )
 
 
 def verify_cloud_tasks_secret(provided_secret: Optional[str]) -> bool:

@@ -1,5 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
-import { LoginPage, RegisterPage } from '../pages';
+import { RegisterPage } from '../pages';
 import { generateTestEmail } from './test-data';
 
 const authFile = 'playwright/.auth/user.json';
@@ -9,7 +9,6 @@ const authFile = 'playwright/.auth/user.json';
  */
 setup('authenticate', async ({ page }) => {
   const registerPage = new RegisterPage(page);
-  const loginPage = new LoginPage(page);
   
   // Generate unique test user
   const testUser = {

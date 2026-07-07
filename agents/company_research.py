@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from workflows.state_schema import WorkflowState, CompanyResearchResult
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.logging_config import sanitize_log_value
 from utils.cache import (
     get_cached_company_research,
     cache_company_research,
@@ -282,7 +283,7 @@ class CompanyResearchAgent:
             # Check cache first
             cached_result: Optional[Dict[str, Any]] = await get_cached_company_research(company_name)
             if cached_result:
-                logger.info(f"Using cached research for {company_name}")
+                logger.info("Using cached research for %s", sanitize_log_value(company_name))
                 state["company_research"] = cached_result
             else:
                 # Stampede protection: only one coroutine should compute at a time.
@@ -293,7 +294,7 @@ class CompanyResearchAgent:
                 if not lock_claimed:
                     # Another task is already computing — wait briefly and retry cache
                     import asyncio as _asyncio
-                    logger.info(f"Compute lock busy for {company_name}, waiting for cache population")
+                    logger.info("Compute lock busy for %s, waiting for cache population", sanitize_log_value(company_name))
                     for _ in range(6):  # up to ~3 seconds
                         await _asyncio.sleep(0.5)
                         cached_result = await get_cached_company_research(company_name)
@@ -301,7 +302,7 @@ class CompanyResearchAgent:
                             state["company_research"] = cached_result
                             return state
                     # Timeout waiting — fall through and compute anyway
-                    logger.warning(f"Compute lock wait timed out for {company_name}, computing independently")
+                    logger.warning("Compute lock wait timed out for %s, computing independently", sanitize_log_value(company_name))
 
                 try:
                     # Perform fresh research with Gemini
@@ -321,7 +322,7 @@ class CompanyResearchAgent:
             logger.error("Company research timed out", exc_info=True)
             raise
         except Exception as e:
-            logger.error(f"Company research failed: {e}", exc_info=True)
+            logger.error("Company research failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
     async def _research_company_with_llm(
@@ -343,7 +344,7 @@ class CompanyResearchAgent:
         if unnamed_job_analysis is not None:
             logger.info("Researching unnamed employer using job-context-only prompt")
         else:
-            logger.info(f"Researching company with Gemini: {company_name}")
+            logger.info("Researching company with Gemini: %s", sanitize_log_value(company_name))
         start_time: datetime = datetime.now(timezone.utc)
 
         try:
@@ -399,7 +400,7 @@ class CompanyResearchAgent:
             return result
 
         except Exception as e:
-            logger.error(f"Error researching company {company_name}: {e}", exc_info=True)
+            logger.error("Error researching company %s: %s", sanitize_log_value(company_name), sanitize_log_value(str(e)), exc_info=True)
             return self._create_fallback_result(company_name, start_time)
 
     def _map_to_result(self, data: Dict[str, Any]) -> CompanyResearchResult:

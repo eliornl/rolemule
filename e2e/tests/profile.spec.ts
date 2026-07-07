@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage, ProfileSetupPage, DashboardPage, SettingsPage } from '../pages';
+import { RegisterPage, ProfileSetupPage, SettingsPage } from '../pages';
 import { generateTestEmail, testProfile } from '../fixtures/test-data';
-import * as path from 'path';
+
 
 test.describe('Profile Setup', () => {
   let profilePage: ProfileSetupPage;
@@ -270,7 +270,7 @@ test.describe('Help & Support', () => {
       await page.waitForTimeout(500);
       
       // Should filter results
-      const visibleItems = page.locator('.faq-item:visible, [class*="faq"]:visible');
+      const _visibleItems = page.locator('.faq-item:visible, [class*="faq"]:visible');
       // Results should be filtered
     }
   });

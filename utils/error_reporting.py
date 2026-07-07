@@ -38,15 +38,15 @@ except ImportError:
 
 # Lazily-initialised client (one instance per process)
 _client: Optional[object] = None
-_client_init_attempted = False
+_client_lookup_done: bool = False
 
 
 def _get_client() -> Optional[object]:
     """Return the Error Reporting client, initialising it on first call."""
-    global _client, _client_init_attempted
-    if _client_init_attempted:
+    global _client, _client_lookup_done
+    if _client_lookup_done:
         return _client
-    _client_init_attempted = True
+    _client_lookup_done = True
 
     if not _CLIENT_AVAILABLE:
         return None
@@ -98,7 +98,12 @@ async def report_exception(
                 response_status_code=500,
                 remote_ip=request.client.host if request.client else "",
             )
-        except Exception:
+        except Exception as http_err:
+            logger.debug(
+                "Could not build HTTP context for error reporting: %s",
+                http_err,
+                exc_info=True,
+            )
             http_context = None
 
     tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))

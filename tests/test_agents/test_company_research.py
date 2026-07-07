@@ -167,14 +167,6 @@ class TestCompanyResearchInit:
 # =============================================================================
 
 
-_CACHE_PATCHES = dict(
-    get_cached=patch("agents.company_research.get_cached_company_research", return_value=None),
-    acquire=patch("agents.company_research.acquire_compute_lock", return_value=True),
-    release=patch("agents.company_research.release_compute_lock", return_value=None),
-    write=patch("agents.company_research.cache_company_research", return_value=None),
-)
-
-
 class TestCompanyResearchProcessing:
     """Tests for company research processing."""
 

@@ -19,7 +19,7 @@ from tenacity import (
     before_sleep_log,
 )
 from config.settings import get_settings
-from utils.logging_config import get_structured_logger
+from utils.logging_config import get_structured_logger, sanitize_log_value
 import asyncio
 
 # Both backends use google-genai (imported lazily inside methods)
@@ -270,7 +270,7 @@ class GeminiClient:
                     cached_response["from_cache"] = True
                     return cached_response
             except Exception as cache_error:
-                logger.warning(f"Cache lookup failed, proceeding with API call: {cache_error}")
+                logger.warning("Cache lookup failed, proceeding with API call: %s", sanitize_log_value(str(cache_error)))
 
         # Call the internal method with retry logic
         result = await self._generate_with_retry(
@@ -288,7 +288,7 @@ class GeminiClient:
                 from utils.cache import cache_llm_response
                 await cache_llm_response(prompt, result, system, user_id)
             except Exception as cache_error:
-                logger.warning(f"Failed to cache LLM response: {cache_error}")
+                logger.warning("Failed to cache LLM response: %s", sanitize_log_value(str(cache_error)))
 
         return result
 
@@ -414,7 +414,7 @@ class GeminiClient:
             try:
                 response_text = response.text
             except Exception as text_error:
-                logger.error(f"[LLM] Failed to extract response text: {text_error}", exc_info=True)
+                logger.error("[LLM] Failed to extract response text: %s", sanitize_log_value(str(text_error)), exc_info=True)
                 response_text = "Error retrieving response. Please try again."
 
             logger.info(
@@ -440,7 +440,7 @@ class GeminiClient:
                 success=False,
                 error=str(e),
             )
-            logger.error(f"Error in Vertex AI generate: {e}", exc_info=True)
+            logger.error("Error in Vertex AI generate: %s", sanitize_log_value(str(e)), exc_info=True)
             raise GeminiError(f"Vertex AI generate failed: {str(e)}", original_error=e)
 
     async def _generate_with_google_ai(
@@ -507,7 +507,7 @@ class GeminiClient:
             try:
                 response_text: str = response.text
             except Exception as text_error:
-                logger.error(f"[LLM] Failed to extract response text: {text_error}", exc_info=True)
+                logger.error("[LLM] Failed to extract response text: %s", sanitize_log_value(str(text_error)), exc_info=True)
                 response_text = "Error retrieving response from Gemini API. Please try again."
 
             # Check for safety filter (finish_reason OTHER than STOP/MAX_TOKENS)
@@ -530,7 +530,7 @@ class GeminiClient:
             )
 
             if filtered:
-                logger.warning(f"[LLM] Content filtered by safety settings  model={model_to_use}")
+                logger.warning("[LLM] Content filtered by safety settings  model=%s", sanitize_log_value(str(model_to_use)))
                 return {"model": model_to_use, "response": "The content generation was blocked by safety filters. Please try with different input or contact support.", "done": True, "filtered": True}
 
             return {"model": model_to_use, "response": response_text, "done": True}
@@ -543,7 +543,7 @@ class GeminiClient:
                 success=False,
                 error=str(e),
             )
-            logger.error(f"Error in Gemini generate: {e}", exc_info=True)
+            logger.error("Error in Gemini generate: %s", sanitize_log_value(str(e)), exc_info=True)
             raise GeminiError(f"Generate failed: {str(e)}", original_error=e)
 
     async def health_check(self) -> bool:
@@ -591,7 +591,7 @@ class GeminiClient:
             if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
                 logger.info("Gemini health check: quota limit hit but service is reachable")
                 return True
-            logger.warning(f"Gemini health check failed: {e}")
+            logger.warning("Gemini health check failed: %s", sanitize_log_value(str(e)))
             return False
 
 
@@ -656,7 +656,7 @@ async def check_gemini_health() -> bool:
             logger.info("Gemini health check successful")
         return True
     except Exception as e:
-        logger.error(f"Gemini health check failed: {e}", exc_info=True)
+        logger.error("Gemini health check failed: %s", sanitize_log_value(str(e)), exc_info=True)
         return False
 
 

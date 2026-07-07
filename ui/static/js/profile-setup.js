@@ -332,7 +332,6 @@
 
     // Populate form with existing data
     function populateFormData(data) {
-        const userInfo = data.user_info;
         const profileData = data.profile_data;
 
         // Populate location fields
@@ -519,12 +518,6 @@
             } else {
             }
         }
-    }
-
-    // Function to check if we need to show the preferences step
-    function checkPreferencesStep() {
-        // Logic to determine if preferences step should be shown
-        // This would typically check if previous steps are completed
     }
 
     /**
@@ -1200,24 +1193,6 @@
         }
     }
 
-    // Validation
-    function validateCurrentStep() {
-        switch (currentStep) {
-            case 1:
-                return validateBasicInfo();
-            case 2:
-                return validateWorkExperience();
-            case 3:
-                return validateEducation();
-            case 4:
-                return validateSkillsQualifications();
-            case 5:
-                return validateCareerPreferences();
-            default:
-                return true;
-        }
-    }
-
     /**
      * Validate basic information step (Step 1)
      * Ensures all required fields are completed with proper validation
@@ -1461,90 +1436,6 @@
         return isValid;
     }
 
-    // Data saving
-    /**
-     * Save current step data to backend
-     * Handles step-specific data saving with proper error handling
-     */
-    async function saveCurrentStepData() {
-        try {
-
-            // Get token using the same consistent approach as other functions
-            // First check URL parameters for token
-            const urlParams = new URLSearchParams(window.location.search);
-            let token = urlParams.get('token');
-
-
-            // If token is in URL, store it in localStorage with consistent key
-            if (token) {
-                localStorage.setItem("access_token", token);
-                // Also save with alternate key for backward compatibility
-                localStorage.setItem("authToken", token);
-            } else {
-                // Otherwise check localStorage with both possible keys
-                token = localStorage.getItem("access_token") || localStorage.getItem("authToken");
-
-                // Ensure token is stored with consistent key
-                if (token) {
-                    localStorage.setItem("access_token", token);
-                }
-            }
-
-            if (!token) {
-                console.error("Authentication token not found in URL or localStorage");
-                showError("Authentication token not found. Please log in again.");
-                window.location.href = (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || "/auth/login";
-                return false;
-            }
-
-
-            let success = false;
-            switch (currentStep) {
-                case 1:
-                    success = await saveBasicInfo();
-                    break;
-                case 2:
-                    success = await saveWorkExperience();
-                    break;
-                case 3:
-                    success = await saveEducation();
-                    break;
-                case 4:
-                    // For skills step, make sure we have at least one skill
-                    if (skills.length === 0) {
-                        const skillsContainer = document.getElementById("skills-container");
-                        const skillElements = skillsContainer.querySelectorAll(".skill-badge");
-                        if (skillElements.length > 0) {
-                            // Update skills array from UI
-                            skills = [];
-                            skillElements.forEach(element => {
-                                skills.push(element.textContent.trim());
-                            });
-                        }
-                    }
-                    success = await saveSkillsQualifications();
-                    break;
-                case 5:
-                    success = await saveCareerPreferences();
-                    break;
-                default:
-                    console.warn(`Unknown step: ${currentStep}`);
-                    return false;
-            }
-
-            if (success) {
-                return true;
-            } else {
-                console.error(`Failed to save data for step ${currentStep}`);
-                return false;
-            }
-        } catch (error) {
-            console.error(`Error saving step ${currentStep} data:`, error);
-            showError(`Error saving data: ${error.message}`);
-            return false;
-        }
-    }
-
     /**
      * Save basic information to backend API
      * Handles form data collection and API communication
@@ -1708,7 +1599,7 @@
             // Format data according to backend API expectations
             const requestData = { work_experience: workExperienceToSave };
 
-            const response = await makeAuthenticatedApiCall("/profile/work-experience", "PUT", requestData);
+            await makeAuthenticatedApiCall("/profile/work-experience", "PUT", requestData);
 
             console.log("Work experience saved successfully with", workExperienceToSave.length, "entries");
             return true; // Ensure we return true for success

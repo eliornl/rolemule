@@ -23,13 +23,7 @@
    */
   function escapeHtml(str) {
     if (str == null) return '';
-    const decoded = String(str)
-      .replace(/&amp;/g, '&')
-      .replace(/&#x27;/g, "'")
-      .replace(/&#039;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
+    const decoded = decodeEntities(str);
     return decoded
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -38,13 +32,9 @@
   /** Decode HTML entities for .textContent assignments (no re-encoding step) */
   function decodeEntities(str) {
     if (str == null) return '';
-    return String(str)
-      .replace(/&amp;/g, '&')
-      .replace(/&#x27;/g, "'")
-      .replace(/&#039;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = String(str);
+    return textarea.value;
   }
 
   /**

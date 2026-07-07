@@ -8,6 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from workflows.state_schema import WorkflowState, CoverLetterResult
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +203,8 @@ class CoverLetterWriterAgent:
             ValueError: If required data is missing
             Exception: If cover letter generation fails
         """
-        logger.info(f"Starting cover letter writing for session {state['session_id']}")
+        session_id = sanitize_log_value(str(state.get("session_id") or "unknown"))
+        logger.info("Starting cover letter writing for session %s", session_id)
         start_time = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)
@@ -248,7 +250,7 @@ class CoverLetterWriterAgent:
             logger.info("Cover letter writing completed successfully")
 
         except Exception as e:
-            logger.error(f"Cover letter writing failed: {str(e)}", exc_info=True)
+            logger.error("Cover letter writing failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
         return state
@@ -301,14 +303,14 @@ class CoverLetterWriterAgent:
         for key in priority_keys:
             if key in context:
                 tone = TONE_GUIDANCE.get(key, tone)
-                logger.info(f"Selected tone guidance for '{key}'")
+                logger.info("Selected tone guidance for %r", sanitize_log_value(key))
                 break
 
         # Append user-selected tone override on top of industry guidance
         tone_override = USER_TONE_OVERRIDES.get(user_tone, "")
         if tone_override:
             tone = (tone or "") + tone_override
-            logger.info(f"Applied user tone override: {user_tone}")
+            logger.info("Applied user tone override: %s", sanitize_log_value(user_tone))
 
         # Build prompt with today's date
         today = datetime.now().strftime("%B %d, %Y")
@@ -352,7 +354,7 @@ class CoverLetterWriterAgent:
             logger.error("LLM request timed out")
             raise Exception("Cover letter generation timed out")
         except Exception as e:
-            logger.error(f"LLM request failed: {e}", exc_info=True)
+            logger.error("LLM request failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
     def _format_profile(self, profile: Dict[str, Any]) -> str:

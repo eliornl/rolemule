@@ -15,6 +15,21 @@
 /// <reference path="./types.js" />
 
 /**
+ * Allow only same-origin relative paths for post-auth redirects.
+ * @param {string|null|undefined} path
+ * @returns {string|null}
+ */
+function validateRelativeRedirectPath(path) {
+    if (typeof path !== 'string' || path.length === 0) {
+        return null;
+    }
+    if (!/^\/(?!\/)/.test(path)) {
+        return null;
+    }
+    return path;
+}
+
+/**
  * Authentication manager class.
  * Handles all authentication-related operations.
  * 
@@ -1130,21 +1145,24 @@ class AuthManager {
      * @param {boolean} profileCompleted - Whether profile is completed
      */
     redirectUser(profileCompleted = false) {
+        const defaultDestination = profileCompleted ? '/dashboard' : '/profile/setup';
+        let destination = defaultDestination;
+
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const rawRedirect = urlParams.get('redirect');
-            // Only allow relative paths (must start with / but not //) to prevent open redirect
-            const safeRedirect = (rawRedirect && /^\/(?!\/)/.test(rawRedirect)) ? rawRedirect : null;
-            const redirectUrl = safeRedirect || (profileCompleted ? '/dashboard' : '/profile/setup');
-            
-            setTimeout(() => {
-                window.location.href = redirectUrl;
-            }, AuthManager.CONFIG.REDIRECT_DELAY);
+            const validatedRedirect = validateRelativeRedirectPath(rawRedirect);
+            if (validatedRedirect) {
+                destination = validatedRedirect;
+            }
         } catch (error) {
-            console.error('Redirect failed:', error);
-            // Fallback redirect
-            window.location.href = '/dashboard';
+            console.error('Redirect validation failed:', error);
         }
+
+        const safeDestination = destination;
+        setTimeout(() => {
+            window.location.href = safeDestination;
+        }, AuthManager.CONFIG.REDIRECT_DELAY);
     }
 
     /**

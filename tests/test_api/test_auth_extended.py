@@ -10,14 +10,15 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
+from urllib.parse import urlparse
 
 import jwt
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-import api.auth as auth_module
-from api.auth import _make_jwt, pwd_context
+from api.auth import _make_jwt, pwd_context, _SQLIntegrityError
 from config.settings import get_security_settings
 from main import app
 from models.database import AuthMethod, User
@@ -169,7 +170,7 @@ def patch_redis(fake_redis: FakeRedis):
 class TestRegistrationExtended:
     @pytest.mark.asyncio
     async def test_register_auto_verified_when_disabled(self):
-        with patch.object(auth_module.settings, "disable_email_verification", True):
+        with patch("api.auth.settings", "disable_email_verification", True):
             payload = _reg_payload("_autoverify")
             async with _make_client() as client:
                 resp = await client.post(f"{BASE}/register", json=payload)
@@ -181,11 +182,11 @@ class TestRegistrationExtended:
         payload = _reg_payload("_race")
         with patch(
             "api.auth._SQLIntegrityError",
-            auth_module._SQLIntegrityError,
+            _SQLIntegrityError,
         ), patch.object(
-            auth_module.AsyncSession,
+            AsyncSession,
             "commit",
-            AsyncMock(side_effect=auth_module._SQLIntegrityError("", "", "")),
+            AsyncMock(side_effect=_SQLIntegrityError("", "", "")),
         ):
             async with _make_client() as client:
                 resp = await client.post(f"{BASE}/register", json=payload)
@@ -327,7 +328,7 @@ class TestVerifyCode:
         code = "123456"
         patch_redis._store[f"email_verification:{code}"] = email
         try:
-            with patch.object(auth_module.settings, "disable_email_verification", False):
+            with patch("api.auth.settings", "disable_email_verification", False):
                 async with _make_client() as client:
                     resp = await client.post(
                         f"{BASE}/verify-code",
@@ -587,7 +588,7 @@ class TestOAuth:
             google_client_id="test-client-id.apps.googleusercontent.com",
             google_client_secret="secret",
         )
-        with patch.object(auth_module, "settings", mock_settings):
+        with patch("api.auth.settings", mock_settings):
             async with _make_client() as client:
                 resp = await client.get(
                     f"{BASE}/google",
@@ -595,7 +596,7 @@ class TestOAuth:
                     follow_redirects=False,
                 )
         assert resp.status_code == 302
-        assert "accounts.google.com" in resp.headers["location"]
+        assert urlparse(resp.headers["location"]).hostname == "accounts.google.com"
 
     @pytest.mark.asyncio
     async def test_google_login_rejects_open_redirect(self, patch_redis):
@@ -604,7 +605,7 @@ class TestOAuth:
             google_client_id="test-client-id.apps.googleusercontent.com",
             google_client_secret="secret",
         )
-        with patch.object(auth_module, "settings", mock_settings):
+        with patch("api.auth.settings", mock_settings):
             async with _make_client() as client:
                 resp = await client.get(
                     f"{BASE}/google",
@@ -612,7 +613,7 @@ class TestOAuth:
                     follow_redirects=False,
                 )
         assert resp.status_code == 302
-        assert "accounts.google.com" in resp.headers["location"]
+        assert urlparse(resp.headers["location"]).hostname == "accounts.google.com"
 
     @pytest.mark.asyncio
     async def test_oauth_callback_new_user_success(self, patch_redis):
@@ -646,7 +647,7 @@ class TestOAuth:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch.object(auth_module, "settings", mock_settings), patch(
+        with patch("api.auth.settings", mock_settings), patch(
             "api.auth.httpx.AsyncClient", return_value=mock_client
         ), patch("utils.email_service.get_email_service") as mock_email:
             svc = MagicMock()
@@ -664,7 +665,7 @@ class TestOAuth:
     @pytest.mark.asyncio
     async def test_oauth_callback_invalid_state(self, patch_redis):
         mock_settings = MagicMock(is_google_oauth_configured=True)
-        with patch.object(auth_module, "settings", mock_settings):
+        with patch("api.auth.settings", mock_settings):
             async with _make_client() as client:
                 resp = await client.get(
                     f"{BASE}/google/callback",
@@ -703,7 +704,7 @@ class TestOAuth:
             google_client_secret="secret",
         )
         try:
-            with patch.object(auth_module, "settings", mock_settings):
+            with patch("api.auth.settings", mock_settings):
                 resp = await client.post(f"{BASE}/google/link")
             assert resp.status_code == 200
             assert "oauth_url" in resp.json()

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuth } from '../utils/api-mocks';
 
 /**
  * RATE LIMIT & 429 HANDLING TESTS

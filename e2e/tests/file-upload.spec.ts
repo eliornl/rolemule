@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { DashboardPage, NewApplicationPage } from '../pages';
+
 import * as path from 'path';
 import * as fs from 'fs';
 import { setupAuth, setupAllMocks } from '../utils/api-mocks';
@@ -13,22 +13,26 @@ if (!fs.existsSync(fixturesDir)) {
 }
 const resumeTxtPath = path.join(fixturesDir, 'sample-resume.txt');
 const jobTxtPath = path.join(fixturesDir, 'sample-job.txt');
-if (!fs.existsSync(resumeTxtPath)) {
+try {
   fs.writeFileSync(resumeTxtPath, [
     'John Doe', 'Software Engineer', 'john.doe@email.com | San Francisco, CA', '',
     'SUMMARY', 'Experienced software engineer with 8 years of experience.', '',
     'EXPERIENCE', 'Senior Software Engineer | TechCorp Inc | 2020 - Present',
     '- Led development of microservices architecture', '',
     'SKILLS', 'Python, JavaScript, TypeScript, React, Node.js, PostgreSQL, AWS',
-  ].join('\n'));
+  ].join('\n'), { flag: 'wx' });
+} catch (_err) {
+  /* fixture already exists */
 }
-if (!fs.existsSync(jobTxtPath)) {
+try {
   fs.writeFileSync(jobTxtPath, [
     'Senior Software Engineer', 'TechCorp Inc | San Francisco, CA (Remote OK)',
     '$180,000 - $220,000', '',
     'Requirements:', '- 5+ years of software engineering experience',
     '- Proficiency in Python and JavaScript',
-  ].join('\n'));
+  ].join('\n'), { flag: 'wx' });
+} catch (_err) {
+  /* fixture already exists */
 }
 
 test.describe('File Upload', () => {
@@ -311,7 +315,7 @@ test.describe('File Input Attributes', () => {
     await page.waitForLoadState('domcontentloaded');
     const fileInput = page.locator('input[type="file"]').first();
     if (await fileInput.count() > 0) {
-      const accept = await fileInput.getAttribute('accept');
+      const _accept = await fileInput.getAttribute('accept');
       // accept may be null if not specified, that's fine
       await expect(page.locator('body')).toBeVisible();
     }
@@ -354,7 +358,7 @@ test.describe('File Input Attributes', () => {
       if (id) {
         const label = page.locator(`label[for="${id}"]`);
         const ariaLabel = await fileInput.getAttribute('aria-label');
-        const hasLabel = (await label.count()) > 0 || ariaLabel !== null;
+        const _hasLabel = (await label.count()) > 0 || ariaLabel !== null;
         // Just verify we can check — not mandatory
         await expect(page.locator('body')).toBeVisible();
       }

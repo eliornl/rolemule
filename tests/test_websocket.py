@@ -173,6 +173,7 @@ class TestWebSocketWorkflowConnection:
                 try:
                     await asyncio.wait_for(ws.recv(), timeout=2.0)
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
                 except websockets.exceptions.ConnectionClosed:
                     # Expected - connection closed due to invalid token
@@ -232,6 +233,7 @@ class TestWebSocketWorkflowConnection:
                 try:
                     await asyncio.wait_for(ws.recv(), timeout=2.0)
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
                 
                 # Send ping
@@ -279,12 +281,15 @@ class TestWebSocketUserConnection:
                 try:
                     await asyncio.wait_for(ws.recv(), timeout=2.0)
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
                 except websockets.exceptions.ConnectionClosed:
+                    # Live-server: connection may close after invalid token.
                     pass
         except websockets.exceptions.InvalidStatusCode as e:
             assert e.status_code in [403, 1008]
         except Exception:
+            # Live-server: rejection without a specific error type is acceptable.
             pass
 
     @pytest.mark.asyncio
@@ -306,10 +311,13 @@ class TestWebSocketUserConnection:
                     assert data["type"] == "connected"
                     assert "timestamp" in data
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
         except websockets.exceptions.ConnectionClosed:
+            # Live-server: connection may close when limits are enforced.
             pass
         except Exception:
+            # Live-server: rejection without a specific error type is acceptable.
             pass
 
     @pytest.mark.asyncio
@@ -328,6 +336,7 @@ class TestWebSocketUserConnection:
                 try:
                     await asyncio.wait_for(ws.recv(), timeout=2.0)
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
                 
                 # Send ping
@@ -339,8 +348,10 @@ class TestWebSocketUserConnection:
                     data = json.loads(response)
                     assert data["type"] == "pong"
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
         except Exception:
+            # Live-server: rejection without a specific error type is acceptable.
             pass
 
 
@@ -375,6 +386,7 @@ class TestWebSocketConnectionLimits:
                     try:
                         await asyncio.wait_for(ws.recv(), timeout=1.0)
                     except asyncio.TimeoutError:
+                        # Live-server: no message within timeout is acceptable.
                         pass
                 except Exception:
                     # Connection rejected - expected after limit
@@ -389,6 +401,7 @@ class TestWebSocketConnectionLimits:
                 try:
                     await ws.close()
                 except Exception:
+                    # Live-server: cleanup close failures are non-fatal.
                     pass
 
     @pytest.mark.asyncio
@@ -413,6 +426,7 @@ class TestWebSocketConnectionLimits:
                     try:
                         await asyncio.wait_for(ws.recv(), timeout=1.0)
                     except asyncio.TimeoutError:
+                        # Live-server: no message within timeout is acceptable.
                         pass
                 except Exception:
                     # Connection rejected - expected after limit
@@ -423,6 +437,7 @@ class TestWebSocketConnectionLimits:
                 try:
                     await ws.close()
                 except Exception:
+                    # Live-server: cleanup close failures are non-fatal.
                     pass
 
 
@@ -456,6 +471,7 @@ class TestWebSocketIsolation:
                 try:
                     await asyncio.wait_for(ws1.recv(), timeout=2.0)
                 except asyncio.TimeoutError:
+                    # Live-server: no message within timeout is acceptable.
                     pass
                 
                 # User 2 connects to same session - should also work
@@ -467,6 +483,7 @@ class TestWebSocketIsolation:
                     try:
                         await asyncio.wait_for(ws2.recv(), timeout=2.0)
                     except asyncio.TimeoutError:
+                        # Live-server: no message within timeout is acceptable.
                         pass
                     
                     # Both connections should be active

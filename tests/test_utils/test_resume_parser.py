@@ -278,7 +278,7 @@ async def test_parse_resume_generic_failure_message(monkeypatch) -> None:
     monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
     monkeypatch.setattr(
         "utils.resume_parser.user_facing_message_from_llm_exception",
-        lambda e: str(e),
+        str,
     )
     with pytest.raises(ValueError, match="Failed to parse resume"):
         await parse_resume("x" * 80)

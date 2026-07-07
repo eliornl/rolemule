@@ -65,7 +65,7 @@
         contentTail: c.length > 2000 ? c.slice(-900) : ''
       };
       try {
-        if (/linkedin\.com/i.test(String(window.location.hostname || ''))) {
+        if (/(?:^|\.)linkedin\.com$/i.test(String(window.location.hostname || '').replace(/^www\./i, ''))) {
           var vk = [];
           var si;
           for (si = 0; si < sessionStorage.length; si++) {
@@ -1370,7 +1370,6 @@
           blob = '';
         }
         if (
-          jid &&
           blob.indexOf(jid) !== -1 &&
           (row.description || row.title || row.jobPostingTitle || row.formattedDescription)
         ) {
@@ -1616,7 +1615,6 @@
     try {
       var rawBody = sessionStorage.getItem('jaa_li_guest_body_' + jid);
       var rawMeta = sessionStorage.getItem('jaa_li_guest_meta_' + jid);
-      var rawErr = sessionStorage.getItem('jaa_li_guest_err_' + jid);
       if (rawMeta) {
         try {
           meta = JSON.parse(rawMeta);

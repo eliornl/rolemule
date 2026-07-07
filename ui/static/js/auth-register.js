@@ -23,6 +23,13 @@
         PROFILE_COMPLETED: 'profile_completed'
     };
 
+    /** @param {string} text */
+    function stripHtmlForAlert(text) {
+        return String(text)
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<[^>]*>/g, '');
+    }
+
     // =============================================================================
     // DOM CACHE
     // =============================================================================
@@ -392,7 +399,7 @@
         const emailValue  = DOM.emailField.value.trim();
         const emailResult = validateEmail(emailValue);
         if (!emailResult.isValid) {
-            showError(emailResult.message.replace(/<[^>]*>/g, ''));
+            showError(stripHtmlForAlert(emailResult.message));
             DOM.emailField.classList.add('is-invalid');
             setLoading(false);
             return;

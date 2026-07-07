@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { LoginPage, RegisterPage, DashboardPage, ProfileSetupPage, NewApplicationPage, ToolsPage } from '../pages';
+import { LoginPage, RegisterPage, DashboardPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 

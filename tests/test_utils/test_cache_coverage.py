@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import utils.cache as cache_mod
 from utils.cache import (
     _CacheMetrics,
+    _fallback_limiter,
     cache_delete,
     cache_delete_pattern,
     cache_tool_result,
@@ -34,9 +34,9 @@ from utils.cache import (
 
 @pytest.fixture(autouse=True)
 def reset_fallback_limiter():
-    cache_mod._fallback_limiter._store.clear()
+    _fallback_limiter._store.clear()
     yield
-    cache_mod._fallback_limiter._store.clear()
+    _fallback_limiter._store.clear()
 
 
 @pytest.mark.asyncio
@@ -47,20 +47,20 @@ async def test_get_redis_or_none_exception() -> None:
 
 @pytest.mark.asyncio
 async def test_cache_delete_no_redis() -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await cache_delete("k") is False
 
 
 @pytest.mark.asyncio
 async def test_cache_delete_error(mock_redis) -> None:
     mock_redis.delete = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await cache_delete("k") is False
 
 
 @pytest.mark.asyncio
 async def test_cache_delete_pattern_no_redis() -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await cache_delete_pattern("x:*") == 0
 
 
@@ -71,7 +71,7 @@ async def test_cache_delete_pattern_error(mock_redis) -> None:
         yield  # pragma: no cover
 
     mock_redis.scan_iter = _fail_scan
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await cache_delete_pattern("x:*") == 0
 
 
@@ -85,7 +85,7 @@ async def test_get_cached_company_research_invalid_evicted(mock_redis) -> None:
     wrapped = {"cached_at": "t", "data": {"wrong": "shape"}}
     mock_redis.get = AsyncMock(return_value=json.dumps(wrapped))
     mock_redis.delete = AsyncMock(return_value=1)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_company_research("Acme") is None
         mock_redis.delete.assert_awaited()
 
@@ -93,7 +93,7 @@ async def test_get_cached_company_research_invalid_evicted(mock_redis) -> None:
 @pytest.mark.asyncio
 async def test_get_cached_company_research_miss(mock_redis) -> None:
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_company_research("Acme") is None
 
 
@@ -102,78 +102,78 @@ async def test_get_cached_llm_response_invalid_evicted(mock_redis) -> None:
     wrapped = {"cached_at": "t", "data": {"wrong_field": "only"}}
     mock_redis.get = AsyncMock(return_value=json.dumps(wrapped))
     mock_redis.delete = AsyncMock(return_value=1)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_llm_response("prompt", user_id="u1") is None
 
 
 @pytest.mark.asyncio
 async def test_get_cached_llm_response_miss(mock_redis) -> None:
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_llm_response("prompt") is None
 
 
 @pytest.mark.asyncio
 async def test_interview_prep_generating_paths(mock_redis) -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await set_interview_prep_generating("s") is True
         assert await clear_interview_prep_generating("s") is False
         assert await is_interview_prep_generating("s") is False
 
     mock_redis.set = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await set_interview_prep_generating("s") is True
 
     mock_redis2 = AsyncMock()
     mock_redis2.delete = AsyncMock(side_effect=RuntimeError("fail"))
     mock_redis2.get = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis2)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis2)):
         assert await clear_interview_prep_generating("s") is False
         assert await is_interview_prep_generating("s") is False
 
 
 @pytest.mark.asyncio
 async def test_cv_optimization_running_paths(mock_redis) -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await set_cv_optimization_running("s") is True
         assert await clear_cv_optimization_running("s") is False
         assert await is_cv_optimization_running("s") is False
 
     mock_redis.set = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await set_cv_optimization_running("s") is True
 
     mock_redis2 = AsyncMock()
     mock_redis2.delete = AsyncMock(side_effect=RuntimeError("fail"))
     mock_redis2.get = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis2)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis2)):
         assert await clear_cv_optimization_running("s") is False
         assert await is_cv_optimization_running("s") is False
 
 
 @pytest.mark.asyncio
 async def test_get_cached_tool_result_no_redis() -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await get_cached_tool_result("tool", {"a": 1}) is None
 
 
 @pytest.mark.asyncio
 async def test_get_cached_tool_result_error_records_metric(mock_redis) -> None:
     mock_redis.get = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_tool_result("tool", {"a": 1}) is None
 
 
 @pytest.mark.asyncio
 async def test_cache_tool_result_no_redis() -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await cache_tool_result("tool", {"a": 1}, {"ok": True}) is False
 
 
 @pytest.mark.asyncio
 async def test_cache_tool_result_error(mock_redis) -> None:
     mock_redis.setex = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await cache_tool_result("tool", {"a": 1}, {"ok": True}) is False
 
 
@@ -208,7 +208,7 @@ def test_invalidate_all_user_profile_caches_sync_batch_and_exception() -> None:
 
 @pytest.mark.asyncio
 async def test_record_failed_login_no_redis() -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         attempts, locked = await record_failed_login("a@b.com")
         assert attempts == 0
         assert locked is False
@@ -218,7 +218,7 @@ async def test_record_failed_login_no_redis() -> None:
 async def test_record_failed_login_error() -> None:
     redis = AsyncMock()
     redis.pipeline = MagicMock(side_effect=RuntimeError("pipe fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=redis)):
         attempts, locked = await record_failed_login("a@b.com")
         assert attempts == 0
         assert locked is False
@@ -226,13 +226,13 @@ async def test_record_failed_login_error() -> None:
 
 @pytest.mark.asyncio
 async def test_check_account_lockout_no_redis_and_not_locked(mock_redis) -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         locked, remaining = await check_account_lockout("a@b.com")
         assert locked is False
         assert remaining == 0
 
     mock_redis.get = AsyncMock(return_value="2")
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         locked, remaining = await check_account_lockout("a@b.com")
         assert locked is False
 
@@ -241,7 +241,7 @@ async def test_check_account_lockout_no_redis_and_not_locked(mock_redis) -> None
 async def test_check_account_lockout_error() -> None:
     redis = AsyncMock()
     redis.get = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=redis)):
         locked, remaining = await check_account_lockout("a@b.com")
         assert locked is False
         assert remaining == 0
@@ -249,12 +249,12 @@ async def test_check_account_lockout_error() -> None:
 
 @pytest.mark.asyncio
 async def test_clear_login_attempts_no_redis_and_error() -> None:
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         assert await clear_login_attempts("a@b.com") is False
 
     redis = AsyncMock()
     redis.delete = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=redis)):
         assert await clear_login_attempts("a@b.com") is False
 
 
@@ -262,7 +262,7 @@ async def test_clear_login_attempts_no_redis_and_error() -> None:
 async def test_get_login_attempts_error() -> None:
     redis = AsyncMock()
     redis.get = AsyncMock(side_effect=RuntimeError("fail"))
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=redis)):
         assert await get_login_attempts("a@b.com") == 0
 
 
@@ -280,7 +280,7 @@ async def test_get_cache_stats_scan_iter(mock_redis) -> None:
             yield None
 
     mock_redis.scan_iter = _scan
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         stats = await get_cache_stats()
         assert stats["status"] == "connected"
         assert "key_counts" in stats
@@ -303,7 +303,7 @@ def test_validate_cache_data_non_dict() -> None:
 async def test_check_rate_limit_with_headers_no_redis_fallback() -> None:
     from utils.cache import check_rate_limit_with_headers
 
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=None)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
         result = await check_rate_limit_with_headers("fb:no-redis", limit=5, window_seconds=60)
     assert result.allowed is True
     assert result.limit == 5
@@ -321,7 +321,7 @@ async def test_cache_job_analysis_success(mock_redis) -> None:
     from utils.cache import cache_job_analysis
 
     mock_redis.setex = AsyncMock(return_value=True)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         ok = await cache_job_analysis(
             {"company_name": "A", "job_title": "B"},
             job_url="https://jobs.example.com/1",
@@ -339,7 +339,7 @@ async def test_invalidate_user_llm_cache_no_redis() -> None:
 @pytest.mark.asyncio
 async def test_get_cached_job_analysis_miss(mock_redis) -> None:
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_job_analysis(
             job_url="https://jobs.example.com/1",
             job_content="x" * 100,
@@ -351,7 +351,7 @@ async def test_get_cached_user_profile_miss(mock_redis) -> None:
     from utils.cache import get_cached_user_profile
 
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_user_profile("user-1") is None
 
 
@@ -360,7 +360,7 @@ async def test_get_cached_workflow_state_miss(mock_redis) -> None:
     from utils.cache import get_cached_workflow_state
 
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_workflow_state("session-1") is None
 
 
@@ -369,21 +369,21 @@ async def test_get_cached_cv_optimization_miss(mock_redis) -> None:
     from utils.cache import get_cached_cv_optimization
 
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_cv_optimization("session-1") is None
 
 
 @pytest.mark.asyncio
 async def test_get_cached_tool_result_miss(mock_redis) -> None:
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         assert await get_cached_tool_result("thank_you", {"a": 1}) is None
 
 
 @pytest.mark.asyncio
 async def test_check_account_lockout_no_attempts_key(mock_redis) -> None:
     mock_redis.get = AsyncMock(return_value=None)
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         locked, remaining = await check_account_lockout("a@b.com")
         assert locked is False
         assert remaining == 0
@@ -404,6 +404,6 @@ async def test_get_cache_stats_counts_keys(mock_redis) -> None:
         ]
     )
     mock_redis.scan_iter = _scan_iter
-    with patch.object(cache_mod, "get_redis_or_none", AsyncMock(return_value=mock_redis)):
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         stats = await get_cache_stats()
         assert stats["key_counts"]["job_analysis"] >= 1

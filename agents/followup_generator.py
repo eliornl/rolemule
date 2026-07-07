@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 
 from utils.llm_client import get_gemini_client
 from utils.llm_parsing import parse_json_from_llm_response
-from utils.logging_config import get_structured_logger
+from utils.logging_config import get_structured_logger, sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -245,7 +245,7 @@ class FollowUpGeneratorAgent:
             parsed = parse_json_from_llm_response(response_text)
             
             if not parsed:
-                logger.error(f"Failed to parse follow-up response: {response_text[:200]}")
+                logger.error("Failed to parse follow-up response: %s", sanitize_log_value(response_text[:200]))
                 structured_logger.log_agent_error(
                     "followup_generator", None, 
                     Exception("JSON parse failed"), duration_ms
@@ -271,7 +271,7 @@ class FollowUpGeneratorAgent:
             }
             
         except Exception as e:
-            logger.error(f"Follow-up generation failed: {e}", exc_info=True)
+            logger.error("Follow-up generation failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
     def _create_filtered_result(self, filter_message: str, stage: str) -> Dict[str, Any]:

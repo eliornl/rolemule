@@ -36,7 +36,10 @@ class EventBus {
         if (!this._listeners.has(event)) {
             this._listeners.set(event, new Set());
         }
-        /** @type {Set<EventHandler>} */ (this._listeners.get(event)).add(callback);
+        const listeners = this._listeners.get(event);
+        if (listeners) {
+            listeners.add(callback);
+        }
         return () => this.off(event, callback);
     }
 

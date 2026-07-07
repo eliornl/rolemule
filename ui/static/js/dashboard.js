@@ -11,6 +11,30 @@
 
 /// <reference path="./types.js" />
 
+/** @param {unknown} value */
+function sanitizeLogValue(value) {
+  if (value == null) return "";
+  return String(value).replace(/[\r\n\x00-\x1f\x7f]/g, " ");
+}
+
+/** @param {string|null|undefined} str */
+function escapeHtml(str) {
+  if (str == null) return "";
+  const decoded = String(str)
+    .replace(/&amp;/g, "&")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#039;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+  return decoded
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 /**
  * Dashboard manager class for workflow and application management.
  * Handles real-time updates via WebSocket with polling fallback.
@@ -426,12 +450,12 @@ class DashboardManager {
 
   /** @param {any} data */
   handleWebSocketMessage(data) {
-    console.debug("WebSocket message type:", data.type);
+    console.debug("WebSocket message type:", sanitizeLogValue(data.type));
     
     switch (data.type) {
       case "connected":
         // Connection confirmed
-        console.log("WebSocket subscription confirmed:", data.message);
+        console.log("WebSocket subscription confirmed:", sanitizeLogValue(data.message));
         break;
         
       case "pong":
@@ -475,7 +499,7 @@ class DashboardManager {
         break;
         
       default:
-        console.debug("Unknown WebSocket message type:", data.type);
+        console.debug("Unknown WebSocket message type:", sanitizeLogValue(data.type));
     }
   }
 
@@ -516,7 +540,7 @@ class DashboardManager {
    * @param {any} data
    */
   handlePhaseChange(sessionId, data) {
-    const { phase, progress } = data;
+    const { progress } = data;
     this.updateWorkflowStatus(sessionId, "running", progress);
   }
 
@@ -898,11 +922,13 @@ class DashboardManager {
     );
     if (!workflowCard) return;
     
-    console.debug(`Updating workflow status: ${sessionId} to ${status} with progress ${progress}%`);
+    console.debug(
+      `Updating workflow status: ${sanitizeLogValue(sessionId)} to ${sanitizeLogValue(status)} with progress ${sanitizeLogValue(progress)}%`,
+    );
     
     // Normalize status for UI consistency (backend may send varied formats)
     const normalizedStatus = typeof status === 'string' ? status.toLowerCase() : status;
-    console.debug(`Normalized status: ${normalizedStatus}`);
+    console.debug(`Normalized status: ${sanitizeLogValue(normalizedStatus)}`);
     
     // Map backend workflow statuses to UI status values
     let uiStatus = normalizedStatus;
@@ -916,14 +942,16 @@ class DashboardManager {
       progress = 100;
     }
     
-    console.debug(`Mapped to UI status: ${uiStatus} with ${progress}% progress`);
+    console.debug(
+      `Mapped to UI status: ${sanitizeLogValue(uiStatus)} with ${sanitizeLogValue(progress)}% progress`,
+    );
 
     // Update status badge
     const statusBadge = workflowCard.querySelector(".status-badge");
     if (statusBadge) {
       statusBadge.className = `status-badge status-${uiStatus}`;
       statusBadge.textContent = this.formatStatus(uiStatus);
-      console.debug(`Updated badge to: ${this.formatStatus(uiStatus)}`);
+      console.debug(`Updated badge to: ${sanitizeLogValue(this.formatStatus(uiStatus))}`);
     }
 
     // Update progress bar
@@ -931,7 +959,7 @@ class DashboardManager {
     if (progressBar) {
       progressBar.style.width = progress + "%";
       progressBar.setAttribute("aria-valuenow", String(progress));
-      console.debug(`Updated progress bar to: ${progress}%`);
+      console.debug(`Updated progress bar to: ${sanitizeLogValue(progress)}%`);
     }
 
     // Update progress text
@@ -1598,14 +1626,16 @@ class DashboardManager {
    * @param {string} applicationId
    */
   addDocumentToList(container, documentType, applicationId) {
+    const safeDocType = escapeHtml(String(documentType));
+    const safeAppId = escapeHtml(String(applicationId));
     const documentHtml = `
             <div class="document-item d-flex align-items-center justify-content-between mb-2">
                 <div class="d-flex align-items-center">
-                    <i class="${this.getDocumentIcon(documentType)} me-2"></i>
-                    <span>${this.formatDocumentType(documentType)}</span>
+                    <i class="${escapeHtml(this.getDocumentIcon(documentType))} me-2"></i>
+                    <span>${escapeHtml(this.formatDocumentType(documentType))}</span>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-primary preview-document-btn"
-                        data-app-id="${applicationId}" data-doc-type="${documentType}">
+                        data-app-id="${safeAppId}" data-doc-type="${safeDocType}">
                     <i class="fas fa-eye"></i>
                 </button>
             </div>
@@ -1630,7 +1660,8 @@ class DashboardManager {
     } else {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = submitBtn.getAttribute("data-original-text") || "Create Application";
+        submitBtn.textContent =
+          submitBtn.getAttribute("data-original-text") || "Create Application";
       }
       inputs.forEach((input) => { /** @type {HTMLInputElement} */ (input).disabled = false; });
     }

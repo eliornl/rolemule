@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 from utils.llm_client import get_gemini_client
 from utils.llm_parsing import parse_json_from_llm_response
-from utils.logging_config import get_structured_logger
+from utils.logging_config import get_structured_logger, sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -158,7 +158,7 @@ class RejectionAnalyzerAgent:
             parsed = parse_json_from_llm_response(response_text)
             
             if not parsed:
-                logger.error(f"Failed to parse rejection analysis response: {response_text[:200]}")
+                logger.error("Failed to parse rejection analysis response: %s", sanitize_log_value(response_text[:200]))
                 structured_logger.log_agent_error(
                     "rejection_analyzer", None,
                     Exception("JSON parse failed"), duration_ms
@@ -187,7 +187,7 @@ class RejectionAnalyzerAgent:
             }
             
         except Exception as e:
-            logger.error(f"Rejection analysis failed: {e}", exc_info=True)
+            logger.error("Rejection analysis failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
     def _create_filtered_result(self, filter_message: str) -> Dict[str, Any]:

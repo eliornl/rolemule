@@ -19,6 +19,7 @@ from config.settings import get_security_settings
 from utils.database import get_database
 from utils.error_responses import APIError, ErrorCode, forbidden_error
 from models.database import User
+from utils.logging_config import sanitize_log_value
 
 # =============================================================================
 # CONFIGURATION
@@ -310,7 +311,10 @@ async def invalidate_all_user_tokens(user_id: str) -> bool:
             # issued at "now"), causing the new token to be rejected immediately.
             now_ts = int(datetime.now(timezone.utc).timestamp())
             await redis_client.set(key, str(now_ts), ex=8 * 24 * 3600)
-            logger.info("Invalidated all tokens for user %s", user_id[:8])
+            logger.info(
+                "Invalidated all tokens for user %s",
+                sanitize_log_value(str(user_id)[:8]),
+            )
             return True
         logger.warning("Cannot invalidate user tokens: Redis unavailable")
         return False

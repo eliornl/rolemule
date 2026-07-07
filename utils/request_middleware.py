@@ -4,7 +4,6 @@ Provides request ID generation, logging, and performance tracking.
 """
 
 import logging
-import re
 from time import perf_counter
 
 from fastapi import Request, Response
@@ -15,6 +14,7 @@ from utils.logging_config import (
     set_request_context,
     clear_request_context,
     get_structured_logger,
+    sanitize_log_value,
 )
 
 # =============================================================================
@@ -24,12 +24,9 @@ from utils.logging_config import (
 logger = logging.getLogger(__name__)
 structured_logger = get_structured_logger(__name__)
 
-_NEWLINE_RE = re.compile(r"[\r\n\x00]")
-
-
 def _sanitize_log_value(value: str) -> str:
     """Strip CR/LF/NUL characters to prevent log-injection attacks."""
-    return _NEWLINE_RE.sub(" ", value)
+    return sanitize_log_value(value)
 
 # Request ID header name
 REQUEST_ID_HEADER = "X-Request-ID"

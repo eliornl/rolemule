@@ -26,7 +26,16 @@ MAX_FIELD_LENGTH = 10000  # 10KB for regular fields
 MAX_NAME_LENGTH = 500  # Names, titles, etc.
 
 # Patterns for potentially dangerous content
-SCRIPT_PATTERN = re.compile(r"<script[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL)
+# Avoid nested quantifiers (ReDoS): match script bodies without backtracking.
+SCRIPT_PATTERN = re.compile(
+    r"<script\b[^>]*>(?:(?!</script>).)*</script>",
+    re.IGNORECASE | re.DOTALL,
+)
+# Fence/backtick segments for LLM output — non-backtracking split pattern.
+_CODE_BLOCK_SPLIT_PATTERN = re.compile(
+    r"(```(?:(?!```).)*```|`[^`\n]+`)",
+    re.DOTALL,
+)
 EVENT_HANDLER_PATTERN = re.compile(r"\s+on\w+\s*=", re.IGNORECASE)
 JAVASCRIPT_URL_PATTERN = re.compile(r"javascript:", re.IGNORECASE)
 DATA_URL_PATTERN = re.compile(r"data:\s*text/html", re.IGNORECASE)
@@ -64,7 +73,11 @@ def sanitize_html(content: str, allow_basic_formatting: bool = False) -> str:
     # Truncate extremely long content
     if len(content) > MAX_TEXT_LENGTH:
         content = content[:MAX_TEXT_LENGTH]
-        logger.warning(f"Content truncated from {len(content)} to {MAX_TEXT_LENGTH} chars")
+        logger.warning(
+            "Content truncated from %s to %s chars",
+            len(content),
+            MAX_TEXT_LENGTH,
+        )
 
     # Remove script tags and their content
     content = SCRIPT_PATTERN.sub("", content)
@@ -85,7 +98,7 @@ def sanitize_html(content: str, allow_basic_formatting: bool = False) -> str:
         if _BLEACH_AVAILABLE:
             # bleach.clean strips all tags not in the allowlist and escapes their content,
             # which is far more robust than the regex approach.
-            content = bleach.clean(content, tags=list(SAFE_TAGS), attributes={}, strip=True)
+            content = bleach.clean(content, tags=list(SAFE_TAGS), attributes={}, strip=False)
         else:
             # Fallback: escape all HTML when bleach is not installed
             logger.warning(
@@ -250,7 +263,7 @@ def sanitize_llm_output(content):
     # This preserves code blocks while sanitizing regular content
 
     # Split by code blocks to preserve them
-    parts = re.split(r"(```[\s\S]*?```|`[^`]+`)", content)
+    parts = _CODE_BLOCK_SPLIT_PATTERN.split(content)
 
     sanitized_parts = []
     for i, part in enumerate(parts):

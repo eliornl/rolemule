@@ -177,7 +177,7 @@ test.describe('Job Analysis Workflow', () => {
       await page.waitForTimeout(3000);
       
       // Should show some agent/step indicators
-      const indicatorCount = await agentIndicators.count();
+      const _indicatorCount = await agentIndicators.count();
       // May or may not have indicators depending on UI
     });
     

@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import utils.cache as cache_mod
 from utils.cache import (
+    CACHE_VERSION,
     RateLimitResult,
     _InMemoryRateLimiter,
     _fallback_limiter,
@@ -42,7 +42,7 @@ def test_generate_hash() -> None:
 
 def test_get_job_cache_key_includes_version() -> None:
     key = _get_job_cache_key("https://jobs.example.com/123", "job body text")
-    assert cache_mod.CACHE_VERSION in key
+    assert CACHE_VERSION in key
     assert "job_analysis" in key
 
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage, RegisterPage } from '../pages';
-import { generateTestEmail } from '../fixtures/test-data';
+
 
 /**
  * Comprehensive form field edge case tests
@@ -79,7 +79,7 @@ test.describe('Form Edge Cases', () => {
       
       // Email should have proper autocomplete
       const emailAutocomplete = await loginPage.emailInput.getAttribute('autocomplete');
-      const passwordAutocomplete = await loginPage.passwordInput.getAttribute('autocomplete');
+      const _passwordAutocomplete = await loginPage.passwordInput.getAttribute('autocomplete');
       
       // Should have some autocomplete value (email, username, current-password, etc.)
       // or no autocomplete attribute (browser defaults)

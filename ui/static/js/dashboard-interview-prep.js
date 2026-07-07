@@ -3,25 +3,6 @@
 
     const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '/api/v1';
 
-    /**
-     * Show a notification via window.app.
-     * @param {string} message
-     * @param {string} [type]
-     */
-    function notify(message, type = 'info') {
-        const notifType = type === 'danger' ? 'error' : type;
-        // @ts-ignore
-        const bus = window.eventBus; const busEvents = window.BusEvents;
-        if (bus && busEvents) {
-            /** @type {Record<string,string>} */
-            const evtMap = { success: busEvents.NOTIFY_SUCCESS, error: busEvents.NOTIFY_ERROR, warning: busEvents.NOTIFY_WARNING, info: busEvents.NOTIFY_INFO };
-            bus.emit(evtMap[notifType] ?? busEvents.NOTIFY_INFO, { message });
-        }
-        // @ts-ignore
-        const app = window.app;
-        if (app && typeof app.showNotification === 'function') app.showNotification(message, notifType);
-    }
-
     /** @type {string|null} */
     let sessionId = null;
     /** @type {Record<string,unknown>|null} */

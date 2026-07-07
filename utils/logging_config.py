@@ -36,7 +36,10 @@ def _get_hostname() -> str:
     import socket
     try:
         return socket.gethostname()
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).debug(
+            "Could not resolve hostname for log metadata: %s", exc, exc_info=True
+        )
         return "unknown"
 
 
@@ -642,6 +645,13 @@ def log_execution_time(
 # =============================================================================
 
 
+def sanitize_log_value(value: Any) -> str:
+    """Strip CRLF and null bytes from values before logging to prevent log injection."""
+    if value is None:
+        return ""
+    return re.sub(r"[\r\n\x00]", "", str(value))
+
+
 def mask_email(email: str) -> str:
     """Return a masked version of an email address for safe logging.
 
@@ -649,9 +659,10 @@ def mask_email(email: str) -> str:
     Keeps the first 3 characters of the local part so logs remain useful
     for debugging without exposing the full address.
     """
-    if not email or "@" not in email:
+    safe_email = sanitize_log_value(email)
+    if not safe_email or "@" not in safe_email:
         return "***"
-    local = email.split("@")[0]
+    local = safe_email.split("@")[0]
     return f"{local[:3]}***@***"
 
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage, LoginPage, DashboardPage, ProfileSetupPage, NewApplicationPage, ToolsPage } from '../pages';
+import { RegisterPage, LoginPage, DashboardPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 
 /**
@@ -145,7 +145,7 @@ test.describe('Performance', () => {
       
       const startTime = Date.now();
       
-      const response = await page.request.post('/api/v1/auth/login', {
+      await page.request.post('/api/v1/auth/login', {
         data: {
           email: 'test@example.com',
           password: 'password',
@@ -338,8 +338,8 @@ test.describe('Performance', () => {
     test('should lazy load images', async ({ page }) => {
       await page.goto('/');
       
-      const lazyImages = await page.locator('img[loading="lazy"]').count();
-      const allImages = await page.locator('img').count();
+      const _lazyImages = await page.locator('img[loading="lazy"]').count();
+      const _allImages = await page.locator('img').count();
       
       // Some images may be lazy loaded
       // Not strictly required but good practice

@@ -7,11 +7,11 @@ job comparison, follow-up emails, and salary negotiation coaching.
 import uuid
 import logging
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Dict, Any, Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
-from enum import Enum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
@@ -24,6 +24,7 @@ from utils.cache import (
 )
 from utils.encryption import decrypt_api_key
 from utils.security import sanitize_text
+from utils.logging_config import sanitize_log_value
 from utils.error_responses import internal_error, rate_limit_error, validation_error
 from models.database import User, JobApplication
 from agents.thank_you_writer import ThankYouWriterAgent
@@ -382,7 +383,7 @@ async def generate_thank_you_note(
             )
             await cache_tool_result("thank_you", sanitized_payload, result)
 
-        logger.info(f"Generated thank you note for user {user_id}")
+        logger.info(f"Generated thank you note for user {sanitize_log_value(user_id)}")
 
         return ThankYouNoteResponse(
             subject_line=result.get("subject_line", ""),
@@ -471,7 +472,7 @@ async def analyze_rejection(
             )
             await cache_tool_result("rejection_analysis", sanitized_payload, result)
 
-        logger.info(f"Generated rejection analysis for user {user_id}")
+        logger.info(f"Generated rejection analysis for user {sanitize_log_value(user_id)}")
         
         return RejectionAnalysisResponse(
             analysis_summary=result.get("analysis_summary", ""),
@@ -561,7 +562,7 @@ async def generate_reference_request(
             )
             await cache_tool_result("reference_request", sanitized_payload, result)
 
-        logger.info(f"Generated reference request for user {user_id}")
+        logger.info(f"Generated reference request for user {sanitize_log_value(user_id)}")
         
         return ReferenceRequestResponse(
             subject_line=result.get("subject_line", ""),
@@ -899,7 +900,7 @@ async def compare_jobs(
             )
             await cache_tool_result("job_comparison", sanitized_payload, result)
 
-        logger.info(f"Generated job comparison for user {user_id}")
+        logger.info(f"Generated job comparison for user {sanitize_log_value(user_id)}")
         
         # Build response with proper type handling
         jobs_analysis = []
@@ -1030,7 +1031,11 @@ async def generate_followup(
             )
             await cache_tool_result("followup", sanitized_payload, result)
 
-        logger.info(f"Generated follow-up email for user {user_id}, stage: {request.stage}")
+        logger.info(
+            "Generated follow-up email for user %s, stage: %s",
+            sanitize_log_value(user_id),
+            sanitize_log_value(request.stage),
+        )
         
         return FollowUpResponse(
             subject_line=result.get("subject_line", ""),
@@ -1144,7 +1149,7 @@ async def get_salary_coaching(
             )
             await cache_tool_result("salary_coach", sanitized_payload, result)
 
-        logger.info(f"Generated salary coaching for user {user_id}")
+        logger.info(f"Generated salary coaching for user {sanitize_log_value(user_id)}")
         
         # Build response with proper type handling
         market_analysis = result.get("market_analysis", {})

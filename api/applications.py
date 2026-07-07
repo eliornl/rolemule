@@ -10,8 +10,8 @@ from datetime import datetime, timedelta, timezone
 import logging
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status, Response
-from utils.logging_config import get_structured_logger, mask_email
 from pydantic import BaseModel, Field, validator
+from utils.logging_config import get_structured_logger, mask_email, sanitize_log_value
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, case, or_, exists
 
@@ -423,7 +423,7 @@ async def update_application_notes(
         await db.commit()
         await db.refresh(existing_app)
 
-        logger.info(f"Updated notes for application {application_id}")
+        logger.info(f"Updated notes for application {sanitize_log_value(application_id)}")
         return await _format_application_response(existing_app, db)
 
     except HTTPException:
@@ -599,13 +599,13 @@ async def get_application_download(
         application = result.scalar_one_or_none()
 
         if not application:
-            logger.warning(f"Application {application_id} not found for user {user_id}")
+            logger.warning(f"Application {sanitize_log_value(application_id)} not found for user {sanitize_log_value(user_id)}")
             raise not_found_error("Application not found")
 
         session_id = application.session_id
 
         if not session_id:
-            logger.warning(f"Application {application_id} has no workflow session ID")
+            logger.warning(f"Application {sanitize_log_value(application_id)} has no workflow session ID")
             raise not_found_error("No workflow data found for this application")
 
         workflow_result = await db.execute(
@@ -619,7 +619,7 @@ async def get_application_download(
         workflow_session = workflow_result.scalar_one_or_none()
 
         if not workflow_session:
-            logger.warning(f"Workflow session {session_id} not found")
+            logger.warning(f"Workflow session {sanitize_log_value(session_id)} not found")
             raise not_found_error("Workflow data not found")
 
         workflow_data = workflow_session.to_dict()
@@ -649,7 +649,11 @@ async def get_application_download(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error generating application download: {str(e)}", exc_info=True)
+        logger.error(
+            "Error generating application download: %s",
+            sanitize_log_value(e),
+            exc_info=True,
+        )
         raise internal_error("Failed to generate application download")
 
 

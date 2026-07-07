@@ -8,6 +8,8 @@ Uses Redis for distributed state across multiple instances.
 import logging
 from typing import Optional
 
+from utils.logging_config import sanitize_log_value
+
 logger = logging.getLogger(__name__)
 
 # Redis key for maintenance mode
@@ -103,7 +105,11 @@ async def enable_maintenance_mode(
             else:
                 await redis_client.delete(MAINTENANCE_END_KEY)
             
-            logger.info(f"Maintenance mode enabled. Message: {message}, End: {estimated_end}")
+            logger.info(
+                "Maintenance mode enabled. Message: %s, End: %s",
+                sanitize_log_value(message or ""),
+                sanitize_log_value(estimated_end or ""),
+            )
             return True
         
         logger.warning("Redis not available - maintenance mode not enabled")

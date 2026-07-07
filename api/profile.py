@@ -36,7 +36,7 @@ from utils.encryption import (
     decrypt_api_key,
 )
 from utils.gemini_api_key_format import validate_gemini_api_key
-from utils.logging_config import get_structured_logger, mask_email
+from utils.logging_config import get_structured_logger, mask_email, sanitize_log_value
 from utils.error_responses import APIError, ErrorCode, internal_error, no_api_key_error, not_found_error, not_implemented_error, rate_limit_error, validation_error
 from models.database import User, UserProfile as UserProfileModel, JobApplication, WorkflowSession, UserWorkflowPreferences, UserResumeAsset
 
@@ -67,9 +67,7 @@ def get_user_id_from_token(current_user: Dict[str, Any]) -> uuid.UUID:
     """
     user_id = current_user.get("id") or current_user.get("_id")
     if not user_id:
-        logger.warning(
-            f"Invalid user session, no user_id found in token: {list(current_user.keys())}"
-        )
+        logger.warning("Invalid user session: no user_id found in token")
         raise validation_error("Invalid user session. Please login again.")
 
     # Ensure user_id is converted to UUID if it's a string
@@ -77,7 +75,10 @@ def get_user_id_from_token(current_user: Dict[str, Any]) -> uuid.UUID:
         try:
             return uuid.UUID(user_id)
         except Exception as e:
-            logger.warning(f"Failed to convert user_id to UUID: {e}")
+            logger.warning(
+                "Failed to convert user_id to UUID: %s",
+                sanitize_log_value(e),
+            )
             raise validation_error("Invalid user ID format.")
 
     return user_id
@@ -612,12 +613,11 @@ class EducationItem(BaseModel):
                 parsed_start = datetime.strptime(start_raw.strip(), "%Y-%m").replace(
                     tzinfo=timezone.utc
                 )
+            except ValueError:
+                pass  # unparseable start_date; skip cross-field check
+            else:
                 if parsed_end_date <= parsed_start:
                     raise ValueError("End date must be after start date")
-            except ValueError as ex:
-                if "End date must be after" in str(ex):
-                    raise
-                pass
         return end_date
 
     @validator("is_current")
@@ -1006,8 +1006,10 @@ async def parse_resume_endpoint(
             raise no_api_key_error()
 
         logger.info(
-            f"Parsing resume for user {current_user.get('id')}: "
-            f"{resume.filename} ({len(content)} bytes)"
+            "Parsing resume for user %s: %s (%d bytes)",
+            sanitize_log_value(current_user.get("id")),
+            sanitize_log_value(resume.filename),
+            len(content),
         )
 
         parsed_data = await parse_resume_from_file(content, resume.filename, user_api_key=user_api_key)
@@ -1069,7 +1071,11 @@ async def download_stored_resume(
     try:
         path = resume_absolute_path(settings.user_resume_storage_dir, row.storage_relative_path)
     except ValueError as e:
-        logger.warning("Invalid resume storage path for user %s: %s", user_id, e)
+        logger.warning(
+            "Invalid resume storage path for user %s: %s",
+            sanitize_log_value(user_id),
+            sanitize_log_value(e),
+        )
         raise not_found_error(resource_type="Stored resume")
     if not path.is_file():
         raise not_found_error(resource_type="Stored resume")
@@ -1116,7 +1122,7 @@ async def get_profile_data(
         # Try to get from cache first
         cached_profile = await get_cached_user_profile(user_id_str)
         if cached_profile:
-            logger.debug(f"Profile cache hit for user {user_id_str[:8]}...")
+            logger.debug(f"Profile cache hit for user {sanitize_log_value(user_id_str)[:8]}...")
             return cached_profile
 
         # Get user profile from database
@@ -1126,7 +1132,7 @@ async def get_profile_data(
         user_profile = result.scalar_one_or_none()
 
         if not user_profile:
-            logger.info(f"No profile found for user {user_id}, creating empty profile")
+            logger.info(f"No profile found for user {sanitize_log_value(user_id)}, creating empty profile")
             # Create empty profile
             user_profile = UserProfileModel(
                 id=uuid.uuid4(),

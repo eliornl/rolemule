@@ -8,10 +8,9 @@ questions — are filled reliably from profile data without model guesswork.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence
 
-if TYPE_CHECKING:
-    from api.extension_autofill import AutofillFieldIn
+from api.extension_autofill_models import AutofillFieldIn
 
 # =============================================================================
 # LABEL PATTERNS
@@ -284,7 +283,7 @@ def _norm_label(label: str) -> str:
     return re.sub(r"\s+", " ", (label or "").strip())
 
 
-def _label_blob(field: "AutofillFieldIn") -> str:
+def _label_blob(field: AutofillFieldIn) -> str:
     parts = [
         field.label_text or "",
         field.placeholder or "",
@@ -323,7 +322,7 @@ def _family_name_from_full_name(full_name: str) -> str:
     return " ".join(parts[1:])
 
 
-def _sponsorship_answer(field: "AutofillFieldIn", prof: Dict[str, Any]) -> Optional[str]:
+def _sponsorship_answer(field: AutofillFieldIn, prof: Dict[str, Any]) -> Optional[str]:
     """
     Visa / employment sponsorship screening.
 
@@ -467,7 +466,7 @@ def _parse_plus_years_threshold(label: str) -> Optional[int]:
     return None
 
 
-def _free_text_field(field: "AutofillFieldIn") -> bool:
+def _free_text_field(field: AutofillFieldIn) -> bool:
     """Greenhouse screening text areas often omit input_type."""
     tag = (getattr(field, "tag", None) or "").strip().lower()
     if tag == "textarea":
@@ -476,11 +475,11 @@ def _free_text_field(field: "AutofillFieldIn") -> bool:
     return input_type in (None, "", "text", "textarea")
 
 
-def _salary_text_field(field: "AutofillFieldIn") -> bool:
+def _salary_text_field(field: AutofillFieldIn) -> bool:
     return _free_text_field(field)
 
 
-def _salary_expectations_answer(prof: Dict[str, Any], field: "AutofillFieldIn") -> Optional[str]:
+def _salary_expectations_answer(prof: Dict[str, Any], field: AutofillFieldIn) -> Optional[str]:
     """
     Map profile.desired_salary_range {min, max} to numeric salary text fields.
     Returns None when the user has not set a range (field stays empty).
@@ -512,7 +511,7 @@ def _salary_expectations_answer(prof: Dict[str, Any], field: "AutofillFieldIn") 
 
 
 def _education_field_value(
-    field: "AutofillFieldIn",
+    field: AutofillFieldIn,
     prof: Dict[str, Any],
     *,
     kind: str,
@@ -545,7 +544,7 @@ def _is_consent_ack_label(label: str) -> bool:
     return bool(_ACKNOWLEDGE_RE.search(label))
 
 
-def _acknowledge_answer(field: "AutofillFieldIn") -> str:
+def _acknowledge_answer(field: AutofillFieldIn) -> str:
     options = _option_texts(field)
     if options:
         picked = _pick_option(
@@ -598,7 +597,7 @@ def _yes_no_from_bool(flag: bool) -> str:
     return "Yes" if flag else "No"
 
 
-def _option_texts(field: "AutofillFieldIn") -> List[str]:
+def _option_texts(field: AutofillFieldIn) -> List[str]:
     if not field.options:
         return []
     out: List[str] = []
@@ -644,7 +643,7 @@ def _label_asks_nyc_area_commute(label: str) -> bool:
 
 
 def _tri_state_commute_yes_no_answer(
-    field: "AutofillFieldIn", prof: Dict[str, Any]
+    field: AutofillFieldIn, prof: Dict[str, Any]
 ) -> Optional[str]:
     """
     Plain Yes/No tri-state / NYC commute (Lever radio, etc.).
@@ -668,7 +667,7 @@ def _tri_state_commute_yes_no_answer(
 
 
 def _central_office_relocation_answer(
-    field: "AutofillFieldIn", prof: Dict[str, Any]
+    field: AutofillFieldIn, prof: Dict[str, Any]
 ) -> Optional[str]:
     """
     Greenhouse relocation dropdown when user is / is not near a central office.
@@ -733,7 +732,7 @@ def _central_office_relocation_answer(
 
 
 def _years_experience_answer(
-    field: "AutofillFieldIn", prof: Dict[str, Any]
+    field: AutofillFieldIn, prof: Dict[str, Any]
 ) -> Optional[str]:
     val = prof.get("years_experience")
     if val is None:
@@ -784,7 +783,7 @@ def _years_experience_answer(
     return _years_experience_bucket_fallback(years)
 
 
-def _in_office_answer(field: "AutofillFieldIn", prof: Dict[str, Any]) -> Optional[str]:
+def _in_office_answer(field: AutofillFieldIn, prof: Dict[str, Any]) -> Optional[str]:
     label = _label_blob(field)
     asks_nyc_commute = _label_asks_nyc_area_commute(label)
     if not _IN_OFFICE_RE.search(label) and not asks_nyc_commute:
@@ -895,7 +894,7 @@ def _startup_answer(prof: Dict[str, Any]) -> Optional[str]:
 # =============================================================================
 
 
-def _form_has_middle_name_field(fields: Optional[Sequence["AutofillFieldIn"]]) -> bool:
+def _form_has_middle_name_field(fields: Optional[Sequence[AutofillFieldIn]]) -> bool:
     if not fields:
         return False
     for f in fields:
@@ -905,10 +904,10 @@ def _form_has_middle_name_field(fields: Optional[Sequence["AutofillFieldIn"]]) -
 
 
 def deterministic_value_for_field(
-    field: "AutofillFieldIn",
+    field: AutofillFieldIn,
     profile_bundle: Dict[str, Any],
     *,
-    all_fields: Optional[Sequence["AutofillFieldIn"]] = None,
+    all_fields: Optional[Sequence[AutofillFieldIn]] = None,
 ) -> Optional[str]:
     """
     Return a profile-backed value for a single field, or None if no rule applies.
@@ -961,6 +960,15 @@ def deterministic_value_for_field(
 
     if _GITHUB_USERNAME_FIELD_RE.search(label) and input_type in ("", "text", "combobox"):
         return _github_username_from_profile(prof)
+
+    if _GITHUB_RE.search(label) and not _GITHUB_USERNAME_FIELD_RE.search(label) and input_type in (
+        "",
+        "text",
+        "url",
+        "combobox",
+    ):
+        github = (prof.get("github_url") or "").strip()
+        return github or None
 
     if _WEBSITE_RE.search(label) and not _LINKEDIN_RE.search(label) and input_type in (
         "",
@@ -1048,7 +1056,7 @@ def deterministic_value_for_field(
 
 
 def build_deterministic_raw_assignments(
-    fields: Sequence["AutofillFieldIn"],
+    fields: Sequence[AutofillFieldIn],
     profile_bundle: Dict[str, Any],
 ) -> List[Dict[str, str]]:
     """

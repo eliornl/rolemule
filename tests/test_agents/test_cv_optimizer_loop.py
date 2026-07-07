@@ -73,7 +73,7 @@ def _make_cover_letter_mock(text="Dear Hiring Team,\nI am excited..."):
 
 
 async def _noop_broadcast(record):
-    pass
+    return None
 
 
 # =============================================================================

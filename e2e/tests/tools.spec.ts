@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { RegisterPage, ProfileSetupPage, DashboardPage, ToolsPage, SettingsPage } from '../pages';
-import { generateTestEmail, testToolsData, testApiKey } from '../fixtures/test-data';
+import { RegisterPage, ProfileSetupPage, DashboardPage } from '../pages';
+import { generateTestEmail } from '../fixtures/test-data';
 
 // Helper function to login and complete profile setup if needed
 async function loginAndSetup(page: Page, email: string, password: string) {

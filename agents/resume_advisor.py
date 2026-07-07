@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from workflows.state_schema import WorkflowState, ResumeRecommendationsResult
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +211,8 @@ class ResumeAdvisorAgent:
             ValueError: If required data is missing
             Exception: If LLM generation fails
         """
-        logger.info(f"Starting resume advisory for session {state['session_id']}")
+        session_id = sanitize_log_value(str(state.get("session_id") or "unknown"))
+        logger.info("Starting resume advisory for session %s", session_id)
         start_time = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)
@@ -252,10 +254,10 @@ class ResumeAdvisorAgent:
             # Store in state
             state["resume_recommendations"] = result.to_dict()
 
-            logger.info(f"Resume advisory completed for session {state['session_id']}")
+            logger.info("Resume advisory completed for session %s", session_id)
 
         except Exception as e:
-            logger.error(f"Resume advisory failed: {str(e)}", exc_info=True)
+            logger.error("Resume advisory failed: %s", sanitize_log_value(str(e)), exc_info=True)
             raise
 
         return state
@@ -343,7 +345,7 @@ class ResumeAdvisorAgent:
             logger.error("LLM request timed out")
             return self._create_fallback_result("Request timed out")
         except Exception as e:
-            logger.error(f"LLM request failed: {e}", exc_info=True)
+            logger.error("LLM request failed: %s", sanitize_log_value(str(e)), exc_info=True)
             return self._create_fallback_result(str(e))
 
     def _format_profile(self, profile: Dict[str, Any]) -> str:

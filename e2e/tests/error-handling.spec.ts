@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage, LoginPage, DashboardPage, ProfileSetupPage, SettingsPage } from '../pages';
+import { RegisterPage, LoginPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 
@@ -155,7 +155,7 @@ test.describe('Error Handling', () => {
       });
       
       // Register and try to start workflow
-      const registerPage = new RegisterPage(page);
+      const _registerPage = new RegisterPage(page);
       const email = generateTestEmail('server_error_test');
       
       await registerPage.navigate();

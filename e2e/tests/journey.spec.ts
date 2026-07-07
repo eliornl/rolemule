@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth, setupAllMocks, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 
 /**
  * MULTI-STEP USER JOURNEY TESTS

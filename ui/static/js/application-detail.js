@@ -10,7 +10,6 @@
         // &amp;amp; is the bleach double-encode of a literal & (& → &amp; via html.escape → &amp;amp; via bleach).
         // Decode that first, then the remaining &amp; covers entities like &amp;#x27; → &#x27; → '.
         const decoded = String(str)
-            .replace(/&amp;amp;/g, '&')
             .replace(/&amp;/g, '&')
             .replace(/&#x27;/g, "'")
             .replace(/&#039;/g, "'")
@@ -29,7 +28,6 @@
     function decodeEntities(str) {
         if (str == null) return '';
         return String(str)
-            .replace(/&amp;amp;/g, '&')
             .replace(/&amp;/g, '&')
             .replace(/&#x27;/g, "'")
             .replace(/&#039;/g, "'")
@@ -509,7 +507,6 @@
         addSkills(job.required_skills);
         addSkills(job.ats_keywords);
         addSkills(job.keywords);
-        const allSkills = Array.from(allSkillsSet);
 
         const qualifications = ensureArray(job.required_qualifications);
         const responsibilities = ensureArray(job.responsibilities).filter(r => {
@@ -1209,8 +1206,6 @@
         const jobTitle = job ? (job.job_title || '').replace(/\s*[-–—].*$/, '').trim() : '';
         const companyName =
             job && !isPlaceholderCompanyName(job.company_name) ? String(job.company_name).trim() : '';
-        const headerParts = [jobTitle, companyName].filter(Boolean);
-        const headerLabel = headerParts.length ? headerParts.join(' · ') : 'Cover Letter';
 
         const generatedAt = cover.generated_at
             ? new Date(cover.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -2451,57 +2446,6 @@
             btn.classList.remove('loading');
             btn.disabled = false;
             _regeneratingResume = false;
-        }
-    }
-
-    async function generateDocuments() {
-        if (!currentSessionId) return;
-        const btns = /** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('#generateDocsBtn, #generateDocsBtnResume'));
-        btns.forEach(b => { b.disabled = true; b.classList.add('loading'); });
-        try {
-            const res = await fetch(`${API_BASE}/workflow/generate-documents/${currentSessionId}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' },
-            });
-            if (res.status === 429) {
-                const errData = await res.json().catch(() => ({}));
-                showToast(apiErrorMessage(errData, 'Rate limit reached. Try again in a few minutes.'), 'error');
-                return;
-            }
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(apiErrorMessage(errData, 'Failed to start generation'));
-            }
-            showToast('Generating your documents… this may take a minute.');
-            // Poll for completion
-            let attempts = 0;
-            const poll = async () => {
-                if (attempts++ > 40) { showToast('Generation is taking longer than expected. Refresh the page to check.', 'error'); return; }
-                await new Promise(r => setTimeout(r, 3000));
-                try {
-                    const r2 = await fetch(`${API_BASE}/workflow/status/${currentSessionId}`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
-                    if (!r2.ok) { setTimeout(poll, 3000); return; }
-                    const status = await r2.json();
-                    if (status.status === 'completed') {
-                        await loadApplicationData();
-                        showToast('Documents generated!');
-                    } else if (status.status === 'failed') {
-                        showToast(
-                            workflowFailureMessage(status.error_messages, 'Generation failed. Please try again.'),
-                            'error'
-                        );
-                        btns.forEach(b => { b.disabled = false; b.classList.remove('loading'); });
-                    } else {
-                        setTimeout(poll, 3000);
-                    }
-                } catch { setTimeout(poll, 3000); }
-            };
-            setTimeout(poll, 3000);
-        } catch (error) {
-            console.error('Error generating documents:', error);
-            const err = /** @type {Error} */ (error);
-            showToast(err.message || 'Failed to start generation', 'error');
-            btns.forEach(b => { b.disabled = false; b.classList.remove('loading'); });
         }
     }
 

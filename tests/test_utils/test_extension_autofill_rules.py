@@ -1,5 +1,7 @@
 """Unit tests for api/extension_autofill_rules.py deterministic mapping."""
 
+from urllib.parse import urlparse
+
 from api.extension_autofill import AutofillFieldIn
 from api.extension_autofill_rules import (
     _align_degree_to_form_options,
@@ -112,7 +114,7 @@ class TestDeterministicContactFields:
     def test_linkedin_field(self) -> None:
         f = _field(label_text="LinkedIn profile URL", input_type="url")
         val = deterministic_value_for_field(f, _bundle())
-        assert val and "linkedin.com" in val
+        assert val and urlparse(val).hostname and urlparse(val).hostname.endswith("linkedin.com")
 
 
 class TestScreeningQuestions:

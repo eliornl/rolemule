@@ -250,7 +250,7 @@ class TestErrorHandling:
             assert "cover_letter" in result
         except Exception:
             # Empty response should raise an error
-            pass
+            return
 
 
 # =============================================================================

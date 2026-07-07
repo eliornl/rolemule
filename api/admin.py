@@ -19,7 +19,7 @@ from models.database import User, WorkflowSession, JobApplication, WorkflowStatu
 from utils.auth import require_admin
 from utils.database import get_database, get_session
 from utils.error_responses import APIError, internal_error, unauthorized_error
-from utils.logging_config import mask_email
+from utils.logging_config import mask_email, sanitize_log_value
 from utils.maintenance import (
     get_maintenance_info,
     enable_maintenance_mode,
@@ -120,9 +120,10 @@ async def set_maintenance_mode(
             if not success:
                 raise internal_error("Failed to enable maintenance mode. Check Redis connection.")
             logger.warning(
-                f"Maintenance mode ENABLED by {mask_email(user_email)}. "
-                f"Message: {request_data.message}, "
-                f"Estimated end: {request_data.estimated_end}"
+                "Maintenance mode ENABLED by %s. Message: %s, Estimated end: %s",
+                mask_email(user_email),
+                sanitize_log_value(request_data.message),
+                sanitize_log_value(request_data.estimated_end),
             )
         else:
             # Disable maintenance mode

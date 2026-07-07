@@ -5,13 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 import utils.database as db_mod
-from utils.database import (
-    check_database_health,
-    close_database_connection,
-    execute_in_transaction,
-    get_engine,
-    get_session,
-)
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +18,7 @@ def reset_db_globals():
 
 @pytest.mark.asyncio
 async def test_check_database_health_no_engine() -> None:
-    assert await check_database_health() is False
+    assert await db_mod.check_database_health() is False
 
 
 @pytest.mark.asyncio
@@ -38,7 +31,7 @@ async def test_check_database_health_ok() -> None:
     engine = MagicMock()
     engine.begin = MagicMock(return_value=cm)
     db_mod._engine = engine
-    assert await check_database_health() is True
+    assert await db_mod.check_database_health() is True
 
 
 @pytest.mark.asyncio
@@ -46,7 +39,7 @@ async def test_check_database_health_failure() -> None:
     engine = MagicMock()
     engine.begin = MagicMock(side_effect=RuntimeError("db down"))
     db_mod._engine = engine
-    assert await check_database_health() is False
+    assert await db_mod.check_database_health() is False
 
 
 @pytest.mark.asyncio
@@ -55,7 +48,7 @@ async def test_close_database_connection() -> None:
     engine.dispose = AsyncMock()
     db_mod._engine = engine
     db_mod._async_session_factory = MagicMock()
-    await close_database_connection()
+    await db_mod.close_database_connection()
     assert db_mod._engine is None
     engine.dispose.assert_awaited()
 
@@ -65,7 +58,7 @@ async def test_get_engine_connects_when_missing() -> None:
     mock_engine = MagicMock()
     with patch.object(db_mod, "connect_to_database", AsyncMock()) as connect:
         db_mod._engine = mock_engine
-        eng = await get_engine()
+        eng = await db_mod.get_engine()
         assert eng is mock_engine
         connect.assert_not_awaited()
 
@@ -81,7 +74,7 @@ async def test_get_session_commits_on_success() -> None:
     factory_cm.__aexit__ = AsyncMock(return_value=False)
     db_mod._async_session_factory = MagicMock(return_value=factory_cm)
 
-    async with get_session() as s:
+    async with db_mod.get_session() as s:
         assert s is session
     session.commit.assert_awaited()
 
@@ -96,9 +89,10 @@ async def test_get_session_rolls_back_on_error() -> None:
     factory_cm.__aexit__ = AsyncMock(return_value=False)
     db_mod._async_session_factory = MagicMock(return_value=factory_cm)
 
-    with pytest.raises(ValueError):
-        async with get_session():
+    with pytest.raises(ValueError) as exc_info:
+        async with db_mod.get_session():
             raise ValueError("boom")
+    assert str(exc_info.value) == "boom"
     session.rollback.assert_awaited()
 
 
@@ -113,7 +107,7 @@ async def test_execute_in_transaction() -> None:
         cm.__aenter__ = AsyncMock(return_value=session)
         cm.__aexit__ = AsyncMock(return_value=False)
         gs.return_value = cm
-        result = await execute_in_transaction(fn, 21)
+        result = await db_mod.execute_in_transaction(fn, 21)
         assert result == 42
 
 
@@ -121,7 +115,7 @@ async def test_execute_in_transaction() -> None:
 async def test_get_engine_triggers_connect() -> None:
     with patch.object(db_mod, "connect_to_database", AsyncMock()) as connect:
         db_mod._engine = None
-        await get_engine()
+        await db_mod.get_engine()
         connect.assert_awaited_once()
 
 

@@ -935,8 +935,6 @@ export async function setupMiscMocks(page: Page): Promise<void> {
 export async function setupWebSocketMock(page: Page): Promise<void> {
   // Intercept WebSocket connection attempts
   await page.addInitScript(() => {
-    const OriginalWebSocket = window.WebSocket;
-    
     class MockWebSocket {
       url: string;
       readyState: number = 1; // OPEN

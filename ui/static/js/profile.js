@@ -405,13 +405,21 @@ class ProfileManager {
     let current = obj;
 
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!(keys[i] in current)) {
-        current[keys[i]] = {};
+      const key = keys[i];
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        return;
       }
-      current = current[keys[i]];
+      if (!(key in current)) {
+        current[key] = {};
+      }
+      current = current[key];
     }
 
-    current[keys[keys.length - 1]] = value;
+    const leafKey = keys[keys.length - 1];
+    if (leafKey === "__proto__" || leafKey === "constructor" || leafKey === "prototype") {
+      return;
+    }
+    current[leafKey] = value;
   }
 
   /**
@@ -1208,7 +1216,6 @@ class ProfileManager {
       this.profileData.experience &&
       Array.isArray(this.profileData.experience)
     ) {
-      const container = document.querySelector(".experience-entries");
       this.profileData.experience.forEach((exp) => {
         this.addExperienceEntry();
         // Populate the latest entry
@@ -1221,7 +1228,6 @@ class ProfileManager {
       this.profileData.education &&
       Array.isArray(this.profileData.education)
     ) {
-      const container = document.querySelector(".education-entries");
       this.profileData.education.forEach((edu) => {
         this.addEducationEntry();
         // Populate the latest entry
@@ -1233,7 +1239,6 @@ class ProfileManager {
       this.profileData.certifications &&
       Array.isArray(this.profileData.certifications)
     ) {
-      const container = document.querySelector(".certification-entries");
       this.profileData.certifications.forEach((cert) => {
         this.addCertificationEntry();
         // Populate the latest entry
@@ -1568,7 +1573,6 @@ class ProfileManager {
    * Set form loading state
    */
   setFormLoading(loading) {
-    const form = document.querySelector("#profileForm");
     const submitBtn = document.querySelector(".submit-profile-btn");
     const inputs = document.querySelectorAll(".profile-input");
 

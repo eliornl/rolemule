@@ -12,6 +12,13 @@
             .replace(/'/g, '&#x27;');
     }
 
+    /** @param {string} text */
+    function stripHtmlForAlert(text) {
+        return String(text)
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<[^>]*>/g, '');
+    }
+
     // =============================================================================
     // CONSTANTS AND CONFIGURATION
     // =============================================================================
@@ -307,7 +314,7 @@
      * @param {{ email: string, password: string, remember_me?: boolean }} credentials
      */
     async function performLogin(credentials) {
-        if (!credentials || !credentials.email || !credentials.password) {
+        if (!credentials.email || !credentials.password) {
             throw new Error('Email and password are required');
         }
         /** @type {Record<string,unknown>} */
@@ -403,7 +410,7 @@
                 const emailResult = validateEmail(email);
                 if (!emailResult.valid) {
                     DOM.emailField.classList.add('is-invalid');
-                    showAlert((emailResult.message ?? 'Invalid email').replace(/<[^>]*>/g, ''), 'error');
+                    showAlert(stripHtmlForAlert(emailResult.message ?? 'Invalid email'), 'error');
                     return;
                 }
 

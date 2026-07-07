@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 from workflows.state_schema import WorkflowState
 from utils.llm_client import get_gemini_client
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -368,7 +369,8 @@ class ProfileMatchingAgent:
         Raises:
             ValueError: If user profile or job analysis is missing from state
         """
-        logger.info(f"Starting AI profile matching for session {state['session_id']}")
+        session_id = sanitize_log_value(str(state.get("session_id") or "unknown"))
+        logger.info("Starting AI profile matching for session %s", session_id)
         start_time: datetime = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)
@@ -430,7 +432,7 @@ class ProfileMatchingAgent:
             state["profile_matching"] = self._create_error_result("Analysis timed out")
             raise
         except Exception as e:
-            logger.error(f"AI profile matching failed: {str(e)}", exc_info=True)
+            logger.error("AI profile matching failed: %s", sanitize_log_value(str(e)), exc_info=True)
             state["profile_matching"] = self._create_error_result(str(e))
             raise
 

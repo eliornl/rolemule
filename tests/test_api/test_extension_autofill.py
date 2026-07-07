@@ -1602,7 +1602,6 @@ class TestExtensionAutofillHelperFunctions:
             work_experience=[{"title": f"Role {i}"} for i in range(20)],
         )
         async with _NullSessionLocal() as session:
-            user_row = await session.get(User, uid)
             session.add(
                 UserResumeAsset(
                     id=uuid.uuid4(),

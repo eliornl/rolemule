@@ -5,12 +5,15 @@ from unittest.mock import patch
 
 from utils.logging_config import (
     JSONFormatter,
+    LoggingConfig,
     StructuredLogger,
+    _get_hostname,
     clear_request_context,
     generate_request_id,
     get_structured_logger,
     mask_email,
     redact_sensitive_data,
+    sanitize_log_value,
     set_request_context,
     setup_logging,
 )
@@ -19,6 +22,13 @@ from utils.logging_config import (
 def test_generate_request_id_length() -> None:
     rid = generate_request_id()
     assert len(rid) == 16
+
+
+def test_sanitize_log_value_strips_newlines() -> None:
+    assert "127.0.0.1" in sanitize_log_value("127.0.0.1\r\nINJECT")
+    assert "\r" not in sanitize_log_value("127.0.0.1\r\nINJECT")
+    assert "\n" not in sanitize_log_value("127.0.0.1\r\nINJECT")
+    assert "\x00" not in sanitize_log_value("a\x00b")
 
 
 def test_mask_email() -> None:
@@ -115,15 +125,11 @@ def test_setup_logging_text_mode(tmp_path) -> None:
 def test_get_hostname_fallback(monkeypatch) -> None:
     import socket
 
-    import utils.logging_config as lc
-
     monkeypatch.setattr(socket, "gethostname", lambda: (_ for _ in ()).throw(OSError("no host")))
-    assert lc._get_hostname() == "unknown"
+    assert _get_hostname() == "unknown"
 
 
 def test_logging_config_configure_is_idempotent() -> None:
-    from utils.logging_config import LoggingConfig
-
     config = LoggingConfig(log_dir="logs", enable_file_logging=False)
     config.configure()
     handlers_before = len(logging.getLogger().handlers)

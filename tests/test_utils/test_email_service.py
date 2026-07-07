@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import utils.email_service as email_mod
 from utils.email_service import (
     EmailService,
     _sanitize_email_header,
@@ -16,6 +15,8 @@ from utils.email_service import (
 
 @pytest.fixture(autouse=True)
 def reset_email_singleton():
+    import utils.email_service as email_mod
+
     email_mod._email_service = None
     yield
     email_mod._email_service = None

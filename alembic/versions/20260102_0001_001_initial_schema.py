@@ -22,6 +22,9 @@ down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+# Alembic reads these module-level identifiers; reference satisfies static analysis.
+_ALEMBIC_METADATA = (revision, down_revision, branch_labels, depends_on)
+
 
 def upgrade() -> None:
     """Create all database tables."""

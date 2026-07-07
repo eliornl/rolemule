@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth, MOCK_JWT } from '../utils/api-mocks';
+import { MOCK_JWT } from '../utils/api-mocks';
 
 /**
  * ONBOARDING TOUR TESTS  (/dashboard → auto-triggered)
