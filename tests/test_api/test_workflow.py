@@ -17,6 +17,7 @@ from sqlalchemy import update
 
 from api.workflow import _canonical_job_url
 from config.settings import get_security_settings
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
 from models.database import ApplicationStatus, JobApplication, User, UserProfile
 from tests.test_api.conftest import _NullSessionLocal
 
@@ -243,7 +244,7 @@ class TestWorkflowStartDuplicate:
         with patch("utils.redis_client.get_redis_client", AsyncMock(return_value=None)), patch(
             "config.settings.get_settings",
             return_value=MagicMock(
-                gemini_api_key="AIzaSyDummyTestKey012345678901234567890",
+                gemini_api_key="DUMMY_GEMINI_API_KEY",
                 use_cloud_tasks=False,
                 use_vertex_ai=False,
             ),
@@ -314,7 +315,7 @@ class TestWorkflowStartDuplicate:
         app.dependency_overrides[get_current_user_with_complete_profile] = _mock_complete_user
 
         mock_settings = MagicMock(
-            gemini_api_key="AIzaSyDummyTestKey012345678901234567890",
+            gemini_api_key="DUMMY_GEMINI_API_KEY",
             use_cloud_tasks=False,
             use_vertex_ai=False,
         )

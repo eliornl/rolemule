@@ -20,6 +20,7 @@ from sqlalchemy import delete, select
 from main import app
 from models.database import AuthMethod, JobApplication, User, UserProfile, UserResumeAsset, WorkflowSession
 from tests.test_api.conftest import _NullSessionLocal, _make_test_jwt
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
 from utils.auth import get_current_user, get_current_user_with_complete_profile
 
 BASE = "/api/v1/profile"
@@ -280,7 +281,7 @@ class TestResumeExtended:
             with patch("api.profile.parse_resume_from_file", AsyncMock(return_value=MOCK_PARSED_RESUME)), patch(
                 "api.profile.settings"
             ) as mock_settings:
-                mock_settings.gemini_api_key = "AIzaSyDummyTestKey012345678901234567890"
+                mock_settings.gemini_api_key = DUMMY_GEMINI_API_KEY
                 mock_settings.use_vertex_ai = False
                 mock_settings.user_resume_storage_dir = "/tmp/applypilot-test-resumes"
                 with patch("api.profile.save_resume_bytes", return_value=("rel/path", "sha", "txt")), patch(
@@ -318,7 +319,7 @@ class TestResumeExtended:
         client = await _client_for(uid, email)
         try:
             with patch("api.profile.settings") as mock_settings:
-                mock_settings.gemini_api_key = "AIzaSyDummyTestKey012345678901234567890"
+                mock_settings.gemini_api_key = DUMMY_GEMINI_API_KEY
                 mock_settings.use_vertex_ai = False
                 huge = b"x" * (11 * 1024 * 1024)
                 files = {"resume": ("resume.txt", huge, "text/plain")}
@@ -373,7 +374,7 @@ class TestResumeExtended:
 
 
 class TestApiKeyExtended:
-    VALID_KEY = "AIzaSyDummyTestKey012345678901234567890"
+    VALID_KEY = DUMMY_GEMINI_API_KEY
 
     @pytest.mark.asyncio
     async def test_set_and_delete_api_key(self):

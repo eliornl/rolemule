@@ -17,6 +17,7 @@ import jwt
 import pytest
 from sqlalchemy import select, update
 
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
 from api.workflow import (
     _agent_error_message,
     _canonical_job_url,
@@ -140,7 +141,7 @@ async def _override_complete_user(app, uid: uuid.UUID, email: str) -> None:
 
 def _mock_settings(**overrides):
     base = dict(
-        gemini_api_key="AIzaSyDummyTestKey012345678901234567890",
+        gemini_api_key=DUMMY_GEMINI_API_KEY,
         use_cloud_tasks=False,
         use_vertex_ai=False,
         debug=False,

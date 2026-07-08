@@ -20,6 +20,7 @@ No Sentry account required — it runs entirely within GCP.
 import asyncio
 import logging
 import traceback
+from functools import lru_cache
 from typing import Optional
 
 from fastapi import Request
@@ -39,30 +40,19 @@ except ImportError:
     _CLIENT_AVAILABLE = False
 
 # Lazily-initialised client (one instance per process)
-_client: Optional[object] = None
-_client_lookup_done: bool = False
-
-
+@lru_cache(maxsize=1)
 def _get_client() -> Optional[object]:
     """Return the Error Reporting client, initialising it on first call."""
-    global _client, _client_lookup_done
-    if _client_lookup_done:
-        return _client
-
     if not _CLIENT_AVAILABLE:
-        _client_lookup_done = True
         return None
 
-    _client_lookup_done = True
-
     try:
-        _client = _gcp_error_reporting.Client()
+        client = _gcp_error_reporting.Client()
         logger.info("Google Cloud Error Reporting client initialised")
+        return client
     except Exception as exc:
         logger.warning("Could not initialise Cloud Error Reporting: %s", sanitize_log_value(str(exc)))
-        _client = None
-
-    return _client
+        return None
 
 
 # ---------------------------------------------------------------------------

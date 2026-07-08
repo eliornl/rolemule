@@ -80,8 +80,10 @@ from tests.test_api.test_profile_extended import (
 )
 from utils.error_responses import APIError, validation_error
 
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
+
 BASE = "/api/v1/profile"
-VALID_KEY = "AIzaSyDummyTestKey012345678901234567890"
+VALID_KEY = DUMMY_GEMINI_API_KEY
 
 
 def _current_user(uid: uuid.UUID, email: str, **extra: Any) -> Dict[str, Any]:

@@ -2,13 +2,14 @@
 
 import pytest
 
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
 from utils.gemini_api_key_format import validate_gemini_api_key
 
 
 @pytest.mark.parametrize(
     "key,expected",
     [
-        ("AIzaSyDummyTestKey012345678901234567890", True),
+        (DUMMY_GEMINI_API_KEY, True),
         ("Gsk_test_dummy_key_shape_123456789012345678901234567890", True),
         ("AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTt", True),
         ("short", False),
