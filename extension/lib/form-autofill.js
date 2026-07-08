@@ -2087,17 +2087,9 @@
     s = s.replace(/&#x([0-9a-fA-F]+);/g, function (_match, hex) {
       return String.fromCodePoint(parseInt(hex, 16));
     });
-    s = s.replace(/&#(\d+);/g, function (_match, num) {
+    return s.replace(/&#(\d+);/g, function (_match, num) {
       return String.fromCodePoint(parseInt(num, 10));
     });
-    s = s.replace(/&amp;/g, '&');
-    s = s.replace(/&#x27;/g, "'");
-    s = s.replace(/&#039;/g, "'");
-    s = s.replace(/&apos;/g, "'");
-    s = s.replace(/&quot;/g, '"');
-    s = s.replace(/&lt;/g, '<');
-    s = s.replace(/&gt;/g, '>');
-    return s;
   }
 
   function setNativeValue(el, value) {
