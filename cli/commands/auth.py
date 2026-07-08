@@ -222,6 +222,31 @@ def email_status(ctx: typer.Context) -> None:
     emit(cli_ctx, data)
 
 
+@auth_app.command("oauth-status")
+def oauth_status(ctx: typer.Context) -> None:
+    """Check whether Google OAuth login is configured on the server."""
+    cli_ctx: CliContext = ctx.obj
+    client = make_client(cli_ctx)
+    try:
+        data = client.auth.oauth_status()
+    except ApiClientError as exc:
+        emit_error(cli_ctx, exc)
+
+    if cli_ctx.output_format == "json":
+        emit(cli_ctx, data)
+    else:
+        enabled = bool(data.get("google_oauth_enabled"))
+        emit(
+            cli_ctx,
+            data,
+            human=(
+                "Google OAuth is enabled on this server."
+                if enabled
+                else "Google OAuth is not configured (set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)."
+            ),
+        )
+
+
 @auth_app.command("change-password")
 def change_password(ctx: typer.Context) -> None:
     """Change password for the logged-in account."""
@@ -282,3 +307,93 @@ def token_show(ctx: typer.Context) -> None:
         {"present": True, "email": creds.email, "token": mask_token(creds.access_token)},
         human=f"email={creds.email or 'unknown'} token={mask_token(creds.access_token)}",
     )
+
+
+@token_app.command("create")
+def pat_create(
+    ctx: typer.Context,
+    name: str = typer.Option(..., "--name", "-n", help="Label for this token"),
+    expires_days: int = typer.Option(90, "--expires-days", min=1, max=365, help="Days until expiry"),
+    save: bool = typer.Option(False, "--save", help="Store PAT in ~/.applypilot/credentials.json"),
+) -> None:
+    """Create a server-side personal access token (shown once)."""
+    cli_ctx: CliContext = ctx.obj
+    if not cli_ctx.access_token:
+        raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
+    client = make_client(cli_ctx)
+    try:
+        data = client.auth.create_pat(name, expires_days=expires_days)
+    except ApiClientError as exc:
+        emit_error(cli_ctx, exc)
+
+    if save:
+        token = data.get("token")
+        if token:
+            existing = load_credentials()
+            email = (existing.email if existing else None) or (
+                cli_ctx.credentials.email if cli_ctx.credentials else None
+            )
+            save_credentials(
+                Credentials(
+                    access_token=str(token),
+                    email=str(email) if email else None,
+                    saved_at=_now_iso(),
+                )
+            )
+            data = {**data, "saved": True}
+
+    if cli_ctx.output_format == "json":
+        emit(cli_ctx, data)
+    else:
+        lines = [
+            f"Token created: {data.get('name')} (prefix {data.get('token_prefix')})",
+            f"Save this token now — it will not be shown again:\n{data.get('token')}",
+        ]
+        if save:
+            lines.append("Saved to ~/.applypilot/credentials.json")
+        emit(cli_ctx, data, human="\n".join(lines))
+
+
+@token_app.command("list")
+def pat_list(ctx: typer.Context) -> None:
+    """List personal access tokens (metadata only)."""
+    cli_ctx: CliContext = ctx.obj
+    if not cli_ctx.access_token:
+        raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
+    client = make_client(cli_ctx)
+    try:
+        data = client.auth.list_pats()
+    except ApiClientError as exc:
+        emit_error(cli_ctx, exc)
+
+    tokens = data.get("tokens") or []
+    if cli_ctx.output_format == "json":
+        emit(cli_ctx, data)
+    else:
+        if not tokens:
+            emit(cli_ctx, data, human="No personal access tokens.")
+        else:
+            lines = []
+            for row in tokens:
+                status = "active" if row.get("active") else "revoked"
+                lines.append(
+                    f"{row.get('id')}  {row.get('name')}  {row.get('token_prefix')}…  {status}"
+                )
+            emit(cli_ctx, data, human="\n".join(lines))
+
+
+@token_app.command("revoke")
+def pat_revoke(
+    ctx: typer.Context,
+    token_id: str = typer.Argument(..., help="Personal access token UUID"),
+) -> None:
+    """Revoke a personal access token by ID."""
+    cli_ctx: CliContext = ctx.obj
+    if not cli_ctx.access_token:
+        raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
+    client = make_client(cli_ctx)
+    try:
+        data = client.auth.revoke_pat(token_id)
+    except ApiClientError as exc:
+        emit_error(cli_ctx, exc)
+    emit(cli_ctx, data, human=data.get("message", "Token revoked."))

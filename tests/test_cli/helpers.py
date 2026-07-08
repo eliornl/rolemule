@@ -28,8 +28,23 @@ def build_mock_client() -> MagicMock:
     client.auth.verification_status.return_value = {"email_verified": True}
     client.auth.extension_status.return_value = {"authenticated": True, "profile_completed": True}
     client.auth.email_status.return_value = {"smtp_configured": False}
+    client.auth.oauth_status.return_value = {"google_oauth_enabled": True}
     client.auth.change_password.return_value = {"message": "Password changed"}
     client.auth.logout.return_value = {}
+    client.auth.create_pat.return_value = {
+        "id": "pat-1",
+        "name": "CLI",
+        "token_prefix": "ap_pat_ab",
+        "token": "ap_pat_secret_token_value",
+        "expires_at": None,
+        "created_at": "2026-07-08T00:00:00Z",
+    }
+    client.auth.list_pats.return_value = {
+        "tokens": [
+            {"id": "pat-1", "name": "CLI", "token_prefix": "ap_pat_ab", "active": True},
+        ]
+    }
+    client.auth.revoke_pat.return_value = {"message": "Token revoked", "id": "pat-1"}
 
     client.profile.show.return_value = {"profile_data": {"city": "Austin"}}
     client.profile.status.return_value = {"profile_completed": True, "completion_percentage": 100}
@@ -69,6 +84,14 @@ def build_mock_client() -> MagicMock:
     client.workflow.generate_interview_prep.return_value = {"message": "Interview prep started"}
 
     client.applications.list.return_value = {"applications": [], "total": 0}
+    client.applications.get.return_value = {
+        "id": "app-1",
+        "job_title": "Engineer",
+        "company_name": "Acme",
+        "status": "completed",
+        "match_score": 0.9,
+        "workflow_session_id": "sess-1",
+    }
     client.applications.stats.return_value = {"total": 0, "applied": 0}
     client.applications.update_status.return_value = {"updated": True}
     client.applications.update_notes.return_value = {"updated": True}

@@ -79,3 +79,24 @@ def format_stats_human(data: Dict[str, Any]) -> str:
         f"Interviews: {data.get('interviews', 0)}  "
         f"Response rate: {data.get('response_rate', 0)}%"
     )
+
+
+def format_application_show(data: Dict[str, Any]) -> str:
+    """Render a single application summary for apps show."""
+    lines = [
+        f"ID: {data.get('id', '')}",
+        f"Title: {data.get('job_title') or '—'}",
+        f"Company: {data.get('company_name') or '—'}",
+        f"Status: {data.get('status') or '—'}",
+        f"Match: {_score_label(data.get('match_score'))}",
+    ]
+    if data.get("job_url"):
+        lines.append(f"Posting: {data['job_url']}")
+    if data.get("workflow_session_id"):
+        lines.append(f"Session: {data['workflow_session_id']}")
+        lines.append(f"  → applypilot workflow results {data['workflow_session_id']}")
+    if data.get("notes"):
+        lines.append(f"Notes: {data['notes']}")
+    if data.get("created_at"):
+        lines.append(f"Created: {data['created_at']}")
+    return "\n".join(lines)

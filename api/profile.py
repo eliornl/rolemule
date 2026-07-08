@@ -2392,6 +2392,9 @@ async def delete_user_account(
         # Revoke all active tokens before deletion
         try:
             await invalidate_all_user_tokens(user_id)
+            from utils.personal_access_tokens import revoke_all_user_pats
+
+            await revoke_all_user_pats(db, user_id)
         except Exception as revoke_error:
             logger.warning(
                 "Failed to revoke tokens during account deletion: %s",

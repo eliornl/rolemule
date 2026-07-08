@@ -13,6 +13,7 @@ from cli.admin_visibility import admin_help_visible
 from cli.commands.admin import admin_app
 from cli.commands.applications import apps_app
 from cli.commands.auth import auth_app
+from cli.commands.config_cmd import config_app
 from cli.commands.cv import cv_app
 from cli.commands.doctor import doctor_app
 from cli.commands.extension import extension_app
@@ -51,6 +52,7 @@ def main_callback(
     quiet: bool = typer.Option(False, "-q", "--quiet", help="Minimal output"),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output"),
     no_color: bool = typer.Option(False, "--no-color", help="Disable colored output"),
+    no_pager: bool = typer.Option(False, "--no-pager", help="Disable pager for long human output"),
 ) -> None:
     """ApplyPilot command-line interface."""
     ctx.obj = build_context(
@@ -59,6 +61,7 @@ def main_callback(
         quiet=quiet,
         verbose=verbose,
         no_color=no_color,
+        no_pager=no_pager,
     )
 
 
@@ -69,6 +72,7 @@ def version_cmd() -> None:
 
 
 app.add_typer(doctor_app, name="doctor")
+app.add_typer(config_app, name="config")
 app.add_typer(auth_app, name="auth")
 app.add_typer(profile_app, name="profile")
 app.add_typer(workflow_app, name="workflow")

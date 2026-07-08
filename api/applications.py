@@ -327,6 +327,40 @@ async def list_applications(
         raise internal_error("Failed to list applications")
 
 
+@router.get("/{application_id}", response_model=ApplicationResponse)
+async def get_application(
+    application_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user_with_complete_profile),
+    db: AsyncSession = Depends(get_database),
+) -> ApplicationResponse:
+    """Get a single application by ID (dashboard visibility rules apply)."""
+    try:
+        user_id = get_user_uuid(current_user)
+        try:
+            app_uuid = uuid.UUID(application_id)
+        except ValueError:
+            raise validation_error("Invalid application ID format")
+
+        result = await db.execute(
+            select(JobApplication).where(
+                and_(
+                    JobApplication.id == app_uuid,
+                    _dashboard_application_visibility_filter(user_id),
+                )
+            )
+        )
+        application = result.scalar_one_or_none()
+        if not application:
+            raise not_found_error("Application")
+
+        return await _format_application_response(application, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get application: %s", sanitize_log_value(e), exc_info=True)
+        raise internal_error("Failed to get application")
+
+
 @router.patch("/{application_id}/status", response_model=ApplicationResponse)
 async def update_application_status(
     application_id: str,

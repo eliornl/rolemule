@@ -19,6 +19,7 @@ class CliContext:
     quiet: bool = False
     verbose: bool = False
     no_color: bool = False
+    no_pager: bool = False
     config: CliConfig = field(default_factory=CliConfig)
     credentials: Optional[Credentials] = None
 
@@ -35,6 +36,7 @@ def build_context(
     quiet: bool = False,
     verbose: bool = False,
     no_color: bool = False,
+    no_pager: bool = False,
 ) -> CliContext:
     """
     Build CLI context from config file and CLI flags.
@@ -62,6 +64,7 @@ def build_context(
         quiet=quiet,
         verbose=verbose,
         no_color=no_color or not cfg.color,
+        no_pager=no_pager,
         config=cfg,
         credentials=creds,
     )

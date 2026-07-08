@@ -53,3 +53,34 @@ def test_tools_followup_stages_authenticated(invoke, patch_httpx_asgi, cli_user_
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert "stages" in payload
+
+
+def test_pat_create_and_whoami(invoke, patch_httpx_asgi, cli_user_token, write_credentials, applypilot_home) -> None:
+    write_credentials(token=cli_user_token["token"], email=cli_user_token["email"])
+    create = invoke(
+        "--format",
+        "json",
+        "--base-url",
+        "http://localhost",
+        "auth",
+        "token",
+        "create",
+        "--name",
+        "integration-test",
+    )
+    assert create.exit_code == 0, create.output
+    pat_body = json.loads(create.stdout)
+    assert pat_body["token"].startswith("ap_pat_")
+
+    from cli.config import Credentials, save_credentials
+
+    save_credentials(
+        Credentials(
+            access_token=pat_body["token"],
+            email=cli_user_token["email"],
+            saved_at="2026-07-08T00:00:00Z",
+        )
+    )
+    whoami = invoke("--format", "json", "--base-url", "http://localhost", "auth", "whoami")
+    assert whoami.exit_code == 0, whoami.output
+    assert json.loads(whoami.stdout).get("email") == cli_user_token["email"]

@@ -87,12 +87,14 @@ setup: _create-env _npm-install build-frontend
     {{python_cmd}} -m venv venv
     {{python}} -m pip install --upgrade pip
     {{python}} -m pip install -r requirements.txt
+    {{pip}} install -e ".[cli]" -q
     @echo ""
     @echo " Setup complete!"
     @echo " Edit .env with your DATABASE_URL and REDIS_URL, then:"
     @echo "   just migrate   - run database migrations"
     @echo "   just dev       - start the app at http://localhost:8000"
     @echo ""
+    @echo " CLI: venv/bin/applypilot doctor  (Windows: venv\\Scripts\\applypilot.exe)"
 
 # Install Node dependencies (runs inside ui/ — avoids && which breaks PowerShell 5.x)
 [private]

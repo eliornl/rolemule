@@ -161,7 +161,7 @@ Use this if you already have PostgreSQL and Redis running. **Windows users:** us
 ```bash
 git clone https://github.com/eliornl/applypilot.git
 cd applypilot
-make setup       # or: just setup   (Windows)
+make setup       # or: just setup   (Windows) — includes applypilot CLI in venv
 ```
 
 Edit `.env` — update `DATABASE_URL` and `REDIS_URL` to point at your local instances. `JWT_SECRET` and `ENCRYPTION_KEY` are already filled in by `make setup`.

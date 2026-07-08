@@ -119,3 +119,23 @@ def test_apps_notes_from_file(invoke, write_credentials, tmp_path: Path) -> None
         result = invoke("apps", "notes", "app-1", "--file", str(notes_file))
     assert result.exit_code == 0
     mock_client.applications.update_notes.assert_called_once_with("app-1", "Follow up next week")
+
+
+def test_apps_show(invoke, write_credentials) -> None:
+    write_credentials()
+    mock_client = MagicMock()
+    mock_client.applications.get.return_value = {
+        "id": "app-1",
+        "job_title": "Engineer",
+        "company_name": "Acme",
+        "status": "completed",
+        "match_score": 0.85,
+        "workflow_session_id": "sess-1",
+    }
+
+    with patch("cli.commands.applications.require_client", return_value=mock_client):
+        result = invoke("apps", "show", "app-1")
+    assert result.exit_code == 0
+    assert "Engineer" in result.output
+    assert "sess-1" in result.output
+    mock_client.applications.get.assert_called_once_with("app-1")

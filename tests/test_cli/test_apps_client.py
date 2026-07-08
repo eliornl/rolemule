@@ -77,3 +77,16 @@ def test_delete_application() -> None:
 
     data = _mock_client(handler).applications.delete("app-2")
     assert "deleted" in data["message"].lower()
+
+
+def test_get_application() -> None:
+    def handler(method, path, _kwargs) -> httpx.Response:
+        assert method == "GET"
+        assert path == "/api/v1/applications/app-9"
+        return httpx.Response(
+            200,
+            json={"id": "app-9", "job_title": "Engineer", "company_name": "Acme"},
+        )
+
+    data = _mock_client(handler).applications.get("app-9")
+    assert data["id"] == "app-9"

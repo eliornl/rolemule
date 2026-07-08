@@ -34,6 +34,10 @@ Error codes follow a namespace pattern:
 - `CFG_6xxx` — configuration errors (e.g. missing API key)
 - `INT_9xxx` — internal server errors
 
+### Personal access tokens (PAT)
+
+Long-lived CLI/automation auth (`ap_pat_` prefix). Implementation: `utils/personal_access_tokens.py`, migration `20260708_024`, API `POST/GET/DELETE /api/v1/auth/tokens`. `get_current_user` and WebSocket auth check PAT before JWT. Plaintext shown once on create; SHA-256 hash stored. Revoke all user PATs on password change, password reset, and account delete (with JWT invalidation).
+
 ### `CFG_6001` — No API Key (`no_api_key_error()`)
 Use `no_api_key_error()` (HTTP 422, `error_code: "CFG_6001"`) whenever an LLM-backed endpoint is called but neither a user BYOK key nor a server-side `GEMINI_API_KEY` / Vertex AI is configured. **Never use `validation_error()` for this case** — the dedicated code lets the frontend detect it and render a targeted "Add your API key → Settings" prompt instead of a generic error toast.
 

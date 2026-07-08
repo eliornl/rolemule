@@ -163,3 +163,17 @@ def test_api_key_status_human_no_key(invoke, write_credentials) -> None:
         result = invoke("profile", "api-key", "status")
     assert result.exit_code == 0
     assert "api-key set" in result.output.lower()
+
+
+def test_resume_delete_requires_confirm(invoke, write_credentials) -> None:
+    write_credentials()
+    result = invoke("profile", "resume", "delete")
+    assert result.exit_code == int(ExitCode.ERROR)
+    assert "confirm" in result.output.lower()
+
+
+def test_api_key_delete_requires_confirm(invoke, write_credentials) -> None:
+    write_credentials()
+    result = invoke("profile", "api-key", "delete")
+    assert result.exit_code == int(ExitCode.ERROR)
+    assert "confirm" in result.output.lower()

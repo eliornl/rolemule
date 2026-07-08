@@ -126,7 +126,7 @@ make start-local
 
 `make start-local` handles everything on the first run:
 - Installs Homebrew, Python 3, and Node.js if not already present
-- Creates venv, installs Python and Node dependencies, builds the frontend
+- Creates venv, installs Python and Node dependencies, **installs the `applypilot` CLI**, builds the frontend
 - Copies `.env.local.example` → `.env` and fills in strong random secrets automatically
 - Installs PostgreSQL 17 and Redis via Homebrew (first run only)
 - Creates the database and user, runs migrations
@@ -153,7 +153,7 @@ macOS / Linux:
 ```bash
 git clone https://github.com/eliornl/applypilot.git
 cd applypilot
-make setup          # creates venv, installs deps, builds frontend, generates .env
+make setup          # creates venv, installs deps + CLI, builds frontend, generates .env
 ```
 
 Windows — install [just](https://just.systems) (`winget install Casey.Just`) first:
@@ -212,27 +212,43 @@ During profile setup you'll be prompted to add your Gemini API key — or you ca
 
 ## CLI
 
-Terminal client for the same API — useful for scripting, AI assistants (Claude Code, Cursor, Codex), and automation.
+Terminal client for the same API — useful for scripting, AI assistants (Cursor, Claude Code, Codex), and automation.
 
-**Install** (from repo root, with the server already running):
+**Installed automatically** by `make setup`, `make start-local`, and `just setup`. The command lives in the venv:
 
 ```bash
-pip install -e ".[cli]"
+source venv/bin/activate    # macOS/Linux
 applypilot doctor
 ```
 
-**First session:**
+Or without activating: `venv/bin/applypilot doctor` (Windows: `venv\Scripts\applypilot.exe`).
+
+**Docker only (`make start`):** the app runs in containers; run **`make setup` once on the host** if you also want the CLI on your machine (same venv + `applypilot` command).
+
+**First session** (server must be running):
 
 ```bash
 applypilot auth login              # or: applypilot auth token set  (OAuth users)
 applypilot profile status          # complete profile if needed
 applypilot workflow analyze job.txt --wait --format json
 applypilot apps list
+applypilot apps show APP_ID        # summary + workflow session link
 ```
+
+**Automation / scripts:** create a personal access token (shown once) and save it locally:
+
+```bash
+applypilot auth token create --name "CI" --save
+applypilot workflow results SESSION_ID --section cover-letter --out letter.md
+applypilot workflow watch SESSION_ID   # live WebSocket progress
+applypilot config set --base-url https://your-server.example.com
+```
+
+Use `--no-pager` when piping long human output. Destructive commands require `--confirm` (e.g. `profile resume delete --confirm`).
 
 **Shell completion:** run `applypilot --install-completion` from your terminal (auto-detects bash/zsh/fish).
 
-Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** · Tests: `make cli-test`
+Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** (shell aliases included) · Tests: `make cli-test`
 
 ---
 
@@ -360,7 +376,7 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 | `make docker-down` / `just docker-down` | Stop Docker services, keep data |
 | `make docker-reset` / `just docker-reset` | Stop Docker services, wipe data volumes |
 | `make docker-logs` / `just docker-logs` | Tail the Docker app log |
-| `make setup` / `just setup` | Dev setup: venv + Python/Node deps + frontend build |
+| `make setup` / `just setup` | Dev setup: venv + Python/Node deps + **CLI** + frontend build |
 | `make dev` / `just dev` | Start FastAPI dev server with auto-reload (services must be running) |
 | `make migrate` / `just migrate` | Run Alembic database migrations |
 | `make build-frontend` / `just build-frontend` | Compile and content-hash JS/CSS assets |

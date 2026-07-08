@@ -15,6 +15,8 @@ from applypilot_client.polling import WorkflowPollTimeout, wait_for_terminal_sta
 from cli.context import CliContext
 from cli.formatters.workflow import VALID_SECTIONS, format_workflow_results
 from cli.output import emit, emit_workflow_error, require_client
+from cli.workflow_output import write_workflow_results
+from cli.workflow_watch import watch_workflow_session
 
 workflow_app = typer.Typer(help="Analyze jobs and manage workflow sessions.")
 regenerate_app = typer.Typer(help="Regenerate workflow outputs.")
@@ -243,6 +245,8 @@ def workflow_results(
     ctx: typer.Context,
     session_id: str,
     section: str = typer.Option("all", "--section", help="Human output section filter"),
+    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Write results to this file"),
+    out_dir: Optional[Path] = typer.Option(None, "--out-dir", help="Write section files into this directory"),
 ) -> None:
     """Get workflow results."""
     cli_ctx: CliContext = ctx.obj
@@ -252,7 +256,23 @@ def workflow_results(
     except ApiClientError as exc:
         emit_workflow_error(cli_ctx, exc)
 
-    if cli_ctx.output_format == "json":
+    as_json = cli_ctx.output_format == "json"
+    if out is not None and out_dir is not None:
+        typer.secho("Use only one of --out or --out-dir.", fg="red", err=True)
+        raise typer.Exit(code=int(ExitCode.ERROR))
+
+    if out is not None or out_dir is not None:
+        summary = write_workflow_results(
+            data,
+            section=section,
+            out=out,
+            out_dir=out_dir,
+            as_json=as_json,
+        )
+        emit(cli_ctx, {**data, **summary}, human=f"Saved: {summary.get('saved_to')}")
+        return
+
+    if as_json:
         emit(cli_ctx, data)
     else:
         emit(cli_ctx, data, human=format_workflow_results(data, section))
@@ -347,3 +367,23 @@ def workflow_generate_interview_prep(ctx: typer.Context, session_id: str) -> Non
     except ApiClientError as exc:
         emit_workflow_error(cli_ctx, exc)
     emit(cli_ctx, data, human=data.get("message", "Interview prep generation started."))
+
+
+@workflow_app.command("watch")
+def workflow_watch(
+    ctx: typer.Context,
+    session_id: str = typer.Argument(..., help="Workflow session UUID"),
+) -> None:
+    """Stream workflow progress over WebSocket until completion or error."""
+    cli_ctx: CliContext = ctx.obj
+    if not cli_ctx.access_token:
+        typer.secho("Not logged in.", fg="red", err=True)
+        raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
+
+    watch_workflow_session(
+        base_url=cli_ctx.base_url,
+        access_token=cli_ctx.access_token,
+        session_id=session_id,
+        quiet=cli_ctx.quiet,
+        human=cli_ctx.output_format != "json",
+    )

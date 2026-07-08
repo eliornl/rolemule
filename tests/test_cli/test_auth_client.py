@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import httpx
 
 from applypilot_client.client import ApplyPilotClient
@@ -111,3 +113,59 @@ def test_refresh_on_401_retry() -> None:
     assert data["success"] is True
     assert "new-jwt" in saved
     assert "/api/v1/auth/refresh" in calls
+
+
+def test_create_pat_posts_body() -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v1/auth/tokens"
+        assert request.method == "POST"
+        seen.append(json.loads(request.content.decode()))
+        return httpx.Response(
+            200,
+            json={
+                "id": "pat-1",
+                "name": "CI",
+                "token_prefix": "ap_pat_ab",
+                "token": "ap_pat_secret",
+                "created_at": "2026-07-08T00:00:00Z",
+            },
+        )
+
+    data = _mock_client(handler).auth.create_pat("CI", expires_days=14)
+    assert seen[0] == {"name": "CI", "expires_days": 14}
+    assert data["token"].startswith("ap_pat_")
+
+
+def test_list_pats_get() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v1/auth/tokens"
+        assert request.method == "GET"
+        return httpx.Response(200, json={"tokens": []})
+
+    data = _mock_client(handler).auth.list_pats()
+    assert data["tokens"] == []
+
+
+def test_revoke_pat_delete() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v1/auth/tokens/pat-9"
+        assert request.method == "DELETE"
+        return httpx.Response(200, json={"message": "Token revoked", "id": "pat-9"})
+
+    data = _mock_client(handler).auth.revoke_pat("pat-9")
+    assert data["message"] == "Token revoked"
+
+
+def test_oauth_status_no_auth_header() -> None:
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("Authorization"))
+        assert request.url.path == "/api/v1/auth/oauth/status"
+        return httpx.Response(200, json={"google_oauth_enabled": False})
+
+    data = _mock_client(handler).auth.oauth_status()
+    assert seen == [None]
+    assert data["google_oauth_enabled"] is False

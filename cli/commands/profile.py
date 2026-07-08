@@ -285,8 +285,12 @@ def resume_show(
 
 
 @resume_app.command("delete")
-def resume_delete(ctx: typer.Context) -> None:
+def resume_delete(
+    ctx: typer.Context,
+    confirm: bool = typer.Option(False, "--confirm", help="Confirm deletion"),
+) -> None:
     """Delete the stored resume file."""
+    require_confirm(confirm, "delete your resume")
     _run(ctx, lambda c: c.profile.delete_resume())
 
 
@@ -337,8 +341,12 @@ def api_key_set(
 
 
 @api_key_app.command("delete")
-def api_key_delete(ctx: typer.Context) -> None:
+def api_key_delete(
+    ctx: typer.Context,
+    confirm: bool = typer.Option(False, "--confirm", help="Confirm deletion"),
+) -> None:
     """Remove the stored API key."""
+    require_confirm(confirm, "delete your API key")
     _run(ctx, lambda c: c.profile.api_key_delete())
 
 

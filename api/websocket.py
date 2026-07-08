@@ -227,11 +227,21 @@ manager = ConnectionManager()
 
 async def verify_websocket_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Verify JWT token for WebSocket authentication including revocation checks.
+    Verify JWT or PAT for WebSocket authentication including revocation checks.
 
-    Checks: signature, expiry, jti blocklist, and per-user invalidation timestamp.
-    Returns the decoded payload if all checks pass, None otherwise.
+    Returns the decoded payload (JWT) or a minimal PAT payload with ``sub``.
     """
+    from utils.personal_access_tokens import PAT_PREFIX, authenticate_pat
+
+    if token.startswith(PAT_PREFIX):
+        from utils.database import get_session
+
+        async with get_session() as db:
+            user = await authenticate_pat(token, db)
+            if user:
+                return {"sub": user["id"], "email": user.get("email")}
+        return None
+
     try:
         settings = get_settings()
         payload: Dict[str, Any] = jwt.decode(

@@ -33,8 +33,10 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 #### CLI — full-parity terminal client
 
-- **`applypilot` CLI** — Typer-based client for auth, profile, workflow, applications, interview prep, CV optimizer, six career tools, extension autofill testing, and admin monitoring. Install with `pip install -e ".[cli]"`.
-- **`applypilot_client/`** — sync httpx resource layer; **`tests/test_cli/`** (328 mocked tests, CI `cli-tests` job) + **`tests/test_cli_integration/`** (5 ASGI tests in `python-tests` job).
+- **`applypilot` CLI** — Typer-based client for auth, profile, workflow, applications, interview prep, CV optimizer, six career tools, extension autofill testing, and admin monitoring. **Installed with `make setup` / `make start-local` / `just setup`** (editable `pip install -e ".[cli]"` into the project venv).
+- **`applypilot_client/`** — sync httpx resource layer; **`tests/test_cli/`** (**354** mocked tests, CI `cli-tests` job) + **`tests/test_cli_integration/`** (**6** ASGI tests in `python-tests` job).
+- **Post-v1 CLI:** personal access tokens (`auth token create|list|revoke`, **`--save`**), `apps show`, `workflow results --out|--out-dir`, `workflow watch`, `config` subcommands, pager (`--no-pager`), `--confirm` on resume/api-key delete.
+- **API:** `POST/GET/DELETE /api/v1/auth/tokens`, `GET /api/v1/applications/{id}`; migration `20260708_024` (`personal_access_tokens` table).
 - **Docs:** [docs/cli-reference.md](docs/cli-reference.md), README CLI quick start, USER_GUIDE CLI section, [docs/cli-implementation-plan.md](docs/cli-implementation-plan.md), `.cursor/rules/cli.mdc` / `.claude/rules/cli.mdc`.
 - **Shell completion:** `applypilot --install-completion bash|zsh|fish`.
 - **Optional live smoke:** `scripts/cli_smoke.sh`.

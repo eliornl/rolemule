@@ -461,31 +461,40 @@ All preferences auto-save — there is no Save button:
 
 ## CLI
 
-The **ApplyPilot CLI** (`applypilot`) talks to the same API as the web app and Chrome extension. Install from the repo: `pip install -e ".[cli]"`.
+The **ApplyPilot CLI** (`applypilot`) talks to the same API as the web app and Chrome extension.
+
+**Installed with the app:** `make setup`, `make start-local`, and `just setup` all run `pip install -e ".[cli]"` — no separate install step. Use `venv/bin/applypilot` or activate the venv (`source venv/bin/activate`).
 
 ### Setup
 
-1. Start the server (`make start-local` or Docker).
+1. Start the server (`make start-local`, `make dev`, or Docker).
 2. Run `applypilot doctor` to verify connectivity.
 3. Log in: `applypilot auth login` — or paste a browser JWT with `applypilot auth token set` (Google OAuth users).
-4. Check profile completion: `applypilot profile status`.
+4. For automation, prefer a long-lived token: `applypilot auth token create --name "My script" --save` (requires an existing login).
+5. Check profile completion: `applypilot profile status`.
 
-Config is stored in `~/.applypilot/` (server URL in `config.toml`, JWT in `credentials.json`).
+Config is stored in `~/.applypilot/` (server URL in `config.toml`, credentials in `credentials.json` — JWT or personal access token).
+
+Use `applypilot config` to view settings; `applypilot config set --base-url URL` to change the server. Long human output uses your `$PAGER`; pass `--no-pager` to print everything directly.
 
 ### Common tasks
 
 | Task | Command |
 |------|---------|
 | Analyze a job posting | `applypilot workflow analyze posting.txt --wait` |
+| Stream workflow progress | `applypilot workflow watch SESSION_ID` |
+| Export cover letter to file | `applypilot workflow results SESSION_ID --section cover-letter --out letter.md` |
 | List applications | `applypilot apps list` |
+| Application summary + session link | `applypilot apps show APP_ID` |
 | Interview prep | `applypilot interview generate SESSION_ID --wait` |
 | Optimize CV | `applypilot cv start SESSION_ID --wait` |
 | Thank-you email | `applypilot tools thank-you --file request.json` |
 | Salary negotiation | `applypilot tools salary-coach --file offer.json` |
+| Create automation token | `applypilot auth token create --name LABEL --save` |
 
 Use `--format json` when piping output to scripts or AI tools. Global flags (`--base-url`, `--format`) go **before** the subcommand.
 
-Full reference: **[docs/cli-reference.md](../docs/cli-reference.md)**
+Full reference: **[docs/cli-reference.md](../docs/cli-reference.md)** (includes shell alias recipes)
 
 ---
 

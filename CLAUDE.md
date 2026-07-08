@@ -40,7 +40,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/frontend-build-pipeline.mdc` | esbuild, `asset_url()`, new JS/CSS files, manifest, `make build-frontend` |
 | `.claude/rules/cli.mdc` | ApplyPilot CLI — Typer commands, `applypilot_client`, `tests/test_cli/`, docs |
 | `.claude/rules/mobile-responsive.mdc` | breakpoints, navbar collapse, scrollable tab bars, mobile utilities |
-| `.claude/rules/unit-testing.mdc` | ~227 agent + ~221 API integration tests; writing or running tests in `tests/test_agents/` or `tests/test_api/` |
+| `.claude/rules/unit-testing.mdc` | ~227 agent + ~230 API + **364** CLI + **6** ASGI CLI integration tests; writing or running tests in `tests/test_agents/`, `tests/test_api/`, or `tests/test_cli/` |
 | `.claude/rules/e2e-testing.mdc` | Playwright specs, `setupAuth`, `page.route()`, JWT/cookie-consent setup |
 
 ---

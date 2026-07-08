@@ -78,6 +78,20 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        # Personal access tokens (CLI / automation)
+        from utils.personal_access_tokens import PAT_PREFIX, authenticate_pat
+
+        if token.startswith(PAT_PREFIX):
+            pat_user = await authenticate_pat(token, db)
+            if pat_user:
+                return pat_user
+            raise APIError(
+                ErrorCode.AUTH_TOKEN_INVALID,
+                "Invalid or expired personal access token",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         # Validate and decode JWT token
         user_info: Optional[Dict[str, Any]] = await _validate_jwt_token(token, db)
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from cli.formatters.applications import format_applications_table, format_stats_human
+from cli.formatters.applications import format_application_show, format_applications_table, format_stats_human
 
 
 def test_table_includes_columns() -> None:
@@ -32,3 +32,18 @@ def test_stats_human_format() -> None:
     text = format_stats_human({"total": 10, "applied": 4, "interviews": 2, "response_rate": 25.0})
     assert "Total: 10" in text
     assert "Response rate: 25.0%" in text
+
+
+def test_application_show_includes_session_hint() -> None:
+    text = format_application_show(
+        {
+            "id": "app-1",
+            "job_title": "Engineer",
+            "company_name": "Acme",
+            "status": "completed",
+            "match_score": 0.8,
+            "workflow_session_id": "sess-abc",
+        }
+    )
+    assert "Engineer" in text
+    assert "workflow results sess-abc" in text

@@ -111,3 +111,40 @@ def test_analyze_requires_input(invoke, write_credentials) -> None:
     with patch("cli.commands.workflow.require_client", return_value=MagicMock()):
         result = invoke("workflow", "analyze")
     assert result.exit_code == int(ExitCode.ERROR)
+
+
+def test_results_write_out_file(invoke, write_credentials, tmp_path: Path) -> None:
+    write_credentials()
+    mock_client = MagicMock()
+    mock_client.workflow.get_results.return_value = {
+        "session_id": "sess-1",
+        "status": "completed",
+        "cover_letter": {"content": "Dear team,"},
+        "job_analysis": {"job_title": "Engineer"},
+    }
+    out = tmp_path / "results.md"
+
+    with patch("cli.commands.workflow.require_client", return_value=mock_client):
+        result = invoke("workflow", "results", "sess-1", "--section", "cover-letter", "--out", str(out))
+    assert result.exit_code == 0
+    assert out.is_file()
+    assert "Dear team" in out.read_text(encoding="utf-8")
+
+
+def test_results_out_and_out_dir_mutually_exclusive(invoke, write_credentials, tmp_path: Path) -> None:
+    write_credentials()
+    mock_client = MagicMock()
+    mock_client.workflow.get_results.return_value = {"session_id": "sess-1", "status": "completed"}
+
+    with patch("cli.commands.workflow.require_client", return_value=mock_client):
+        result = invoke(
+            "workflow",
+            "results",
+            "sess-1",
+            "--out",
+            str(tmp_path / "one.md"),
+            "--out-dir",
+            str(tmp_path / "dir"),
+        )
+    assert result.exit_code == int(ExitCode.ERROR)
+    assert "one of" in result.output.lower()

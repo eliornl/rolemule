@@ -12,7 +12,7 @@ import typer
 
 from applypilot_client.errors import ApiClientError, ExitCode
 from cli.context import CliContext
-from cli.formatters.applications import format_applications_table, format_stats_human
+from cli.formatters.applications import format_application_show, format_applications_table, format_stats_human
 from cli.output import emit, emit_error, require_client
 from cli.util import filename_from_headers, require_confirm
 
@@ -65,6 +65,25 @@ def apps_list(
         emit(cli_ctx, data)
     else:
         emit(cli_ctx, data, human=format_applications_table(data))
+
+
+@apps_app.command("show")
+def apps_show(
+    ctx: typer.Context,
+    application_id: str = typer.Argument(..., help="Application UUID"),
+) -> None:
+    """Show one application by ID (includes workflow session link)."""
+    cli_ctx: CliContext = ctx.obj
+    client = require_client(cli_ctx)
+    try:
+        data = client.applications.get(application_id)
+    except ApiClientError as exc:
+        emit_error(cli_ctx, exc)
+
+    if cli_ctx.output_format == "json":
+        emit(cli_ctx, data)
+    else:
+        emit(cli_ctx, data, human=format_application_show(data))
 
 
 @apps_app.command("stats")

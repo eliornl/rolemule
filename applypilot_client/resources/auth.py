@@ -77,6 +77,9 @@ class AuthResource:
     def email_status(self) -> Dict[str, Any]:
         return self._client.get_json(f"{API_V1_PREFIX}/auth/email-status", auth=False)
 
+    def oauth_status(self) -> Dict[str, Any]:
+        return self._client.get_json(f"{API_V1_PREFIX}/auth/oauth/status", auth=False)
+
     def change_password(
         self,
         current_password: str,
@@ -91,3 +94,15 @@ class AuthResource:
                 "confirm_password": confirm_password,
             },
         )
+
+    def create_pat(self, name: str, *, expires_days: Optional[int] = 90) -> Dict[str, Any]:
+        return self._client.post_json(
+            f"{API_V1_PREFIX}/auth/tokens",
+            json={"name": name, "expires_days": expires_days},
+        )
+
+    def list_pats(self) -> Dict[str, Any]:
+        return self._client.get_json(f"{API_V1_PREFIX}/auth/tokens")
+
+    def revoke_pat(self, token_id: str) -> Dict[str, Any]:
+        return self._client.delete_json(f"{API_V1_PREFIX}/auth/tokens/{token_id}")

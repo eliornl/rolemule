@@ -159,6 +159,7 @@ setup:
 	python3 -m venv $(VENV)
 	$(PYTHON) -m pip install --upgrade pip
 	$(PYTHON) -m pip install -r requirements.txt
+	$(PIP) install -e ".[cli]" -q
 	@$(MAKE) _macos_sign_venv
 	@if [ -f "ui/package.json" ]; then cd ui && npm install; fi
 	@$(MAKE) _macos_sign_node
@@ -177,6 +178,10 @@ setup:
 	@echo " Then open http://localhost:8000"
 	@echo " Create your account and go to Settings → AI Setup"
 	@echo " to add your Gemini API key."
+	@echo ""
+	@echo " CLI (terminal client):"
+	@echo "   source venv/bin/activate   # then: applypilot doctor"
+	@echo "   # or: venv/bin/applypilot auth login"
 	@echo ""
 	@echo " Get a key at: https://aistudio.google.com/app/apikey"
 	@echo "=============================================="

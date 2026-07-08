@@ -105,3 +105,90 @@ def test_token_show_masked(invoke, write_credentials) -> None:
     result = invoke("auth", "token", "show")
     assert result.exit_code == 0
     assert "abcd...mnop" in result.stdout
+
+
+def test_pat_create_shows_secret_once(invoke, write_credentials) -> None:
+    write_credentials()
+    mock_client = MagicMock()
+    mock_client.auth.create_pat.return_value = {
+        "id": "pat-1",
+        "name": "Automation",
+        "token_prefix": "ap_pat_ab",
+        "token": "ap_pat_full_secret",
+        "created_at": "2026-07-08T00:00:00Z",
+    }
+
+    with patch("cli.commands.auth.make_client", return_value=mock_client):
+        result = invoke("auth", "token", "create", "--name", "Automation")
+    assert result.exit_code == 0
+    assert "ap_pat_full_secret" in result.output
+    mock_client.auth.create_pat.assert_called_once_with("Automation", expires_days=90)
+
+
+def test_pat_create_save_writes_credentials(invoke, write_credentials, applypilot_home) -> None:
+    write_credentials(token="jwt.for.create", email="user@example.com")
+    mock_client = MagicMock()
+    mock_client.auth.create_pat.return_value = {
+        "id": "pat-2",
+        "name": "CI",
+        "token_prefix": "ap_pat_cd",
+        "token": "ap_pat_saved_secret",
+        "created_at": "2026-07-08T00:00:00Z",
+    }
+
+    with patch("cli.commands.auth.make_client", return_value=mock_client):
+        result = invoke("auth", "token", "create", "--name", "CI", "--save")
+    assert result.exit_code == 0
+    assert "saved" in result.output.lower()
+    from cli.config import load_credentials
+
+    creds = load_credentials()
+    assert creds is not None
+    assert creds.access_token == "ap_pat_saved_secret"
+    assert creds.email == "user@example.com"
+
+
+def test_pat_list(invoke, write_credentials) -> None:
+    write_credentials()
+    mock_client = MagicMock()
+    mock_client.auth.list_pats.return_value = {
+        "tokens": [{"id": "pat-1", "name": "CLI", "token_prefix": "ap_pat_ab", "active": True}],
+    }
+
+    with patch("cli.commands.auth.make_client", return_value=mock_client):
+        result = invoke("auth", "token", "list")
+    assert result.exit_code == 0
+    assert "ap_pat_ab" in result.output
+
+
+def test_pat_revoke(invoke, write_credentials) -> None:
+    write_credentials()
+    mock_client = MagicMock()
+    mock_client.auth.revoke_pat.return_value = {"message": "Token revoked", "id": "pat-1"}
+
+    with patch("cli.commands.auth.make_client", return_value=mock_client):
+        result = invoke("auth", "token", "revoke", "pat-1")
+    assert result.exit_code == 0
+    mock_client.auth.revoke_pat.assert_called_once_with("pat-1")
+
+
+def test_oauth_status_enabled(invoke) -> None:
+    mock_client = MagicMock()
+    mock_client.auth.oauth_status.return_value = {"google_oauth_enabled": True}
+
+    with patch("cli.commands.auth.make_client", return_value=mock_client):
+        result = invoke("auth", "oauth-status")
+    assert result.exit_code == 0
+    assert "enabled" in result.output.lower()
+
+
+def test_oauth_status_disabled_json(invoke) -> None:
+    import json
+
+    mock_client = MagicMock()
+    mock_client.auth.oauth_status.return_value = {"google_oauth_enabled": False}
+
+    with patch("cli.commands.auth.make_client", return_value=mock_client):
+        result = invoke("--format", "json", "auth", "oauth-status")
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["google_oauth_enabled"] is False

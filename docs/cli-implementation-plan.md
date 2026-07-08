@@ -242,7 +242,7 @@ Legend: **Phase** = implementation phase number.
 
 | Command | API | Notes |
 |---------|-----|-------|
-| `doctor` | `GET /health` | Server reachable? |
+| `doctor` | `GET /health` | Server reachable? PAT vs JWT, expiry hint |
 | `doctor` | `GET /api/v1/auth/verify` | Token valid? (if logged in) |
 | `doctor` | reads config files | Permissions, paths |
 
@@ -943,7 +943,7 @@ applypilot doctor && applypilot profile status
 
 | Risk | Mitigation |
 |------|------------|
-| OAuth users can't login via CLI | Document `auth token set`; future PAT endpoint |
+| OAuth users can't login via CLI | `auth token set` for JWT paste; **`auth token create`** for long-lived PAT |
 | Long workflows timeout | Configurable `poll_timeout_seconds`; `--no-wait` + manual status |
 | Output too large for terminal | `--section` filters; `--format json` to file |
 | API changes break CLI | Client resource layer isolates paths; contract tests from OpenAPI |
@@ -954,12 +954,38 @@ applypilot doctor && applypilot profile status
 
 ## 13. Future enhancements (post v1)
 
-- Personal access tokens (`POST /api/v1/auth/tokens`) — better than pasted JWT
-- `applypilot workflow watch SESSION` — WebSocket streaming progress
-- MCP server wrapping the same `applypilot_client`
-- `--output cover-letter.md` write files directly
-- Shell alias recipes in docs
-- Homebrew / pipx publish
+**Implemented (2026-07-08):**
+
+- ✅ Personal access tokens — `POST/GET/DELETE /api/v1/auth/tokens`; CLI `auth token create|list|revoke`
+- ✅ `applypilot apps show APP_ID` — `GET /api/v1/applications/{id}`
+- ✅ `workflow results --out` / `--out-dir` — write cover letter, resume tips, etc. to files
+- ✅ `applypilot workflow watch SESSION` — WebSocket streaming progress (`websocket-client` extra)
+- ✅ Pager for long human output — `--no-pager` global flag; `$PAGER` / `$APPLYPILOT_PAGER`
+- ✅ `config` / `config set` — view and patch `~/.applypilot/config.toml`
+- ✅ `--confirm` on `profile resume delete` and `profile api-key delete`
+- ✅ `auth token create --save` — write PAT to `credentials.json` for scripts
+
+**Nice-to-have (not blocking merge):**
+
+| Item | Effort | Status |
+|------|--------|--------|
+| `auth oauth status` (`GET /auth/oauth/status`) | ~1 h | ✅ `auth oauth-status` |
+| `doctor` PAT awareness | ~2 h | ✅ token type, expiry hint, refresh guidance |
+| `workflow watch` human mode | ~3 h | ✅ human lines; `--format json` for raw events |
+| Shell alias recipes in docs | ~1 h | ✅ `cli-reference.md` § Shell aliases |
+| MCP server over `applypilot_client` | ~2–3 days | Open — optional; CLI + shell is enough for self-hosted |
+| pipx / Homebrew publish | ~1 day | **Not planned** — self-hosted users get CLI via `make setup` |
+
+**Deploy note:** run `make migrate` (revision `20260708_024`) on any environment before using PAT endpoints.
+
+### Why MCP? (optional, not required)
+
+The CLI already works from any terminal (Cursor, Claude Code, scripts). **MCP** (Model Context Protocol) would wrap `applypilot_client` as a structured tool server so AI apps could call “analyze job” / “list applications” without shelling out. Useful for tighter IDE integration; **not** needed for correctness or parity.
+
+### What is pipx / Homebrew publish?
+
+- **pipx** — installs Python CLI tools in isolated global venvs (`pipx install applypilot` → `applypilot` on PATH without cloning the repo).
+- **Homebrew** — macOS/Linux package manager (`brew install applypilot` from a tap). Same goal: one-command install for end users who are not developers.
 
 ---
 
@@ -1015,9 +1041,12 @@ Use this table during Phase 9 sign-off. ✅ = CLI command planned above.
 | `GET /auth/verification-status` | ✅ |
 | `GET /auth/email-status` | ✅ |
 | `PUT /auth/change-password` | ✅ |
+| `POST /auth/tokens` | ✅ `auth token create` |
+| `GET /auth/tokens` | ✅ `auth token list` |
+| `DELETE /auth/tokens/{id}` | ✅ `auth token revoke` |
 | `POST /auth/forgot-password` | ❌ browser (intentional) |
 | `POST /auth/reset-password` | ❌ browser (intentional) |
-| `GET /auth/oauth/status` | ❌ browser setup |
+| `GET /auth/oauth/status` | ✅ `auth oauth-status` |
 | `GET /auth/verify-email` | ❌ browser token link (intentional) |
 | `POST /auth/oauth/exchange-code` | ❌ browser OAuth step 3 (intentional) |
 | Google OAuth + link/unlink | ❌ token import workaround |
@@ -1026,7 +1055,7 @@ Use this table during Phase 9 sign-off. ✅ = CLI command planned above.
 | **Workflow** | |
 | All 9 public workflow routes | ✅ Section 5.5 |
 | **Applications** | |
-| All 6 application routes | ✅ Section 5.6 (no single GET-by-id — use list + `workflow results`) |
+| All 7 application routes | ✅ Section 5.6 + `apps show` (`GET /{id}`) |
 | **Interview prep** | |
 | All 4 routes | ✅ Section 5.7 |
 | **CV optimizer** | |
@@ -1041,7 +1070,8 @@ Use this table during Phase 9 sign-off. ✅ = CLI command planned above.
 | **Monitoring** | |
 | `GET /health` | ✅ `doctor` |
 | **WebSocket** | |
-| `/ws/workflow/*`, `/ws/user` | ❌ polling instead (intentional) |
+| `/ws/workflow/*` | ✅ `workflow watch` (optional; polling still default) |
+| `/ws/user` | ❌ polling instead (intentional) |
 | `GET /ws/stats` | ❌ optional debug (any authed user; low priority) |
 | **HTML pages** | |
 | `/dashboard`, `/profile/setup`, etc. | ❌ CLI prints URLs only |

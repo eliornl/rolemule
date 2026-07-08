@@ -21,6 +21,9 @@ class ApplicationsResource:
         self._client = client
         self._prefix = f"{API_V1_PREFIX}/applications"
 
+    def get(self, application_id: str) -> Dict[str, Any]:
+        return self._client.get_json(f"{self._prefix}/{application_id}")
+
     def list(
         self,
         *,

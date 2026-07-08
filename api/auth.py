@@ -1710,6 +1710,9 @@ async def reset_password(
         # should not retain an active session after the reset.
         try:
             await invalidate_all_user_tokens(str(user.id))
+            from utils.personal_access_tokens import revoke_all_user_pats
+
+            await revoke_all_user_pats(db, str(user.id))
         except Exception as revoke_err:
             logger.warning("Failed to invalidate sessions after password reset: %s", sanitize_log_value(str(revoke_err)))
 
@@ -1788,6 +1791,9 @@ async def change_password(
 
         # Invalidate all existing tokens so stolen tokens cannot be reused after password change
         await invalidate_all_user_tokens(str(user.id))
+        from utils.personal_access_tokens import revoke_all_user_pats
+
+        await revoke_all_user_pats(db, str(user.id))
 
         # Issue a fresh token so the current session stays alive
         new_token = _make_jwt(
@@ -2279,3 +2285,118 @@ async def get_verification_status(
     except Exception as e:
         logger.error("Failed to get verification status: %s", sanitize_log_value(str(e)), exc_info=True)
         raise internal_error("Failed to get verification status")
+
+
+# =============================================================================
+# PERSONAL ACCESS TOKENS (CLI / automation)
+# =============================================================================
+
+
+class CreatePatRequest(BaseModel):
+    """Request body for creating a personal access token."""
+
+    name: str = Field(..., min_length=1, max_length=100, description="Label for this token")
+    expires_days: Optional[int] = Field(
+        default=90,
+        ge=1,
+        le=365,
+        description="Days until expiry (omit for no expiry — not recommended)",
+    )
+
+
+class CreatePatResponse(BaseModel):
+    """Response when a PAT is created (secret shown once)."""
+
+    id: str
+    name: str
+    token_prefix: str
+    token: str = Field(..., description="Full token — store now; not shown again")
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+
+
+class PatListItem(BaseModel):
+    id: str
+    name: str
+    token_prefix: str
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    last_used_at: Optional[datetime] = None
+    revoked_at: Optional[datetime] = None
+    active: bool
+
+
+@router.post("/tokens", response_model=CreatePatResponse)
+async def create_personal_access_token_endpoint(
+    body: CreatePatRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database),
+) -> CreatePatResponse:
+    """Create a long-lived personal access token for CLI and automation."""
+    from utils.personal_access_tokens import create_personal_access_token, pat_to_dict
+
+    try:
+        user_id = uuid.UUID(str(current_user.get("id") or current_user.get("_id")))
+        row, plaintext = await create_personal_access_token(
+            db,
+            user_id=user_id,
+            name=body.name,
+            expires_days=body.expires_days,
+        )
+        meta = pat_to_dict(row)
+        return CreatePatResponse(
+            id=meta["id"],
+            name=meta["name"],
+            token_prefix=meta["token_prefix"],
+            token=plaintext,
+            expires_at=meta["expires_at"],
+            created_at=meta["created_at"],
+        )
+    except ValueError as exc:
+        raise validation_error(str(exc))
+    except Exception as e:
+        logger.error("PAT create failed: %s", sanitize_log_value(str(e)), exc_info=True)
+        raise internal_error("Failed to create personal access token")
+
+
+@router.get("/tokens")
+async def list_personal_access_tokens_endpoint(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database),
+) -> Dict[str, Any]:
+    """List personal access tokens for the current user (metadata only)."""
+    from utils.personal_access_tokens import list_personal_access_tokens, pat_to_dict
+
+    try:
+        user_id = uuid.UUID(str(current_user.get("id") or current_user.get("_id")))
+        rows = await list_personal_access_tokens(db, user_id)
+        return {"tokens": [pat_to_dict(r) for r in rows]}
+    except Exception as e:
+        logger.error("PAT list failed: %s", sanitize_log_value(str(e)), exc_info=True)
+        raise internal_error("Failed to list personal access tokens")
+
+
+@router.delete("/tokens/{token_id}")
+async def revoke_personal_access_token_endpoint(
+    token_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: AsyncSession = Depends(get_database),
+) -> Dict[str, Any]:
+    """Revoke a personal access token by ID."""
+    from utils.personal_access_tokens import revoke_personal_access_token
+
+    try:
+        user_id = uuid.UUID(str(current_user.get("id") or current_user.get("_id")))
+        try:
+            tid = uuid.UUID(token_id)
+        except ValueError:
+            raise validation_error("Invalid token ID format")
+        revoked = await revoke_personal_access_token(db, user_id=user_id, token_id=tid)
+        if not revoked:
+            raise not_found_error("Personal access token")
+        return {"message": "Token revoked", "id": token_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("PAT revoke failed: %s", sanitize_log_value(str(e)), exc_info=True)
+        raise internal_error("Failed to revoke personal access token")

@@ -26,7 +26,9 @@ def emit(ctx: CliContext, data: Any, *, human: Optional[str] = None) -> None:
     if ctx.output_format == "json":
         typer.echo(json.dumps(data, indent=2, default=str))
     elif human is not None:
-        typer.echo(human)
+        from cli.pager import maybe_page
+
+        maybe_page(human, no_pager=ctx.no_pager, quiet=ctx.quiet)
 
 
 def emit_error(ctx: CliContext, exc: ApiClientError) -> None:

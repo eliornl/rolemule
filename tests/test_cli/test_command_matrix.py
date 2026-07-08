@@ -43,6 +43,7 @@ COMMAND_CASES: list[CommandCase] = [
     CommandCase("auth-verification-status", ("auth", "verification-status"), "cli.commands.auth.make_client"),
     CommandCase("auth-extension-status", ("auth", "extension-status"), "cli.commands.auth.make_client"),
     CommandCase("auth-email-status", ("auth", "email-status"), "cli.commands.auth.make_client", needs_auth=False),
+    CommandCase("auth-oauth-status", ("auth", "oauth-status"), "cli.commands.auth.make_client", needs_auth=False),
     CommandCase(
         "auth-login",
         ("auth", "login", "--email", "user@example.com"),
@@ -85,6 +86,17 @@ COMMAND_CASES: list[CommandCase] = [
         input="header.payload.sig",
     ),
     CommandCase("auth-token-show", ("auth", "token", "show"), "cli.commands.auth.make_client"),
+    CommandCase(
+        "auth-token-create",
+        ("auth", "token", "create", "--name", "Automation"),
+        "cli.commands.auth.make_client",
+    ),
+    CommandCase("auth-token-list", ("auth", "token", "list"), "cli.commands.auth.make_client"),
+    CommandCase(
+        "auth-token-revoke",
+        ("auth", "token", "revoke", "pat-1"),
+        "cli.commands.auth.make_client",
+    ),
     CommandCase("profile-show", ("profile", "show"), "cli.commands.profile.require_client"),
     CommandCase("profile-status", ("profile", "status"), "cli.commands.profile.require_client"),
     CommandCase("profile-complete", ("profile", "complete"), "cli.commands.profile.require_client"),
@@ -163,8 +175,8 @@ COMMAND_CASES: list[CommandCase] = [
         ("profile", "set", "notifications", "--email-notifications"),
         "cli.commands.profile.require_client",
     ),
-    CommandCase("profile-resume-delete", ("profile", "resume", "delete"), "cli.commands.profile.require_client"),
-    CommandCase("profile-api-key-delete", ("profile", "api-key", "delete"), "cli.commands.profile.require_client"),
+    CommandCase("profile-resume-delete", ("profile", "resume", "delete", "--confirm"), "cli.commands.profile.require_client"),
+    CommandCase("profile-api-key-delete", ("profile", "api-key", "delete", "--confirm"), "cli.commands.profile.require_client"),
     CommandCase(
         "profile-api-key-validate",
         ("profile", "api-key", "validate"),
@@ -186,6 +198,12 @@ COMMAND_CASES: list[CommandCase] = [
     ),
     CommandCase("workflow-status", ("workflow", "status", "sess-1"), "cli.commands.workflow.require_client"),
     CommandCase("workflow-results", ("workflow", "results", "sess-1"), "cli.commands.workflow.require_client"),
+    CommandCase(
+        "workflow-watch",
+        ("workflow", "watch", "sess-1"),
+        "cli.commands.workflow.require_client",
+        extra_patches={"cli.commands.workflow.watch_workflow_session": lambda **_kwargs: None},
+    ),
     CommandCase(
         "workflow-continue",
         ("workflow", "continue", "sess-1", "--confirm"),
@@ -217,6 +235,7 @@ COMMAND_CASES: list[CommandCase] = [
         "cli.commands.workflow.require_client",
     ),
     CommandCase("apps-list", ("apps", "list"), "cli.commands.applications.require_client"),
+    CommandCase("apps-show", ("apps", "show", "app-1"), "cli.commands.applications.require_client"),
     CommandCase("apps-stats", ("apps", "stats"), "cli.commands.applications.require_client"),
     CommandCase("apps-status", ("apps", "status", "app-1", "applied"), "cli.commands.applications.require_client"),
     CommandCase(

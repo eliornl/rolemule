@@ -11,21 +11,28 @@ alwaysApply: false
 ## Architecture
 
 ```
-cli/                    — Typer commands, formatters, config, output
+cli/                    — Typer commands, formatters, config, output, pager, workflow watch
 applypilot_client/      — Sync httpx client + resource modules
 tests/test_cli/         — CliRunner tests (no live server in CI)
+tests/test_cli_integration/ — ASGI tests (requires DATABASE_URL)
 ```
 
-Install: `pip install -e ".[cli]"`. Tests: `make cli-test`.
+Install: bundled with **`make setup`** / **`make start-local`** / **`just setup`** (`pip install -e ".[cli]"` into the project venv). Tests: `make cli-test`.
 
 ## Command patterns
 
-1. **Global flags before subcommand:** `applypilot --format json workflow analyze -`
+1. **Global flags before subcommand:** `applypilot --format json --no-pager workflow analyze -`
 2. **HTTP only through client:** `require_client(ctx)` → `client.<resource>.<method>()`
 3. **Errors:** `emit_error()` or `emit_workflow_error()` (handles `CFG_6001`, `RES_3002`)
-4. **Destructive ops:** `require_confirm()` from `cli/util.py`
+4. **Destructive ops:** `require_confirm()` from `cli/util.py` (`--confirm`)
 5. **JSON payloads:** `payload_from_file()` / `--file -` for stdin
-6. **Human vs JSON:** `emit(ctx, data, human=...)` from `cli/output.py`
+6. **Human vs JSON:** `emit(ctx, data, human=...)` from `cli/output.py` (pager for long human text)
+
+## Auth: JWT vs PAT
+
+- **Local JWT:** `auth token set` / `auth token show` — stored in `credentials.json`
+- **PATs:** `auth token create|list|revoke` → `/api/v1/auth/tokens` (`ap_pat_` prefix; hash at rest); `auth token create --save` stores PAT in `credentials.json`
+- PAT works as `Authorization: Bearer` on all API + WebSocket endpoints
 
 ## Adding a command
 
@@ -34,7 +41,7 @@ Install: `pip install -e ".[cli]"`. Tests: `make cli-test`.
 3. Implement Typer command in `cli/commands/<area>.py`
 4. Add human formatter in `cli/formatters/` when output is not raw JSON
 5. Register typer in `cli/main.py`
-6. Tests: `tests/test_cli/test_<area>_client.py` + `test_<area>_commands.py`
+6. Tests: `tests/test_cli/test_<area>_client.py` + `test_<area>_commands.py` + matrix case
 7. Update `docs/cli-reference.md`
 
 ## Security
@@ -42,8 +49,19 @@ Install: `pip install -e ".[cli]"`. Tests: `make cli-test`.
 - Credentials: `~/.applypilot/credentials.json` mode `0600`
 - Passwords: `getpass` only (TTY required)
 - Register success: **never** save JWT — only `verify-code` / `login` / `token set`
+- PAT plaintext shown once on `auth token create`
 - `--file` paths: read JSON only, never execute
 - No tokens in log output
+
+## Pager and file output
+
+- `cli/pager.py` — `maybe_page()`; disable with global `--no-pager`
+- `cli/workflow_output.py` — `workflow results --out` / `--out-dir`
+- `cli/workflow_watch.py` — `workflow watch` (WebSocket)
+
+## Config subcommands
+
+- `config` / `config set` in `cli/commands/config_cmd.py`
 
 ## Admin visibility
 
@@ -60,5 +78,5 @@ Use client `parse_error_response()` — do not invent parallel error shapes. JSO
 ## Docs
 
 - Full reference: `docs/cli-reference.md`
-- Implementation plan: `docs/cli-implementation-plan.md`
+- Implementation plan: `docs/cli-implementation-plan.md` (§13 post-v1 enhancements)
 - User-facing: `USER_GUIDE.md` CLI section, README Quick Start CLI block

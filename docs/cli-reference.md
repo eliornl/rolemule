@@ -4,19 +4,25 @@ Command-line client for a running ApplyPilot server. Full API parity for auth, p
 
 **Implementation plan:** [cli-implementation-plan.md](./cli-implementation-plan.md)
 
-**Status:** Implemented on branch `feature/cli` — 88 leaf commands, 328 mocked CLI tests + 5 ASGI integration tests.
+**Status:** Implemented on branch `feature/cli` — 96 leaf commands, **364** mocked CLI tests + **6** ASGI integration tests.
 
 ---
 
 ## Install
 
-From the repo root (server must be running separately):
+From the repo root, the CLI is installed automatically when you run **`make setup`**, **`make start-local`**, or **`just setup`** (same venv as the server).
 
 ```bash
-pip install -e ".[cli]"
-# or after make setup:
-make cli-test   # also installs editable CLI
+make setup          # or make start-local on macOS
+source venv/bin/activate
+applypilot doctor
 ```
+
+Without activating the venv: `venv/bin/applypilot` (Windows: `venv\Scripts\applypilot.exe`).
+
+**Docker only (`make start`):** run `make setup` once on the host if you want the CLI locally — the container image does not install a host-side `applypilot` command.
+
+Manual reinstall (optional): `pip install -e ".[cli]"` inside the project venv.
 
 Entry point: `applypilot` → `cli.main:main`
 
@@ -44,6 +50,7 @@ Place **before** the subcommand:
 | `--no-color` | Disable styled output |
 | `-q` / `--quiet` | Minimal output |
 | `-v` / `--verbose` | Verbose output |
+| `--no-pager` | Disable pager for long human output |
 
 Shell completion (run from an interactive terminal so Typer can detect your shell):
 
@@ -78,11 +85,25 @@ applypilot --show-completion
 
 | Command | API / action |
 |---------|--------------|
-| `doctor` | `GET /health`, token check, local config paths |
+| `doctor` | `GET /health`, token check (JWT vs PAT), local config paths |
 
 ```bash
 applypilot doctor
 applypilot doctor --format json
+```
+
+---
+
+## `config`
+
+| Command | Action |
+|---------|--------|
+| `config` | Show `~/.applypilot/config.toml` (default when no subcommand) |
+| `config set` | Patch config (`--base-url`, `--format`, `--poll-interval`, `--poll-timeout`, `--color` / `--no-color`) |
+
+```bash
+applypilot config
+applypilot config set --base-url https://apply.example.com --format json
 ```
 
 ---
@@ -99,13 +120,17 @@ applypilot doctor --format json
 | `auth verify-code --email EMAIL --code CODE` | `POST /api/v1/auth/verify-code` (saves JWT) |
 | `auth change-password` | `PUT /api/v1/auth/change-password` |
 | `auth token set [--token TOKEN] [--from-stdin]` | Local only (paste, getpass, or stdin) |
-| `auth token show` | Local only (masked) |
+| `auth token show` | Local only (masked JWT) |
+| `auth token create --name LABEL [--expires-days N] [--save]` | `POST /api/v1/auth/tokens` (PAT shown once; `--save` writes to credentials) |
+| `auth token list` | `GET /api/v1/auth/tokens` (metadata only) |
+| `auth token revoke TOKEN_ID` | `DELETE /api/v1/auth/tokens/{id}` |
 | `auth email-status` | `GET /api/v1/auth/email-status` |
+| `auth oauth-status` | `GET /api/v1/auth/oauth/status` |
 | `auth resend-verification` | `POST /api/v1/auth/resend-verification` |
 | `auth verification-status` | `GET /api/v1/auth/verification-status` |
 | `auth extension-status` | `GET /api/v1/auth/extension-status` |
 
-Google OAuth users: log in via the browser, then `applypilot auth token set`.
+Google OAuth users: log in via the browser, then `applypilot auth token set`. For automation, prefer **`auth token create`** (personal access token) over pasting a short-lived JWT.
 
 ---
 
@@ -124,10 +149,10 @@ Google OAuth users: log in via the browser, then `applypilot auth token set`.
 | `profile set notifications` | `PUT /api/v1/profile/notifications` |
 | `profile resume upload FILE` | `POST /api/v1/profile/parse-resume` (10 MB max) |
 | `profile resume show` | `GET /api/v1/profile/resume` |
-| `profile resume delete` | `DELETE /api/v1/profile/resume` |
+| `profile resume delete --confirm` | `DELETE /api/v1/profile/resume` |
 | `profile api-key status` | `GET /api/v1/profile/api-key/status` |
 | `profile api-key set` | `POST /api/v1/profile/api-key` |
-| `profile api-key delete` | `DELETE /api/v1/profile/api-key` |
+| `profile api-key delete --confirm` | `DELETE /api/v1/profile/api-key` |
 | `profile api-key validate` | `POST /api/v1/profile/api-key/validate` |
 | `profile workflow-preferences show` | `GET /api/v1/profile/preferences` |
 | `profile workflow-preferences set` | `PATCH /api/v1/profile/preferences` |
@@ -154,6 +179,9 @@ JSON sections accept `--file path.json` or `--file -` (stdin).
 | `workflow analyze --company COMPANY` | optional detected company name |
 | `workflow status SESSION` | `GET /api/v1/workflow/status/{id}` |
 | `workflow results SESSION` | `GET /api/v1/workflow/results/{id}` |
+| `workflow results SESSION --out FILE` | Write one section (or JSON) to a file |
+| `workflow results SESSION --out-dir DIR` | Write per-section `.md` files (or `results.json` with `--format json`) |
+| `workflow watch SESSION` | WebSocket `/api/v1/ws/workflow/{id}` (live progress; human lines by default, `--format json` for raw events) |
 | `workflow history` | `GET /api/v1/workflow/history` |
 | `workflow continue SESSION --confirm` | `POST /api/v1/workflow/continue/{id}` |
 | `workflow generate-documents SESSION` | `POST /api/v1/workflow/generate-documents/{id}` |
@@ -171,8 +199,11 @@ JSON sections accept `--file path.json` or `--file -` (stdin).
 
 ```bash
 applypilot workflow analyze posting.txt --wait --format json
-applypilot workflow results SESSION_ID --section cover-letter
+applypilot workflow results SESSION_ID --section cover-letter --out cover-letter.md
+applypilot workflow watch SESSION_ID
 ```
+
+Long human output uses `$PAGER` / `$APPLYPILOT_PAGER` (disable with `--no-pager`).
 
 ---
 
@@ -181,6 +212,7 @@ applypilot workflow results SESSION_ID --section cover-letter
 | Command | API |
 |---------|-----|
 | `apps list` | `GET /api/v1/applications/` |
+| `apps show APP_ID` | `GET /api/v1/applications/{id}` |
 | `apps stats` | `GET /api/v1/applications/stats/overview` |
 | `apps status APP_ID STATUS` | `PATCH .../status` |
 | `apps notes APP_ID [--file\|TEXT]` | `PATCH .../notes` |
@@ -285,16 +317,56 @@ applypilot tools salary-coach --file offer.json --format json
 - Server must be running (`make start-local` or Docker)
 - Login once: `applypilot auth login` or `auth token set`
 - Global flags go **before** subcommands
-- Destructive commands need `--confirm` (account/data/application deletes; not resume or API-key delete)
+- Destructive commands need `--confirm` (account/data/application/resume/api-key deletes, maintenance toggles, etc.)
 - `422 CFG_6001` → user needs API key (`profile api-key set` or server key)
+
+---
+
+## Shell aliases (optional)
+
+Copy into `~/.bashrc` or `~/.zshrc` for shorter commands. Adjust paths to your ApplyPilot install.
+
+```bash
+# Server + auth
+alias ap='applypilot'
+alias apdoc='applypilot doctor'
+alias aplogin='applypilot auth login'
+alias aptoken='applypilot auth token create --save --name'
+
+# Analyze and watch
+alias apanalyze='applypilot workflow analyze --wait'
+alias apwatch='applypilot workflow watch'
+
+# Applications
+alias aplist='applypilot apps list'
+alias apshow='applypilot apps show'
+
+# Export cover letter after a completed workflow
+apcover() {
+  applypilot workflow results "$1" --section cover-letter --out "${2:-cover-letter.md}"
+}
+
+# JSON-friendly scripting
+alias apjson='applypilot --format json --no-pager'
+```
+
+Example session:
+
+```bash
+aplogin
+aptoken "my-laptop"
+apanalyze ~/jobs/acme-backend.txt
+apwatch SESSION_ID_FROM_OUTPUT
+apcover SESSION_ID_FROM_OUTPUT ~/cover-letters/acme.md
+```
 
 ---
 
 ## Testing
 
 ```bash
-make cli-test                              # pytest tests/test_cli/ (328 tests)
-pytest tests/test_cli_integration/ -v      # ASGI integration (5 tests; needs Postgres)
+make cli-test                              # pytest tests/test_cli/ (364 tests)
+pytest tests/test_cli_integration/ -v      # ASGI integration (6 tests; needs Postgres)
 ./scripts/cli_smoke.sh                     # optional live server smoke
 ```
 
