@@ -230,6 +230,7 @@ class GeminiClient:
         use_cache: bool = False,
         user_api_key: Optional[str] = None,
         user_id: Optional[str] = None,
+        use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
         """
         Generate a response from the Gemini model with optional caching.
@@ -247,6 +248,8 @@ class GeminiClient:
             user_id: User UUID string. When provided, scopes the cache key per user
                      to prevent cross-user hits on prompts that contain personal content
                      (resumes, cover letters, etc.). Omit only for fully public prompts.
+            use_google_search_grounding: When True, attach Google Search tool to the request
+                     (company research and other opted-in callers only).
 
         Returns:
             Dict[str, Any]: Response from the model containing generated text
@@ -274,6 +277,7 @@ class GeminiClient:
             temperature=temperature,
             max_tokens=max_tokens,
             user_api_key=user_api_key,
+            use_google_search_grounding=use_google_search_grounding,
         )
 
         # Cache the response if caching is enabled
@@ -301,6 +305,7 @@ class GeminiClient:
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         user_api_key: Optional[str] = None,
+        use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
         """
         Internal generate method with retry logic.
@@ -330,6 +335,7 @@ class GeminiClient:
                 system=system,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                use_google_search_grounding=use_google_search_grounding,
             )
         else:
             return await self._generate_with_google_ai(
@@ -339,7 +345,39 @@ class GeminiClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
                 user_api_key=user_api_key,
+                use_google_search_grounding=use_google_search_grounding,
             )
+
+    @staticmethod
+    def _build_generate_config(
+        *,
+        temperature: float,
+        max_tokens: int,
+        use_google_search_grounding: bool,
+    ) -> Any:
+        """
+        Build GenerateContentConfig with thinking disabled and optional Google Search.
+
+        Args:
+            temperature: Sampling temperature
+            max_tokens: Max output tokens
+            use_google_search_grounding: Attach Google Search grounding tool when True
+
+        Returns:
+            google.genai.types.GenerateContentConfig
+        """
+        from google.genai import types
+
+        config_kwargs: Dict[str, Any] = {
+            "temperature": temperature,
+            "max_output_tokens": max_tokens,
+            "top_p": DEFAULT_TOP_P,
+            "top_k": DEFAULT_TOP_K,
+            "thinking_config": types.ThinkingConfig(thinking_budget=0),
+        }
+        if use_google_search_grounding:
+            config_kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+        return types.GenerateContentConfig(**config_kwargs)
 
     async def _generate_with_vertex_ai(
         self,
@@ -348,11 +386,11 @@ class GeminiClient:
         system: Optional[str] = None,
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
+        use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
         """Generate using Vertex AI backend with ADC authentication (higher rate limits)."""
         try:
             from google import genai as google_genai
-            from google.genai import types
             
             current_settings = get_settings()
             model_to_use = model or current_settings.gemini_model
@@ -371,19 +409,14 @@ class GeminiClient:
             else:
                 combined_prompt = prompt
             
-            # Create generation config
-            # Disable thinking mode — on flash models it consumes the output token
-            # budget for internal reasoning, leaving too little for actual output
-            config = types.GenerateContentConfig(
+            config = self._build_generate_config(
                 temperature=temperature,
-                max_output_tokens=max_tokens,
-                top_p=DEFAULT_TOP_P,
-                top_k=DEFAULT_TOP_K,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                max_tokens=max_tokens,
+                use_google_search_grounding=use_google_search_grounding,
             )
             
             prompt_chars = len(combined_prompt)
-            logger.info('[LLM] Vertex AI  model=%s  prompt=%s chars  temp=%s', sanitize_log_value(model_to_use), sanitize_log_value(prompt_chars), sanitize_log_value(temperature))
+            logger.info('[LLM] Vertex AI  model=%s  prompt=%s chars  temp=%s  grounding=%s', sanitize_log_value(model_to_use), sanitize_log_value(prompt_chars), sanitize_log_value(temperature), sanitize_log_value(use_google_search_grounding))
 
             # Generate response (bounded by DEFAULT_TIMEOUT to prevent indefinite hangs)
             api_start_time = perf_counter()
@@ -438,11 +471,11 @@ class GeminiClient:
         temperature: float = DEFAULT_TEMPERATURE,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         user_api_key: Optional[str] = None,
+        use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
         """Generate using Google AI Studio backend (BYOK / free tier)."""
         try:
             from google import genai as google_genai
-            from google.genai import types
 
             current_settings = get_settings()
 
@@ -460,17 +493,15 @@ class GeminiClient:
             else:
                 combined_prompt = prompt
 
-            config = types.GenerateContentConfig(
+            config = self._build_generate_config(
                 temperature=temperature,
-                max_output_tokens=max_tokens,
-                top_p=DEFAULT_TOP_P,
-                top_k=DEFAULT_TOP_K,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                max_tokens=max_tokens,
+                use_google_search_grounding=use_google_search_grounding,
             )
 
             prompt_chars = len(combined_prompt)
             byok_label = "  byok=user-key" if user_api_key else ""
-            logger.info('[LLM] Google AI Studio  model=%s  prompt=%s chars  temp=%s%s', sanitize_log_value(model_to_use), sanitize_log_value(prompt_chars), sanitize_log_value(temperature), sanitize_log_value(byok_label))
+            logger.info('[LLM] Google AI Studio  model=%s  prompt=%s chars  temp=%s  grounding=%s%s', sanitize_log_value(model_to_use), sanitize_log_value(prompt_chars), sanitize_log_value(temperature), sanitize_log_value(use_google_search_grounding), sanitize_log_value(byok_label))
 
             api_start_time = perf_counter()
             response = await asyncio.wait_for(

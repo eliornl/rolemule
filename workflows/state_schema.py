@@ -211,6 +211,8 @@ class JobAnalysisResult:
     job_type: Optional[str] = None
     is_student_position: Optional[bool] = None
     company_size: Optional[str] = None
+    employer_type: Optional[str] = None
+    company_name_confidence: Optional[str] = None
 
     # Skills and qualifications
     required_skills: Optional[List[str]] = field(default_factory=list)
@@ -361,6 +363,12 @@ class CompanyResearchResult:
     # Confidence assessment
     confidence_assessment: Dict[str, Any] = field(default_factory=dict)
     # Contains: overall_confidence (HIGH|MEDIUM|LOW), uncertain_areas, recommendation
+
+    # Disambiguation / quality (company research improvement)
+    resolved_company_name: Optional[str] = None
+    employer_type: Optional[str] = None
+    disambiguation_notes: Optional[str] = None
+    research_quality: Optional[str] = None  # verified | uncertain | posting_only
 
     # Research metadata
     research_date: Optional[str] = None

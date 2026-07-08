@@ -431,24 +431,49 @@ async def cache_job_analysis(
 # =============================================================================
 
 
-def _get_company_research_cache_key(company_name: str) -> str:
-    """Generate versioned, normalized cache key for company research."""
+def _get_company_research_cache_key(
+    company_name: str,
+    *,
+    disambiguators: Optional[Dict[str, str]] = None,
+) -> str:
+    """
+    Generate versioned cache key for company research.
+
+    Keys include posting context (URL domain, industry, location) so employers
+    with the same name but different careers URLs do not share one cache entry.
+    """
     normalized = company_name.lower().strip()
-    name_hash = generate_hash(normalized)
+    if disambiguators:
+        key_material = "|".join(
+            [
+                normalized,
+                disambiguators.get("url_domain", ""),
+                disambiguators.get("industry", ""),
+                disambiguators.get("primary_location", ""),
+            ]
+        )
+    else:
+        key_material = normalized
+    name_hash = generate_hash(key_material)
     return f"{CACHE_VERSION}:{CACHE_PREFIX_COMPANY_RESEARCH}:{name_hash}:{normalized[:30]}"
 
 
-async def get_cached_company_research(company_name: str) -> Optional[Dict[str, Any]]:
+async def get_cached_company_research(
+    company_name: str,
+    *,
+    disambiguators: Optional[Dict[str, str]] = None,
+) -> Optional[Dict[str, Any]]:
     """
     Get cached company research result.
 
     Args:
         company_name: Company name (case-insensitive)
+        disambiguators: Optional posting context for cache key (url_domain, industry, location)
 
     Returns:
         Cached research dict or None on miss
     """
-    key = _get_company_research_cache_key(company_name)
+    key = _get_company_research_cache_key(company_name, disambiguators=disambiguators)
     t0 = perf_counter()
     cached = await cache_get(key)
     latency_ms = (perf_counter() - t0) * 1000
@@ -471,24 +496,34 @@ async def get_cached_company_research(company_name: str) -> Optional[Dict[str, A
     return None
 
 
-async def cache_company_research(company_name: str, research: Dict[str, Any]) -> bool:
+async def cache_company_research(
+    company_name: str,
+    research: Dict[str, Any],
+    *,
+    disambiguators: Optional[Dict[str, str]] = None,
+) -> bool:
     """
     Cache company research result using the shared 7-day TTL.
 
     Args:
         company_name: Company name
         research: Research result dict
+        disambiguators: Optional posting context for cache key
 
     Returns:
         True if cached successfully
     """
-    key = _get_company_research_cache_key(company_name)
+    key = _get_company_research_cache_key(company_name, disambiguators=disambiguators)
     return await cache_set(key, research, TTL_COMPANY_RESEARCH)
 
 
-async def invalidate_company_research(company_name: str) -> bool:
+async def invalidate_company_research(
+    company_name: str,
+    *,
+    disambiguators: Optional[Dict[str, str]] = None,
+) -> bool:
     """Invalidate company research cache entry."""
-    key = _get_company_research_cache_key(company_name)
+    key = _get_company_research_cache_key(company_name, disambiguators=disambiguators)
     return await cache_delete(key)
 
 

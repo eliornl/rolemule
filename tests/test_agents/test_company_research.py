@@ -122,6 +122,9 @@ def workflow_state_with_job_analysis():
         job_analysis={
             "job_title": "Software Engineer",
             "company_name": "TechCorp Inc",
+            "company_name_confidence": "HIGH",
+            "employer_type": "direct",
+            "industry": "Technology",
         }
     )
 
@@ -218,6 +221,7 @@ class TestCompanyResearchProcessing:
 
         assert "company_research" in result
         assert result["company_research"]["industry"] == "Technology"
+        assert result["company_research"].get("research_quality") == "posting_only"
         mock_gemini_client.generate.assert_called()
 
 
@@ -411,18 +415,19 @@ class TestCompanyResearchHelpersAndEdges:
 
     def test_has_usable_company_name_rejects_dashes_and_placeholders(self):
         from agents.company_research import (
-            _format_job_context_for_unnamed_employer,
+            _format_job_context_for_research,
             _has_usable_company_name,
         )
 
         assert _has_usable_company_name("---") is False
         assert _has_usable_company_name("unknown") is False
-        ctx = _format_job_context_for_unnamed_employer(
+        ctx = _format_job_context_for_research(
             {
                 "job_title": "Founding Engineer",
                 "team_info": "Small platform team building core APIs",
                 "responsibilities": ["Ship features"],
-            }
+            },
+            {},
         )
         assert "Team / role context" in ctx
 

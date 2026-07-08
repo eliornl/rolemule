@@ -192,7 +192,9 @@ Extract information into this EXACT JSON structure. Output ONLY valid JSON, no e
         "<key responsibility 2>"
     ],
     "team_info": "<information about the team or null>",
-    "reporting_to": "<who this role reports to or null>"
+    "reporting_to": "<who this role reports to or null>",
+    "employer_type": "<direct | staffing_agency | confidential | null if unclear>",
+    "company_name_confidence": "<HIGH | MEDIUM | LOW — LOW when name is generic, ambiguous, or from a staffing header only>"
 }}
 
 ## EXTRACTION RULES:
@@ -205,7 +207,9 @@ Extract information into this EXACT JSON structure. Output ONLY valid JSON, no e
 7. Look for hidden skills in responsibilities section
 8. Include soft skills mentioned in "ideal candidate" sections
 9. responsibilities MUST be a JSON array of strings — never one long prose paragraph as a substitute. Break "What you'll do" into one element per bullet or discrete duty (minimum 3 items when the posting lists multiple duties).
-10. company_name: use the employer named in the posting header, "Company:", or overview. For confidential or recruiter posts with no named legal entity, use null — do not invent a company (the dashboard will show "Unknown").
+10. company_name: use the ACTUAL HIRING EMPLOYER named in the posting header, "Company:", or overview — not the ATS vendor (Greenhouse, Lever, Workday), not a job board site name, and not a staffing agency when a client is named. If posted by a staffing agency "on behalf of" a client and the client is unnamed, use null. If both agency and client are named, use the CLIENT. For confidential posts with no legal entity, use null — do not invent a company (the dashboard will show "Unknown").
+11. employer_type: "direct" for the actual hiring company; "staffing_agency" when a recruiter/agency posted on behalf of someone else; "confidential" when the employer is intentionally hidden; null if unclear.
+12. company_name_confidence: HIGH when the legal employer is clearly stated; MEDIUM when plausible but ambiguous; LOW when generic, staffing-only, or conflicting signals in the posting.
 """
 
 
@@ -470,12 +474,36 @@ class JobAnalyzerAgent:
                 val = parsed_data.get(key)
                 return val if isinstance(val, list) else []
 
+            def get_optional_str(key: str) -> Optional[str]:
+                val = parsed_data.get(key)
+                if val is None:
+                    return None
+                s = str(val).strip()
+                if not s or s.lower() in ("null", "none"):
+                    return None
+                return s
+
+            def get_confidence(key: str) -> Optional[str]:
+                val = get_optional_str(key)
+                if val and val.upper() in ("HIGH", "MEDIUM", "LOW"):
+                    return val.upper()
+                return None
+
+            def get_employer_type(key: str) -> Optional[str]:
+                val = get_optional_str(key)
+                if not val:
+                    return None
+                lowered = val.lower()
+                if lowered in ("direct", "staffing_agency", "confidential"):
+                    return lowered
+                return None
+
             # Create structured result from flat JSON (new format)
             job_analysis_result = JobAnalysisResult(
                 source=source,
                 # Basic information
                 job_title=get_str("job_title"),
-                company_name=get_str("company_name"),
+                company_name=get_optional_str("company_name"),
                 job_city=parsed_data.get("job_city"),
                 job_state=parsed_data.get("job_state"),
                 job_country=parsed_data.get("job_country"),
@@ -490,6 +518,8 @@ class JobAnalyzerAgent:
                 benefits=_normalize_string_list(parsed_data.get("benefits")),
                 is_student_position=parsed_data.get("is_student_position"),
                 company_size=parsed_data.get("company_size"),
+                employer_type=get_employer_type("employer_type"),
+                company_name_confidence=get_confidence("company_name_confidence"),
                 # Skills and qualifications
                 required_skills=get_list("required_skills"),
                 soft_skills=_normalize_string_list(parsed_data.get("soft_skills")),

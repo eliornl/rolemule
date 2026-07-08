@@ -526,14 +526,44 @@
                 ? escapeHtml(companyNameTrimmed)
                 : 'this opportunity';
 
+        const researchQuality = String(company.research_quality || '').toLowerCase();
+        const confidenceOverall = String(
+            (company.confidence_assessment && company.confidence_assessment.overall_confidence) || ''
+        ).toUpperCase();
+        const showUncertaintyBanner =
+            researchQuality === 'uncertain' ||
+            confidenceOverall === 'LOW';
+        const showPostingOnlyBanner = researchQuality === 'posting_only';
+
         // ========== SUB-PANE 1: COMPANY INFO ==========
         let companyHtml = '';
         if (company && Object.keys(company).length > 0) {
+            let researchNoticeHtml = '';
+            if (showUncertaintyBanner) {
+                researchNoticeHtml = `
+                    <div class="company-research-notice company-research-notice--uncertain" role="status">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        <div class="company-research-notice-body">
+                            <strong>Company research may not match this employer.</strong>
+                            <span>Details are based on the job posting where needed. Verify before interviews.</span>
+                        </div>
+                    </div>`;
+            } else if (showPostingOnlyBanner) {
+                researchNoticeHtml = `
+                    <div class="company-research-notice company-research-notice--posting-only" role="status">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        <div class="company-research-notice-body">
+                            <strong>Employer not named in this posting.</strong>
+                            <span>Guidance below is tailored to this role and industry, not a specific company.</span>
+                        </div>
+                    </div>`;
+            }
             const _rawWebsite = company.website || '';
             const _validWebsite = /^https?:\/\//i.test(_rawWebsite) ? _rawWebsite : '';
             const safeWebsiteHref   = encodeURI(_validWebsite).replace(/"/g, '%22');
             const safeWebsiteLabel  = escapeHtml(_validWebsite ? _validWebsite.replace('https://', '').replace('http://', '') : '');
             companyHtml += `
+                ${researchNoticeHtml}
                 <div class="content-section">
                     <h2 class="section-title"><i class="fas fa-building"></i> About ${aboutCompanyHeading}</h2>
                     <div class="company-card">

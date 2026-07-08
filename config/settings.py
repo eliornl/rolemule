@@ -86,6 +86,16 @@ class Settings(BaseSettings):
         description="Vertex AI region (e.g., us-central1, europe-west1)"
     )
 
+    # Company research — Google Search grounding (off by default)
+    company_research_grounding_enabled: bool = Field(
+        default=False,
+        description="Enable Google Search grounding for company research LLM calls",
+    )
+    company_research_grounding_min_confidence: str = Field(
+        default="MEDIUM",
+        description="Ground when employer confidence is at or below this (HIGH|MEDIUM|LOW)",
+    )
+
     base_url: str = "http://localhost:8000"
     security_contact_email: Optional[str] = Field(
         default=None,
