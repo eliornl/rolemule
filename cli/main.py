@@ -9,6 +9,7 @@ from typing import Optional
 import typer
 
 from cli import __version__
+from cli.commands.applications import apps_app
 from cli.commands.auth import auth_app
 from cli.commands.doctor import doctor_app
 from cli.commands.profile import profile_app
@@ -65,6 +66,7 @@ app.add_typer(doctor_app, name="doctor")
 app.add_typer(auth_app, name="auth")
 app.add_typer(profile_app, name="profile")
 app.add_typer(workflow_app, name="workflow")
+app.add_typer(apps_app, name="apps")
 
 
 def main() -> None:

@@ -269,3 +269,10 @@ class ApplyPilotClient:
         from applypilot_client.resources.workflow import WorkflowResource
 
         return WorkflowResource(self)
+
+    @property
+    def applications(self):
+        """Applications API resource."""
+        from applypilot_client.resources.applications import ApplicationsResource
+
+        return ApplicationsResource(self)
