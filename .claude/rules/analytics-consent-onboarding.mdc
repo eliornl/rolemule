@@ -50,7 +50,9 @@ Onboarding.reset();    // reset + show again
 Onboarding.skip();     // skip tour
 ```
 
-Tour auto-shows on first dashboard visit (stored in `localStorage`).
+Tour auto-shows on first dashboard visit when `localStorage.onboarding_completed` is missing.
+
+**Returning users:** if the key is missing but `GET /api/v1/applications/stats/overview` shows `total_applications > 0`, onboarding auto-completes silently (tour state is browser-local only — without this, clearing storage or switching browsers re-shows the tour).
 
 **Tour steps (conditional):**
 - Welcome *(always)*

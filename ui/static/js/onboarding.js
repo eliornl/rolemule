@@ -161,17 +161,45 @@
         },
 
         /**
+         * True when the account already has job applications (returning user).
+         */
+        _userHasExistingApplications: async function() {
+            try {
+                const token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
+                if (!token) return false;
+                const res = await fetch('/api/v1/applications/stats/overview', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) return false;
+                const stats = await res.json();
+                return (stats.total_applications || 0) > 0;
+            } catch (e) {
+                console.warn('Could not check application stats for onboarding:', e);
+                return false;
+            }
+        },
+
+        /**
          * Initialize onboarding
          */
         init: async function() {
-            if (this.shouldShow()) {
-                // Check server API key status first
-                this.serverHasApiKey = await this.checkServerApiKey();
-                this.filterSteps();
-                
-                // Slight delay to let page render
-                setTimeout(() => this.start(), 500);
+            if (!this.shouldShow()) {
+                return;
             }
+
+            // Tour state is browser-local; returning users who cleared storage or switched
+            // browsers should not see the welcome tour again.
+            if (await this._userHasExistingApplications()) {
+                this._markComplete();
+                return;
+            }
+
+            // Check server API key status first
+            this.serverHasApiKey = await this.checkServerApiKey();
+            this.filterSteps();
+
+            // Slight delay to let page render
+            setTimeout(() => this.start(), 500);
         },
 
         /**
