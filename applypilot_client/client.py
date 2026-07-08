@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import httpx
 
@@ -168,6 +168,60 @@ class ApplyPilotClient:
             return {}
         return response.json()
 
+    def patch_json(
+        self,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        auth: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """PATCH JSON and parse response body."""
+        response = self.request("PATCH", path, json=json or {}, auth=auth, **kwargs)
+        if not response.content:
+            return {}
+        return response.json()
+
+    def delete_json(
+        self,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        auth: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """DELETE with optional JSON body."""
+        response = self.request("DELETE", path, json=json, auth=auth, **kwargs)
+        if not response.content:
+            return {}
+        return response.json()
+
+    def post_multipart(
+        self,
+        path: str,
+        field_name: str,
+        file_path: str,
+        *,
+        auth: bool = True,
+    ) -> Any:
+        """POST a single file as multipart form data."""
+        from pathlib import Path
+
+        filename = Path(file_path).name
+        with Path(file_path).open("rb") as handle:
+            files: Dict[str, Tuple[str, Any, str]] = {
+                field_name: (filename, handle, "application/octet-stream"),
+            }
+            response = self.request("POST", path, files=files, auth=auth)
+        if not response.content:
+            return {}
+        return response.json()
+
+    def download_bytes(self, path: str, *, auth: bool = True) -> Tuple[bytes, Dict[str, str]]:
+        """GET binary response; returns body bytes and response headers."""
+        response = self.request("GET", path, auth=auth)
+        return response.content, dict(response.headers)
+
     def refresh_token(self) -> Dict[str, Any]:
         """POST /api/v1/auth/refresh — requires current Bearer token."""
         return self.post_json(f"{API_V1_PREFIX}/auth/refresh", json={}, auth=True, _allow_refresh=False)
@@ -186,3 +240,10 @@ class ApplyPilotClient:
         from applypilot_client.resources.auth import AuthResource
 
         return AuthResource(self)
+
+    @property
+    def profile(self):
+        """Profile API resource."""
+        from applypilot_client.resources.profile import ProfileResource
+
+        return ProfileResource(self)

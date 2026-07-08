@@ -11,6 +11,7 @@ import typer
 from cli import __version__
 from cli.commands.auth import auth_app
 from cli.commands.doctor import doctor_app
+from cli.commands.profile import profile_app
 from cli.context import CliContext, build_context
 
 app = typer.Typer(
@@ -61,6 +62,7 @@ def version_cmd() -> None:
 
 app.add_typer(doctor_app, name="doctor")
 app.add_typer(auth_app, name="auth")
+app.add_typer(profile_app, name="profile")
 
 
 def main() -> None:

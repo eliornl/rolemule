@@ -83,3 +83,15 @@ def make_client(ctx: CliContext) -> ApplyPilotClient:
         access_token=ctx.access_token,
         on_token_refreshed=_on_refresh,
     )
+
+
+def require_client(ctx: CliContext) -> ApplyPilotClient:
+    """Return an authenticated client or exit with AUTH_OR_PROFILE."""
+    if not ctx.access_token:
+        emit(
+            ctx,
+            {"authenticated": False, "message": "Not logged in. Run: applypilot auth login"},
+            human="Not logged in. Run: applypilot auth login",
+        )
+        raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
+    return make_client(ctx)
