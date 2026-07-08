@@ -1074,6 +1074,111 @@
     }
   }
 
+  function findLinkedInTopCardElement() {
+    return (
+      resolveLinkedInUnifiedTopCardRoot() ||
+      pickLinkedInDetailTopCardElement() ||
+      (function () {
+        var pane = getLinkedInVisibleJobDetailsWrapper();
+        var scope = pane;
+        if (!scope) {
+          try {
+            scope = document.querySelector('[class*="jobs-search__job-details"]') || document.body;
+          } catch (eScope) {
+            scope = document.body;
+          }
+        }
+        try {
+          return scope.querySelector(
+            '.job-details-jobs-unified-top-card, .jobs-unified-top-card, [class*="jobs-details-top-card"]'
+          );
+        } catch (eF) {
+          return null;
+        }
+      })()
+    );
+  }
+
+  function readLinkedInTitleCompanyFromCard(card) {
+    if (!card) return { title: '', company: '' };
+
+    function textOf(sel) {
+      try {
+        var el = card.querySelector(sel);
+        return el
+          ? String(el.innerText || '')
+              .trim()
+              .replace(/\s+/g, ' ')
+          : '';
+      } catch (eTxt) {
+        return '';
+      }
+    }
+
+    var company = textOf(
+      '[class*="jobs-unified-top-card__company-name"], [class*="job-details-jobs-unified-top-card__company-name"]'
+    );
+    if (!company) {
+      try {
+        var ca = card.querySelector('a[href*="/company/"]');
+        if (ca) company = String(ca.innerText || '').trim().replace(/\s+/g, ' ');
+      } catch (eCo) {
+        company = '';
+      }
+    }
+    if (!company) {
+      company = textOf('[class*="company-name"] a, a[data-tracking-control-name*="company"]');
+    }
+
+    var title = textOf(
+      '[class*="jobs-unified-top-card__job-title"], [class*="job-details-jobs-unified-top-card__job-title"], h1[class*="job-title"], [data-test-job-title]'
+    );
+    if (!title) title = textOf('h1');
+
+    return { title: title, company: company };
+  }
+
+  function tryLinkedInVoyagerDetectedFields() {
+    var jid = linkedInUrlJobId();
+    if (!jid) return { title: '', company: '' };
+    try {
+      var raw = sessionStorage.getItem('jaa_li_vp_' + jid);
+      if (!raw) return { title: '', company: '' };
+      var o = JSON.parse(raw);
+      return {
+        title: o.title ? String(o.title).trim() : '',
+        company: o.company ? String(o.company).trim() : ''
+      };
+    } catch (e) {
+      return { title: '', company: '' };
+    }
+  }
+
+  function pickDetectedLinkedInTitleCompany(metaBlock) {
+    var dom = readLinkedInTitleCompanyFromCard(findLinkedInTopCardElement());
+    var voyager = tryLinkedInVoyagerDetectedFields();
+    var parsed = parseDetectedTitleCompanyFromMetaBlock(metaBlock);
+    var title = '';
+    var company = '';
+    var candidates = [dom.title, voyager.title, parsed.title];
+    var ci;
+    for (ci = 0; ci < candidates.length; ci++) {
+      if (isPlausibleJobTitle(candidates[ci])) {
+        title = candidates[ci];
+        break;
+      }
+    }
+    var companyCandidates = [dom.company, voyager.company, parsed.company];
+    for (ci = 0; ci < companyCandidates.length; ci++) {
+      var c = String(companyCandidates[ci] || '').trim();
+      if (c && c.length <= MAX_DETECTED_COMPANY_LEN) {
+        company = c;
+        break;
+      }
+    }
+    return { title: title, company: company };
+  }
+
   /**
    * Visible right-pane top card: employer, title, location/date line, promoted line, salary & job-type pills.
    * jobs-guest HTML often omits these; merge so downstream analysis sees comp + arrangement signals.
@@ -1101,27 +1206,7 @@
       /* ignore */
     }
 
-    var card =
-      resolveLinkedInUnifiedTopCardRoot() ||
-      pickLinkedInDetailTopCardElement() ||
-      (function () {
-        var pane = getLinkedInVisibleJobDetailsWrapper();
-        var scope = pane;
-        if (!scope) {
-          try {
-            scope = document.querySelector('[class*="jobs-search__job-details"]') || document.body;
-          } catch (eScope) {
-            scope = document.body;
-          }
-        }
-        try {
-          return scope.querySelector(
-            '.job-details-jobs-unified-top-card, .jobs-unified-top-card, [class*="jobs-details-top-card"]'
-          );
-        } catch (eF) {
-          return null;
-        }
-      })();
+    var card = findLinkedInTopCardElement();
 
     if (!card) return '';
 
@@ -1238,6 +1323,7 @@
         for (ri = 0; ri < rawLines.length && ri < 22; ri++) {
           var ln = rawLines[ri];
           if (/^about the job\b/i.test(ln)) break;
+          if (/^show\s+(more|less)\b/i.test(ln)) continue;
           if (/^show more options\b/i.test(ln)) continue;
           if (/^(share|save|hide|report|dismiss)$/i.test(ln)) continue;
           if (ln.length > 300) continue;
@@ -1255,9 +1341,6 @@
     return lines.join('\n').trim();
   }
 
-  /**
-   * Prepend top-card lines that are not already present near the start of the guest body (dedupe).
-   */
   function prependLinkedInTopCardMetaIfNeeded(body, metaBlock) {
     if (!body || !metaBlock || metaBlock.length < 10) return body;
     var headNorm = String(body.slice(0, 2000))
@@ -1283,6 +1366,120 @@
     }
     if (!onlyAdd.length) return body;
     return onlyAdd.join('\n') + '\n\n---\n\n' + body;
+  }
+
+  var LINKEDIN_METADATA_LINE_RE =
+    /^(full-time|part-time|contract|hybrid|remote|on-site|onsite|reposted|promoted|\$|usd|eur|gbp|\d+\s+applicant)/i;
+  var MAX_DETECTED_TITLE_LEN = 200;
+  var MAX_DETECTED_COMPANY_LEN = 200;
+
+  function isPlausibleJobTitle(line) {
+    if (!line) return false;
+    var s = String(line).trim();
+    if (s.length < 4 || s.length > MAX_DETECTED_TITLE_LEN) return false;
+    if (LINKEDIN_METADATA_LINE_RE.test(s)) return false;
+    var lower = s.toLowerCase();
+    if (/^(about|at |we |join |since |our |the |as a )/.test(lower)) return false;
+    if (/^show\s+(more|less)\b/.test(lower)) return false;
+    if (/^(see\s+more|easy\s+apply|apply\s+now|share|save|hide|report|dismiss)$/.test(lower)) return false;
+    if ((s.match(/[.!]/g) || []).length > 1) return false;
+    return true;
+  }
+
+  function isUnreliableBrowserTabTitle(t) {
+    if (!t) return true;
+    var s = String(t).trim();
+    if (s.length < 3) return true;
+    if (/(linkedin|indeed|glassdoor|ziprecruiter|monster|careerbuilder)/i.test(s)) return true;
+    if (/^\(\d+\)/.test(s)) return true;
+    if (/^search\s*\|/i.test(s)) return true;
+    return false;
+  }
+
+  function parseDetectedTitleCompanyFromMetaBlock(metaBlock) {
+    if (!metaBlock) return { title: '', company: '' };
+    var lines = String(metaBlock)
+      .split(/\r?\n/)
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(Boolean);
+    var title = '';
+    var company = '';
+    var i;
+    for (i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (/^company:\s*/i.test(line)) {
+        company = line.replace(/^company:\s*/i, '').trim();
+        continue;
+      }
+      if (
+        !title &&
+        isPlausibleJobTitle(line) &&
+        !/^company:/i.test(line) &&
+        !/^posted:/i.test(line) &&
+        !/^location:/i.test(line)
+      ) {
+        title = line;
+      }
+    }
+    if (company.length > MAX_DETECTED_COMPANY_LEN) {
+      company = company.slice(0, MAX_DETECTED_COMPANY_LEN).trim();
+    }
+    return { title: title, company: company };
+  }
+
+  function applyLinkedInMetaEnrichment(result, metaBlock) {
+    if (!result || typeof result !== 'object') return result;
+    if (!isLinkedInJobsPage() || !linkedInUrlJobId()) return result;
+
+    if (metaBlock) {
+      result.content = prependLinkedInTopCardMetaIfNeeded(result.content || '', metaBlock);
+    }
+
+    var detected = pickDetectedLinkedInTitleCompany(metaBlock);
+    if (detected.title) result.detectedTitle = detected.title;
+    if (detected.company) result.detectedCompany = detected.company;
+
+    if (!result.detectedTitle && result.content) {
+      var headParsed = parseDetectedTitleCompanyFromMetaBlock(
+        String(result.content).split(/\r?\n/).slice(0, 10).join('\n')
+      );
+      if (isPlausibleJobTitle(headParsed.title)) result.detectedTitle = headParsed.title;
+      if (headParsed.company && !result.detectedCompany) {
+        result.detectedCompany = headParsed.company;
+      }
+    }
+
+    var tabTitle = result.title || '';
+    if (
+      !result.detectedTitle &&
+      tabTitle &&
+      !isUnreliableBrowserTabTitle(tabTitle) &&
+      isPlausibleJobTitle(tabTitle)
+    ) {
+      result.detectedTitle = String(tabTitle).trim();
+    }
+
+    return result;
+  }
+
+  async function enrichExtractResultWithLinkedInMeta(result) {
+    if (!result || typeof result !== 'object') return result;
+    if (!isLinkedInJobsPage() || !linkedInUrlJobId()) return result;
+
+    var metaBlock = '';
+    var ta;
+    for (ta = 0; ta < 10; ta++) {
+      metaBlock = getLinkedInLiveTopCardMetadataText();
+      if (metaBlock && metaBlock.replace(/\s+/g, '').length >= 14) break;
+      if (ta < 9) {
+        await new Promise(function (res) {
+          setTimeout(res, 150);
+        });
+      }
+    }
+    return applyLinkedInMetaEnrichment(result, metaBlock);
   }
 
   /**
@@ -2675,6 +2872,9 @@
   }
 
   function finalizeExtractResult(result) {
+    if (result && isLinkedInJobsPage() && linkedInUrlJobId()) {
+      result = applyLinkedInMetaEnrichment(result, getLinkedInLiveTopCardMetadataText());
+    }
     result.confidence = computeExtractionConfidence(result.content, result.source);
     return result;
   }
@@ -2912,7 +3112,7 @@
         })
       );
     }
-    return attachExtractDiagnostics(domBest);
+    return attachExtractDiagnostics(await enrichExtractResultWithLinkedInMeta(domBest));
   };
 
   window.__jaaPeekLinkedInExtractDebug = function () {

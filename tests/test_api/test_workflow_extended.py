@@ -30,6 +30,8 @@ from api.workflow import (
     _normalize_workflow_status_string,
     _raise_if_agent_soft_failure,
     _revert_workflow_session_after_duplicate_job_constraint,
+    _sanitize_detected_company_name,
+    _sanitize_detected_job_title,
     _safe_error_msg,
     _soft_delete_job_application_for_failed_workflow,
     _strip_agent_outputs_on_session_model,
@@ -210,6 +212,21 @@ class TestWorkflowHelperFunctions:
         b = _fingerprint_job_content(LONG_JOB_TEXT.upper())
         assert a == b
         assert len(a) == 64
+
+    def test_sanitize_detected_job_title_rejects_prose_blob(self):
+        blob = "Join Tech @ Ro to build the future of healthcare. " * 40
+        assert _sanitize_detected_job_title(blob) is None
+
+    def test_sanitize_detected_job_title_rejects_show_more(self):
+        assert _sanitize_detected_job_title("Show more") is None
+
+    def test_sanitize_detected_job_title_keeps_short_label(self):
+        assert _sanitize_detected_job_title(
+            "Senior Software Engineer, Backend Full Stack - Rippling AI"
+        ) == "Senior Software Engineer, Backend Full Stack - Rippling AI"
+
+    def test_sanitize_detected_company_name_truncates(self):
+        assert len(_sanitize_detected_company_name("A" * 300)) == 200
 
     def test_job_text_from_txt(self):
         text = "A" * 60

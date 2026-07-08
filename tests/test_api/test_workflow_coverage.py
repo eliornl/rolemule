@@ -1685,7 +1685,7 @@ class TestWorkflowBranchCompletion:
                     id=uuid.uuid4(),
                     user_id=uid,
                     session_id=other_sid,
-                    job_title="X",
+                    job_title="Dev",
                     company_name="Y",
                     status="completed",
                 )
@@ -1704,7 +1704,7 @@ class TestWorkflowBranchCompletion:
                         None,
                         None,
                         LONG_JOB_TEXT,
-                        "X",
+                        "Dev",
                         "Y",
                         None,
                         None,

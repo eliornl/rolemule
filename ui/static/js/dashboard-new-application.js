@@ -244,6 +244,18 @@
             const formData = new FormData();
             if (jobText) formData.append('job_text', jobText);
             if (currentTab === 'file' && uploadedFile) formData.append('job_file', uploadedFile);
+            if (currentTab === 'manual') {
+                const titleInput = /** @type {HTMLInputElement|null} */ (
+                    document.getElementById('jobTitleInput')
+                );
+                const companyInput = /** @type {HTMLInputElement|null} */ (
+                    document.getElementById('companyNameInput')
+                );
+                const manualTitle = titleInput?.value.trim() ?? '';
+                const manualCompany = companyInput?.value.trim() ?? '';
+                if (manualTitle) formData.append('detected_title', manualTitle);
+                if (manualCompany) formData.append('detected_company', manualCompany);
+            }
 
             const token = getAuthToken();
             if (!token) throw new Error('Authentication failed - please log in again');

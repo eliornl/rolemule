@@ -421,6 +421,54 @@ def _fingerprint_job_content(raw: Optional[str]) -> Optional[str]:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+_MAX_DETECTED_TITLE_LEN = 200
+_MAX_DETECTED_COMPANY_LEN = 200
+_PROSE_TITLE_PREFIXES = (
+    "about ",
+    "at ",
+    "we ",
+    "join ",
+    "since ",
+    "our ",
+    "the ",
+    "as a ",
+)
+_UI_CHROME_TITLE_LITERALS = frozenset({
+    "show more",
+    "show less",
+    "see more",
+    "easy apply",
+    "apply now",
+    "show more options",
+})
+
+
+def _sanitize_detected_job_title(raw: Optional[str]) -> Optional[str]:
+    """Drop extension heuristics that are clearly job-body prose, not a title label."""
+    if not raw:
+        return None
+    s = " ".join(str(raw).strip().split())
+    if len(s) < 3 or len(s) > _MAX_DETECTED_TITLE_LEN:
+        return None
+    lower = s.lower()
+    if lower in _UI_CHROME_TITLE_LITERALS:
+        return None
+    if any(lower.startswith(prefix) for prefix in _PROSE_TITLE_PREFIXES):
+        return None
+    if s.count(".") + s.count("!") > 1:
+        return None
+    return s[:500]
+
+
+def _sanitize_detected_company_name(raw: Optional[str]) -> Optional[str]:
+    if not raw:
+        return None
+    s = " ".join(str(raw).strip().split())
+    if not s:
+        return None
+    return s[:_MAX_DETECTED_COMPANY_LEN]
+
+
 async def _find_duplicate_active_application(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -774,8 +822,12 @@ async def start_workflow(
         # extension path where request is None)
         source = (request.source if request else None) or source_form
         source_url = (request.source_url if request else None) or source_url_form
-        detected_title = (request.detected_title if request else None) or detected_title_form
-        detected_company = (request.detected_company if request else None) or detected_company_form
+        detected_title = _sanitize_detected_job_title(
+            (request.detected_title if request else None) or detected_title_form
+        )
+        detected_company = _sanitize_detected_company_name(
+            (request.detected_company if request else None) or detected_company_form
+        )
 
         effective_job_url = resolved_url if resolved_url else source_url
 

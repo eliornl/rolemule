@@ -110,6 +110,24 @@
     }
 
     /**
+     * LinkedIn UI chrome and other non-title strings that must not render as job titles.
+     * @param {unknown} raw
+     * @returns {boolean}
+     */
+    function isPlaceholderJobTitle(raw) {
+        if (raw == null) return true;
+        const s = String(raw).trim();
+        if (!s) return true;
+        const lower = s.toLowerCase();
+        /** @type {Set<string>} */
+        const literals = new Set([
+            'show more', 'show less', 'see more', 'easy apply', 'apply now',
+            'show more options', 'share', 'save', 'hide', 'report', 'dismiss',
+        ]);
+        return literals.has(lower);
+    }
+
+    /**
      * @param {unknown} raw
      * @returns {string}
      */
@@ -423,7 +441,8 @@
             : '';
 
         const isProcessing = status === 'processing';
-        const titleHtml = app['job_title']
+        const hasRealTitle = app['job_title'] && !isPlaceholderJobTitle(app['job_title']);
+        const titleHtml = hasRealTitle
             ? `<h6 class="application-title">${escapeHtml(String(app['job_title']))}</h6>`
             : isProcessing
                 ? `<div class="skeleton-line skeleton-title" aria-hidden="true"></div>`

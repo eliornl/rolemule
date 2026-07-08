@@ -497,8 +497,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           }
           return {
             content: r.content,
-            title: r.title,
-            company: '',
+            title: r.detectedTitle || r.title || '',
+            company: r.detectedCompany || '',
+            detectedTitle: r.detectedTitle || '',
+            detectedCompany: r.detectedCompany || '',
             url: window.location.href,
             diagnostics: r.diagnostics
           };
@@ -527,8 +529,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
         // Start workflow
         await startWorkflow(data.content, data.url, {
-          detected_title: data.title,
-          detected_company: data.company
+          detected_title: data.detectedTitle || data.title,
+          detected_company: data.detectedCompany || data.company
         });
         
         // Show success notification

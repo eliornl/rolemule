@@ -23,6 +23,74 @@ from utils.cache import (
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+_INFORMAL_TITLE_RE = re.compile(
+    r"(?i)\b(we(?:'|&#x27;|')?re looking|looking to hire|seeking|join us as|hiring)\b"
+)
+_UNRELIABLE_DETECTED_TITLE_RE = re.compile(
+    r"(?i)(linkedin|indeed|glassdoor|ziprecruiter|monster|careerbuilder|\(\d+\)\s*$|^search\s*\|)"
+)
+
+
+def _is_informal_job_title(title: Optional[str]) -> bool:
+    """True when the extracted title looks like body copy, not a formal posting header."""
+    if not title:
+        return True
+    t = str(title).strip()
+    if not t:
+        return True
+    if t == t.lower() and any(c.isalpha() for c in t):
+        return True
+    if _INFORMAL_TITLE_RE.search(t):
+        return True
+    return False
+
+
+def _is_reliable_detected_title(title: Optional[str]) -> bool:
+    """True when extension/manual header is safe to prefer over LLM paraphrase."""
+    if not title:
+        return False
+    t = str(title).strip()
+    if len(t) < 3:
+        return False
+    if _UNRELIABLE_DETECTED_TITLE_RE.search(t):
+        return False
+    return True
+
+
+def _prefer_job_title(
+    extracted: Optional[str],
+    detected: Optional[str],
+) -> Optional[str]:
+    """Prefer extension/manual header over informal or paraphrased LLM titles."""
+    ext = (extracted or "").strip() or None
+    det = (detected or "").strip() or None
+    if det and _is_reliable_detected_title(det):
+        if _is_informal_job_title(ext) or not ext:
+            return det
+        if ext.lower() != det.lower():
+            return det
+    if det and _is_informal_job_title(ext):
+        return det
+    return ext or det
+
+
+def _build_title_hint_block(
+    detected_title: Optional[str],
+    detected_company: Optional[str],
+) -> str:
+    """Optional prompt section when submitter supplied a known header."""
+    title = (detected_title or "").strip()
+    company = (detected_company or "").strip()
+    if not title and not company:
+        return ""
+    lines = ["=== KNOWN HEADER (from submission — prefer over informal body copy) ==="]
+    if title:
+        lines.append(f"Job title: {title}")
+    if company:
+        lines.append(f"Company: {company}")
+    lines.append("")
+    return "\n".join(lines)
+
 
 def _normalize_string_list(val: Any, *, split_lines: bool = False) -> List[str]:
     """Coerce LLM output to List[str]; models often emit a prose string instead of an array."""
@@ -118,7 +186,7 @@ AI_SYSTEM_CONTEXT: str = """You are an expert job posting analyst with 15+ years
 
 JOB_ANALYSIS_PROMPT: str = """Analyze this job posting and extract ALL structured information.
 
-=== JOB POSTING CONTENT ===
+{title_hint_block}=== JOB POSTING CONTENT ===
 {content}
 
 === EXTRACTION INSTRUCTIONS ===
@@ -127,7 +195,7 @@ Extract information into this EXACT JSON structure. Output ONLY valid JSON, no e
 
 {{
     "company_name": "<company/organization name or null>",
-    "job_title": "<exact job title as posted>",
+    "job_title": "<formal role title from the posting header/H1/title line — see rules 1–1c>",
     "job_city": "<primary city (first listed) or null if remote/not specified>",
     "job_state": "<state/province of the primary city or null>",
     "job_country": "<country or null>",
@@ -198,7 +266,10 @@ Extract information into this EXACT JSON structure. Output ONLY valid JSON, no e
 }}
 
 ## EXTRACTION RULES:
-1. Use EXACT job title as written (don't normalize)
+1. job_title must be the FORMAL ROLE TITLE (page header, H1, first title line, or "Job Title:" field) — never informal hiring prose from the body (e.g. do NOT use "we're looking to hire senior backend engineers" as job_title).
+1a. Preserve exact capitalization, punctuation, and qualifiers (e.g. "Senior Backend Engineer - Product", not "senior backend engineers").
+1b. When the formal title is absent from the pasted text but the body states seniority and team/function (e.g. "product engineering group" + "senior backend engineers"), synthesize the best formal title in Title Case with singular role noun and team qualifier when stated (e.g. "Senior Backend Engineer - Product").
+1c. When a KNOWN HEADER block appears above the posting content, treat it as authoritative for job_title (and company_name when provided).
 2. Extract ALL technical skills mentioned anywhere in the posting
 3. Separate REQUIRED from PREFERRED qualifications carefully
 4. For ATS keywords, include variations (React, React.js, ReactJS)
@@ -356,7 +427,12 @@ class JobAnalyzerAgent:
                         )
                     # For extension, use "extension" as source type
                     source_type = "extension" if input_method == InputMethod.EXTENSION else "manual"
-                    analysis_result = await self._process_manual_input(job_content, source_type)
+                    analysis_result = await self._process_manual_input(
+                        job_content,
+                        source_type,
+                        detected_title=job_input_data.get("detected_title"),
+                        detected_company=job_input_data.get("detected_company"),
+                    )
                 else:
                     raise ValueError(f"Unknown job input method: {input_method}")
 
@@ -393,7 +469,11 @@ class JobAnalyzerAgent:
         return state
 
     async def _process_manual_input(
-        self, job_text: str, source_type: str = "manual"
+        self,
+        job_text: str,
+        source_type: str = "manual",
+        detected_title: Optional[str] = None,
+        detected_company: Optional[str] = None,
     ) -> JobAnalysisResult:
         """
         Process manually entered or extension-extracted job posting text.
@@ -418,12 +498,19 @@ class JobAnalyzerAgent:
 
         # Process the validated text using AI extraction
         analysis_result: JobAnalysisResult = await self._parse_generic_job_content(
-            job_text, source_type
+            job_text,
+            source_type,
+            detected_title=detected_title,
+            detected_company=detected_company,
         )
         return analysis_result
 
     async def _parse_generic_job_content(
-        self, content: str, source: str
+        self,
+        content: str,
+        source: str,
+        detected_title: Optional[str] = None,
+        detected_company: Optional[str] = None,
     ) -> JobAnalysisResult:
         """
         Parse job content using AI to extract structured information.
@@ -445,8 +532,12 @@ class JobAnalyzerAgent:
         truncated_content = cleaned_content[:MAX_CONTENT_LENGTH_FOR_AI]
 
         try:
+            title_hint_block = _build_title_hint_block(detected_title, detected_company)
             # Build prompt by replacing the content placeholder
-            prompt: str = JOB_ANALYSIS_PROMPT.replace("{content}", truncated_content)
+            prompt: str = (
+                JOB_ANALYSIS_PROMPT.replace("{title_hint_block}", title_hint_block)
+                .replace("{content}", truncated_content)
+            )
 
             # Generate AI analysis with expert system context
             response: Dict[str, Any] = await self.gemini_client.generate(
@@ -499,10 +590,14 @@ class JobAnalyzerAgent:
                 return None
 
             # Create structured result from flat JSON (new format)
+            resolved_title = _prefer_job_title(
+                get_optional_str("job_title"),
+                detected_title,
+            )
             job_analysis_result = JobAnalysisResult(
                 source=source,
                 # Basic information
-                job_title=get_str("job_title"),
+                job_title=resolved_title or get_str("job_title"),
                 company_name=get_optional_str("company_name"),
                 job_city=parsed_data.get("job_city"),
                 job_state=parsed_data.get("job_state"),

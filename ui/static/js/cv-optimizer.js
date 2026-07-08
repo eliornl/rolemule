@@ -31,10 +31,22 @@
 
   /** Decode HTML entities for .textContent assignments (no re-encoding step) */
   function decodeEntities(str) {
+    if (typeof window.decodeEntities === 'function') {
+      return window.decodeEntities(str);
+    }
     if (str == null) return '';
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = String(str);
-    return textarea.value;
+    let s = String(str);
+    for (let i = 0; i < 5 && s.includes('&amp;'); i++) {
+      s = s.replace(/&amp;/g, '&');
+    }
+    return s
+      .replace(/&#x27;/gi, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&#039;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>');
   }
 
   /**

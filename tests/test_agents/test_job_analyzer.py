@@ -8,7 +8,14 @@ from unittest.mock import AsyncMock, patch
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
-from agents.job_analyzer import JobAnalyzerAgent, _normalize_string_list
+from agents.job_analyzer import (
+    JobAnalyzerAgent,
+    _normalize_string_list,
+    _is_informal_job_title,
+    _is_reliable_detected_title,
+    _prefer_job_title,
+    _build_title_hint_block,
+)
 
 
 # =============================================================================
@@ -413,3 +420,51 @@ class TestNormalizeStringList:
         assert _normalize_string_list(None) == []
         assert _normalize_string_list("") == []
         assert _normalize_string_list([]) == []
+
+
+class TestJobTitleHelpers:
+    """Formal title vs informal body-copy detection."""
+
+    def test_informal_lowercase_plural(self):
+        assert _is_informal_job_title("senior backend engineers") is True
+
+    def test_formal_title_not_informal(self):
+        assert _is_informal_job_title("Senior Backend Engineer - Product") is False
+
+    def test_prefer_detected_over_informal_extracted(self):
+        assert _prefer_job_title(
+            "senior backend engineers",
+            "Senior Backend Engineer - Product",
+        ) == "Senior Backend Engineer - Product"
+
+    def test_prefer_detected_over_llm_paraphrase(self):
+        assert _prefer_job_title(
+            "Senior Full Stack Engineer for Rippling AI",
+            "Senior Software Engineer, Backend Full Stack - Rippling AI",
+        ) == "Senior Software Engineer, Backend Full Stack - Rippling AI"
+
+    def test_reject_unreliable_detected_tab_title(self):
+        assert _is_reliable_detected_title("(5) LinkedIn") is False
+        assert _is_reliable_detected_title("Search | LinkedIn") is False
+
+    def test_reliable_detected_linkedin_dom_title(self):
+        assert _is_reliable_detected_title(
+            "Senior Software Engineer, Backend Full Stack - Rippling AI"
+        ) is True
+
+    def test_keep_formal_extracted_when_no_detected(self):
+        assert _prefer_job_title("Senior Backend Engineer - Product", None) == (
+            "Senior Backend Engineer - Product"
+        )
+
+    def test_title_hint_block_includes_submission_header(self):
+        block = _build_title_hint_block(
+            "Senior Backend Engineer - Product",
+            "Mercury",
+        )
+        assert "KNOWN HEADER" in block
+        assert "Senior Backend Engineer - Product" in block
+        assert "Mercury" in block
+
+    def test_title_hint_block_empty_when_no_hints(self):
+        assert _build_title_hint_block(None, None) == ""

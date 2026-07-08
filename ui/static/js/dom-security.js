@@ -14,9 +14,19 @@
     /** @param {string|null|undefined} str */
     function decodeEntities(str) {
         if (str == null) return '';
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = String(str);
-        return textarea.value;
+        let s = String(str);
+        // &amp; must be decoded first (repeat for double-encoded values like &amp;amp;).
+        for (let i = 0; i < 5 && s.includes('&amp;'); i++) {
+            s = s.replace(/&amp;/g, '&');
+        }
+        return s
+            .replace(/&#x27;/gi, "'")
+            .replace(/&#39;/g, "'")
+            .replace(/&#039;/g, "'")
+            .replace(/&apos;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>');
     }
 
     /** @param {string|null|undefined} str */

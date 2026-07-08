@@ -386,9 +386,25 @@
                 <!-- Manual Entry Tab -->
                 <div id="manualTab" class="tab-content active">
                     <div class="form-section">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="jobTitleInput">Job title <span class="text-muted">(optional)</span></label>
+                                <input type="text" class="form-control" id="jobTitleInput" maxlength="200"
+                                    placeholder="e.g. Senior Backend Engineer - Product" autocomplete="off">
+                                <div class="form-text">Paste the exact title from the posting header if the description below omits it.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="companyNameInput">Company <span class="text-muted">(optional)</span></label>
+                                <input type="text" class="form-control" id="companyNameInput" maxlength="200"
+                                    placeholder="e.g. Mercury" autocomplete="off">
+                            </div>
+                        </div>
                         <div class="mb-3">
+                            <label class="form-label" for="jobDescription">Job description</label>
                             <textarea class="form-control" id="jobDescription" rows="12" required
                                 placeholder="Paste the complete job description here...
+
+Tip: Include the title and company lines from the posting when possible.
 
 Example:
 Senior Software Engineer at Google

@@ -1076,6 +1076,60 @@ function isJobRelatedURL(url) {
 // JOB EXTRACTION
 // =============================================================================
 
+/**
+ * @param {string} title
+ * @returns {boolean}
+ */
+function isUnreliableBrowserTabTitle(title) {
+  if (!title) return true;
+  const s = String(title).trim();
+  if (s.length < 3) return true;
+  if (/(linkedin|indeed|glassdoor|ziprecruiter|monster|careerbuilder)/i.test(s)) return true;
+  if (/^\(\d+\)/.test(s)) return true;
+  if (/^search\s*\|/i.test(s)) return true;
+  return false;
+}
+
+/** @param {string} title */
+function isPlausibleJobTitle(title) {
+  if (!title) return false;
+  const s = String(title).trim();
+  if (s.length < 4 || s.length > 200) return false;
+  const lower = s.toLowerCase();
+  if (/^(about|at |we |join |since |our |the |as a )/.test(lower)) return false;
+  if (/^show\s+(more|less)\b/.test(lower)) return false;
+  if (/^(see\s+more|easy\s+apply|apply\s+now)$/.test(lower)) return false;
+  if ((s.match(/[.!]/g) || []).length > 1) return false;
+  return true;
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} extracted
+ * @param {string} tabUrl
+ * @returns {FormData}
+ */
+function buildExtensionWorkflowFormData(extracted, tabUrl) {
+  const formData = new FormData();
+  formData.append('job_text', String(extracted?.content || ''));
+  formData.append('source', 'extension');
+  if (tabUrl) formData.append('source_url', tabUrl);
+
+  const detectedTitle = String(
+    extracted?.detectedTitle || extracted?.jobTitle || ''
+  ).trim();
+  const detectedCompany = String(
+    extracted?.detectedCompany || extracted?.companyName || ''
+  ).trim();
+
+  if (detectedTitle && !isUnreliableBrowserTabTitle(detectedTitle) && isPlausibleJobTitle(detectedTitle)) {
+    formData.append('detected_title', detectedTitle);
+  }
+  if (detectedCompany && detectedCompany.length <= 200) {
+    formData.append('detected_company', detectedCompany);
+  }
+  return formData;
+}
+
 async function extractAndSubmitJob() {
   if (state.isExtracting) return;
 
@@ -1104,11 +1158,7 @@ async function extractAndSubmitJob() {
 
     elements.statusText.textContent = 'Sending to AI for analysis...';
 
-    const formData = new FormData();
-    formData.append('job_text', content);
-    // Do NOT send detected_title / detected_company — page titles (e.g. "(5) LinkedIn")
-    // are unreliable. The dashboard shows skeleton shimmers until the Job Analyzer
-    // extracts the correct title and company from the job text.
+    const formData = buildExtensionWorkflowFormData(extracted, tab.url || '');
 
     const response = await fetch(`${CONFIG.API_BASE_URL}/workflow/start`, {
       method: 'POST',
