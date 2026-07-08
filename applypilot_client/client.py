@@ -276,3 +276,10 @@ class ApplyPilotClient:
         from applypilot_client.resources.applications import ApplicationsResource
 
         return ApplicationsResource(self)
+
+    @property
+    def interview_prep(self):
+        """Interview prep API resource."""
+        from applypilot_client.resources.interview_prep import InterviewPrepResource
+
+        return InterviewPrepResource(self)

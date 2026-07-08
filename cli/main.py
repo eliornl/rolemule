@@ -12,6 +12,7 @@ from cli import __version__
 from cli.commands.applications import apps_app
 from cli.commands.auth import auth_app
 from cli.commands.doctor import doctor_app
+from cli.commands.interview import interview_app
 from cli.commands.profile import profile_app
 from cli.commands.workflow import workflow_app
 from cli.context import CliContext, build_context
@@ -67,6 +68,7 @@ app.add_typer(auth_app, name="auth")
 app.add_typer(profile_app, name="profile")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(apps_app, name="apps")
+app.add_typer(interview_app, name="interview")
 
 
 def main() -> None:
