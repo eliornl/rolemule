@@ -763,7 +763,7 @@ Reuse patterns from `tests/test_api/test_career_tools.py` for fixture payloads.
 - [x] CI job: `pytest tests/test_cli/ -v`
 - [x] `CHANGELOG.md` entry
 - [x] `.cursor/rules/cli.mdc` — conventions for future CLI changes
-- [x] Expanded test suite: 328 mocked CLI tests + 5 ASGI integration tests (`tests/test_cli_integration/`)
+- [x] Expanded test suite: 364 mocked CLI tests + 6 ASGI integration tests (`tests/test_cli_integration/`)
 
 **Tests:**
 
@@ -1105,7 +1105,7 @@ Issues found in prior draft and corrected in this version:
 | Interview `--regenerate` not documented | → added |
 | CV optimizer param ranges | → 2–7 iterations, 7.0–9.5 threshold |
 
-**Endpoint counts verified:** auth 21 routes (13 CLI / 8 excluded), profile 21, workflow 9 public + 1 internal, applications 6, interview 4, cv 5, tools 7, extension 1, admin 4 + 1 internal, cache stats 1 (admin).
+**Endpoint counts verified:** auth 23 routes (15 CLI / 8 excluded), profile 21, workflow 9 public + 1 internal, applications 7, interview 4, cv 5, tools 7, extension 1, admin 4 + 1 internal, cache stats 1 (admin).
 
 ---
 
