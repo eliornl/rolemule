@@ -80,17 +80,38 @@ Passwords, tokens, API keys, `authorization`, `jwt`, `bearer` are automatically 
 **Email addresses are NOT auto-redacted** — you must wrap them manually with `mask_email()` before logging, even at DEBUG level:
 
 ```python
-from utils.logging_config import get_structured_logger, mask_email
+from utils.logging_config import get_structured_logger, mask_email, sanitize_log_value
 
 # ✅ Correct — GDPR-safe
-logger.debug(f"Login attempt for: {mask_email(user_data.email)}")
-logger.warning(f"Account locked: {mask_email(email)}")
+logger.debug("Login attempt for: %s", mask_email(user_data.email))
+logger.warning("Account locked: %s", mask_email(email))
 
 # ❌ Wrong — raw email ends up in production logs
 logger.debug(f"Login attempt for: {user_data.email}")
 ```
 
 `mask_email("user@example.com")` → `"use***@***"`
+
+## Log Injection Prevention — `sanitize_log_value()`
+
+Use **`%s` placeholder logging** with `sanitize_log_value()` for every dynamic non-email value (session IDs, paths, exception text, user IDs):
+
+```python
+# ✅ Correct — CodeQL-safe
+logger.warning("Session %s failed: %s", sanitize_log_value(session_id), sanitize_log_value(str(exc)))
+
+# ❌ Wrong — f-string with dynamic data
+logger.warning(f"Session {session_id} failed: {exc}")
+```
+
+**Do not wrap numeric `%d` / `%f` / `%.Nf` args** — `sanitize_log_value()` returns `str`:
+
+```python
+logger.info("Uploaded %d bytes for user %s", file_size, sanitize_log_value(user_id))  # ✅
+```
+
+Canonical implementation: `utils/logging_config.py` (`sanitize_log_value`, `mask_email`).  
+CodeQL details and query-filters: `codeql-security-scanning.mdc`.
 
 This applies everywhere: login, registration, lockout, OAuth callback, password reset, email verification, and any other flow that handles an email address.
 

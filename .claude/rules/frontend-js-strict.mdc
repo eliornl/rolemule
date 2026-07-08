@@ -8,6 +8,8 @@ alwaysApply: false
 
 Every page-level JS file in `ui/static/js/` must include these three local helpers and follow the rules below. Zero TypeScript/JSDoc errors expected.
 
+**Shared helpers:** `ui/static/js/dom-security.js` is loaded globally via `base.html` and exports `window.escapeHtml`, `window.decodeEntities`, `window.sanitizeLogValue`, etc. New dashboard code may delegate to those instead of duplicating — but per-page copies must still match the decode-first order below.
+
 ## 1. `escapeHtml()` — XSS Prevention with Decode-First
 
 **CRITICAL**: The backend's `html.escape()` + `bleach.clean()` combination double-encodes entities: `'` → `&#x27;` (html.escape) → `&amp;#x27;` (bleach escapes the `&`). To prevent rendering `&#x27;` literally, `escapeHtml()` must decode `&amp;` FIRST, then the named entities, then re-encode.

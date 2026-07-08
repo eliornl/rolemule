@@ -31,6 +31,12 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 ### Added
 
+#### Security — CodeQL, secret scanning, and contributor docs
+
+- **Code scanning at zero open alerts** on `main` (Jul 2026): log-injection hardening (`sanitize_log_value()` / `mask_email()` at call sites), Pydantic v2 `@field_validator` migration, shared `ui/static/js/dom-security.js`, CodeQL query-filters for remaining false positives, extension entity-decode fixes, and `tests/gemini_test_keys.py` (non-`AIza` dummy keys for secret scanning).
+- New Cursor/Claude rule **`.cursor/rules/codeql-security-scanning.mdc`** — CI gates, logging patterns, test API keys, extension vs dashboard JS.
+- **SECURITY.md** and **CONTRIBUTING.md** — automated scanning table and pre-push checklist.
+
 #### Profile — Education step (JSONB)
 
 Profile setup adds an **Education** step (institution, degree, field of study, dates, **Currently enrolled**). Users with no formal education check **“I don't have formal education to add”** — that persists `education: []` so the step counts complete. Agents and extension autofill read `profile.education`; degree dropdown matching uses **`utils/degree_aliases.py`**.

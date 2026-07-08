@@ -1,0 +1,119 @@
+---
+description: CodeQL, secret scanning, log sanitization, and CI security gate patterns
+globs: **/*.{py,js,yml}
+alwaysApply: false
+---
+
+# CodeQL & Security Scanning
+
+## CI gates (GitHub Actions)
+
+| Workflow | Job | Command / scope |
+|----------|-----|-----------------|
+| `ci.yml` | **Lint (ruff)** | `ruff check .` — must pass before push |
+| `ci.yml` | Python tests | `pytest tests/test_agents/ tests/test_api/ …` with 97% coverage |
+| `codeql.yml` | Analyze (python) | `security-and-quality` query pack + `.github/codeql/codeql-config.yml` |
+| `codeql.yml` | Analyze (javascript-typescript) | Same; scans `ui/static/js/` and `extension/` |
+
+Secret scanning and push protection are enabled on the repo. Dependabot alerts + security updates are on.
+
+## Python — log injection (`py/log-injection`)
+
+**Every dynamic value in a logger call must use `%s` placeholders + `sanitize_log_value()`** — not f-strings or `%` with raw user/request/exception text:
+
+```python
+from utils.logging_config import sanitize_log_value, mask_email
+
+# ✅ Correct
+logger.warning("Workflow failed for session %s: %s", sanitize_log_value(session_id), sanitize_log_value(err))
+logger.info("Login attempt for %s", mask_email(email))
+
+# ❌ Wrong — CodeQL flags f-string interpolation
+logger.warning(f"Workflow failed for session {session_id}: {err}")
+```
+
+**Numeric format specifiers:** never wrap `%d`, `%f`, or `%.Nf` args with `sanitize_log_value()` — it returns `str` and breaks formatting at runtime:
+
+```python
+logger.info("Parsed resume (%d bytes)", file_size)           # ✅
+logger.info("Parsed resume (%d bytes)", sanitize_log_value(file_size))  # ❌ TypeError
+```
+
+**Emails:** always `mask_email()` (GDPR). Emails are not auto-redacted by the formatter.
+
+Defense in depth: `JSONFormatter` / `DevelopmentFormatter` in `utils/logging_config.py` also strip CRLF/null bytes from log message text.
+
+## Python — clear-text logging (`py/clear-text-logging-sensitive-data`)
+
+Use `mask_email()` for emails. API keys, tokens, and passwords must never appear in log messages — the formatter redacts keys matching `SENSITIVE_PATTERNS`, but explicit `mask_email()` / `sanitize_log_value()` at call sites is still required.
+
+## CodeQL query-filters (known false positives)
+
+`.github/codeql/codeql-config.yml` excludes `py/log-injection` and `py/clear-text-logging-sensitive-data` after call-site sanitization is in place. CodeQL static analysis cannot treat `sanitize_log_value()` / `mask_email()` as taint barriers without a working extension model pack.
+
+**Do not re-add `.github/codeql/extensions/` barrier model packs** — multiple attempts failed on CodeQL 2.25.x (`barrierModel` tuple schema / access-path format). Prefer call-site sanitization + query-filters over broken packs.
+
+## Pydantic validators (`py/not-named-self`)
+
+Pydantic v2 — module-level validator functions + `@field_validator`, never `@validator` with `cls`:
+
+```python
+from pydantic import BaseModel, field_validator
+
+def _validate_application_status(v: str) -> str:
+    if v not in VALID_STATUSES:
+        raise ValueError("Invalid status")
+    return v
+
+class StatusUpdateRequest(BaseModel):
+    new_status: str
+    validate_status = field_validator("new_status")(_validate_application_status)
+```
+
+## JavaScript — dashboard vs extension
+
+**Dashboard** (`ui/static/js/`): shared helpers live in `ui/static/js/dom-security.js` (loaded globally via `base.html`):
+
+- `window.escapeHtml`, `window.decodeEntities`, `window.sanitizeLogValue`, `window.stripHtmlForAlert`
+- Page scripts may delegate: `return window.decodeEntities(str);`
+
+**Extension** (`extension/lib/form-autofill.js`): cannot load `dom-security.js`. For decoding entities before setting input `.value`:
+
+- Decode **numeric entities only** (`&#...;`, `&#x...;`) via regex + `fromCodePoint`
+- **Never** `textarea.innerHTML = userString` (`js/xss-through-dom`)
+- **Never** named-entity chains with `&amp;` replace (`js/double-escaping`)
+
+## Test API keys — secret scanning
+
+GitHub secret scanning flags any committed `AIzaSy…` string, including dummy test keys.
+
+Use the shared constant in `tests/gemini_test_keys.py`:
+
+```python
+DUMMY_GEMINI_API_KEY = "Gsk_test_dummy_key_shape_123456789012345678901234567890"
+```
+
+```python
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
+
+mock_settings.gemini_api_key = DUMMY_GEMINI_API_KEY  # ✅ variable
+mock_settings.gemini_api_key = "DUMMY_GEMINI_API_KEY"  # ❌ wrong value + ruff F401 on import
+```
+
+Still passes `validate_gemini_api_key()` — keys are not restricted to the legacy `AIza` prefix.
+
+## Bulk-fix scripts (maintainer reference)
+
+From the Jul 2026 zero-alert cleanup:
+
+- `scripts/fix_log_injection.py` — AST codemod: f-string logger calls → `%s` + `sanitize_log_value()`
+- `scripts/fix_log_numeric_args.py` — removes `sanitize_log_value()` from `%d`/`%f`/`%.Nf` args
+
+After any bulk Python replace: `ruff check .` and validate syntax with `ast.parse()` on every touched file (see `logging-patterns.mdc`).
+
+## Pre-push checklist
+
+1. `ruff check .`
+2. No `AIzaSy…` literals in committed files (`grep -r 'AIzaSy' tests/`)
+3. Dynamic logger calls: `%s` + `sanitize_log_value()` / `mask_email()`
+4. Run CI-safe tests: `pytest tests/test_api/ tests/test_agents/ --override-ini="addopts="`

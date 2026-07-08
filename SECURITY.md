@@ -80,4 +80,17 @@ When running your own instance:
 - Rotate `JWT_SECRET` only after confirming `ENCRYPTION_KEY` is set — rotating JWT without encryption key corrupts stored BYOK keys
 - Review the [README](README.md) environment variables section and [`.env.local.example`](.env.local.example)
 
+## Automated Security Scanning
+
+ApplyPilot runs continuous security checks on `main`:
+
+| Check | Where | Notes |
+|-------|-------|-------|
+| **CodeQL** | [Code scanning](../../security/code-scanning) | Python + JavaScript; config in [`.github/codeql/codeql-config.yml`](.github/codeql/codeql-config.yml) |
+| **Secret scanning** | [Secret scanning](../../security/secret-scanning) | Blocks/commits flag leaked API keys; use non-`AIza` test keys in tests |
+| **Dependabot** | [Dependabot alerts](../../security/dependabot) | CVE alerts + automated security update PRs |
+| **Ruff lint** | GitHub Actions `ci.yml` | Style + unused-import checks on every push |
+
+Contributors: run `ruff check .` locally before pushing. Dynamic Python log values must use `sanitize_log_value()` / `mask_email()` — see [`.cursor/rules/codeql-security-scanning.mdc`](.cursor/rules/codeql-security-scanning.mdc).
+
 For general contribution and bug-reporting guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).

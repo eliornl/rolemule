@@ -15,6 +15,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/database-patterns.mdc` | touching models, migrations, JSONB fields, SQLAlchemy queries |
 | `.claude/rules/auth-patterns.mdc` | auth endpoints, JWT, login, registration, token revocation, lockout |
 | `.claude/rules/security-python.mdc` | any security-sensitive Python code (XSS, file upload, tokens, secrets) |
+| `.claude/rules/codeql-security-scanning.mdc` | CodeQL CI, log sanitization, secret scanning test keys, Pydantic `field_validator`, extension entity decode |
 | `.claude/rules/security-middleware.mdc` | middleware, CORS, CSP, `.is-hidden`, maintenance mode |
 | `.claude/rules/settings-and-env.mdc` | env vars, `get_settings()`, `.env`, `ENCRYPTION_KEY` |
 | `.claude/rules/llm-integration.mdc` | Gemini client, BYOK, **`user_facing_message_from_llm_exception()`**, **`DEFAULT_MAX_TOKENS` (16k)**, `asyncio.wait_for()`, JSON parsing, `thinking_budget` |
@@ -24,7 +25,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/career-tools.mdc` | 6 career tool agents, endpoints, rate limits, output schemas, copy button |
 | `.claude/rules/caching-redis.mdc` | cache TTLs, Redis helpers, **job-analysis key (up to 50k chars of text)**, rate limiting, auth-specific keys |
 | `.claude/rules/websocket-patterns.mdc` | WebSocket endpoints, connection limits, broadcast helpers |
-| `.claude/rules/logging-patterns.mdc` | `StructuredLogger`, redaction, `exc_info=True`, bulk-script safety |
+| `.claude/rules/logging-patterns.mdc` | `StructuredLogger`, **`sanitize_log_value()` / `mask_email()`**, redaction, `exc_info=True`, bulk-script safety |
 | `.claude/rules/google-oauth.mdc` | OAuth flow, CSRF state in Redis, exchange-code pattern, open-redirect |
 | `.claude/rules/email-and-misc-utils.mdc` | Gmail SMTP, resume parser, BYOK encryption |
 | `.claude/rules/frontend-js-strict.mdc` | any `.js` file — JSDoc, null safety, event delegation, no `style=` attrs |
@@ -70,4 +71,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 23. **`datetime.strptime()` results must have `.replace(tzinfo=timezone.utc)`** before comparing with timezone-aware datetimes
 24. **`escapeHtml()` must decode `&amp;` FIRST** — canonical order: `&amp;` → `&`, then `&#x27;`, `&#039;`, `&quot;`, `&lt;`, `&gt;`, then re-encode
 25. **`.textContent` assignments must use `decodeEntities()`** — `.textContent` does not interpret HTML entities; `escapeHtml()` is for `.innerHTML` only
+26. **Dynamic logger calls must use `%s` + `sanitize_log_value()`** — not f-strings with user/request/exception data; never wrap `%d`/`%f` args with `sanitize_log_value()` (see `codeql-security-scanning.mdc`)
+27. **Never commit `AIzaSy…` dummy API keys** — use `tests/gemini_test_keys.DUMMY_GEMINI_API_KEY`
+28. **Pydantic v2: `@field_validator` + module-level functions** — not `@validator(cls, ...)`
 26. **Required numeric profile fields — never reject `0` with truthiness** — e.g. `years_experience` in profile setup: `if (!value)` after `parseInt` fails for zero; use explicit empty/NaN checks. See `.claude/rules/frontend-js-strict.mdc` (“Required numeric fields”).

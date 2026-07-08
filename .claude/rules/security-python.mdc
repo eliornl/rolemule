@@ -137,19 +137,19 @@ Raise a validation error if the URL fails — never fetch it. Implemented in `ag
 **Workflow start (`api/workflow.py`):** `effective_job_url` (from `source_url`, form `job_url`, or resolved URL) must also be discarded when it does not start with `http://` or `https://` before writing `job_applications.job_url` or using it in dedupe. Log at warning and set to `None` — do not persist `javascript:`, `file:`, or other schemes even if a client bypasses the UI.
 
 ## Log Injection Prevention
-Values logged from HTTP requests (headers, IP addresses, query params) must have newlines and control characters stripped before logging to prevent log injection attacks:
+Values logged from HTTP requests, user input, and exceptions must use **`%s` placeholders + `sanitize_log_value()`** from `utils/logging_config.py` (not f-strings):
 
 ```python
-def _sanitize_log_value(value: str) -> str:
-    """Strip CRLF and null bytes to prevent log injection."""
-    return re.sub(r"[\r\n\x00]", "", value)
+from utils.logging_config import sanitize_log_value, mask_email
 
-# In request logging middleware:
-safe_ip = _sanitize_log_value(request.client.host or "unknown")
-safe_path = _sanitize_log_value(str(request.url.path))
+logger.info("POST %s from %s", sanitize_log_value(path), sanitize_log_value(client_ip))
+logger.warning("Could not init client: %s", sanitize_log_value(str(exc)))
 ```
 
-This is implemented in `utils/request_middleware.py::_sanitize_log_value()`.
+For emails use `mask_email()` instead. Request middleware also sanitizes IP/path (`utils/request_middleware.py`).
+
+**Do not wrap `%d`/`%f` numeric format args** with `sanitize_log_value()`.  
+Full CodeQL / CI patterns: `codeql-security-scanning.mdc`.
 
 ## External HTTP Calls — Always Set a Timeout
 Any `httpx` call to an external service must specify a timeout. Without one, a slow or unresponsive service will hang a worker thread indefinitely.

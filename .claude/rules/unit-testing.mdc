@@ -150,6 +150,29 @@ The `alembic_version` table is intentionally left untouched — schema migration
 
 ---
 
+## Test API Keys — Secret Scanning
+
+**Never commit `AIzaSy…` strings**, even as dummy keys — GitHub secret scanning flags them.
+
+Use the shared constant:
+
+```python
+from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
+
+# In mocks / MagicMock settings:
+gemini_api_key=DUMMY_GEMINI_API_KEY
+```
+
+Still passes `validate_gemini_api_key()`. For accessing private module attrs without duplicate imports (CodeQL `py/import-and-import-from`):
+
+```python
+import importlib
+mod = importlib.import_module("utils.llm_client")
+assert mod._gemini_client is None
+```
+
+---
+
 ## E2E Browser Tests (Playwright)
 
 The companion E2E suite lives in `e2e/` and is **separate from pytest**. See `e2e-testing.mdc` for the full pattern reference.

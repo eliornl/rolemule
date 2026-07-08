@@ -286,17 +286,23 @@ async def _background_task(user_id: str) -> None:
 #### Logging — always include `exc_info=True` inside except blocks
 
 ```python
-from utils.logging_config import get_structured_logger
+from utils.logging_config import get_structured_logger, sanitize_log_value, mask_email
 from utils.error_responses import internal_error
 
 logger = get_structured_logger(__name__)
 
 try:
     ...
-except Exception:
-    logger.error("Operation failed", exc_info=True)   # never omit exc_info
+except Exception as exc:
+    logger.error("Operation failed: %s", sanitize_log_value(str(exc)), exc_info=True)
     raise internal_error()
 ```
+
+**Log injection:** use `%s` placeholders + `sanitize_log_value()` for dynamic values — not f-strings. Use `mask_email()` for emails. Do not wrap `%d`/`%f` numeric args with `sanitize_log_value()`. See [`.cursor/rules/codeql-security-scanning.mdc`](.cursor/rules/codeql-security-scanning.mdc).
+
+#### Pydantic v2 validators
+
+Use `@field_validator` with module-level functions — not `@validator("field") def validate(cls, v)`.
 
 ---
 
@@ -458,8 +464,19 @@ Workflows under [`.github/workflows/`](.github/workflows/):
 
 | Workflow | What it checks |
 |----------|----------------|
-| `ci.yml` | Ruff lint, agent unit tests, API integration tests (Postgres + Redis), frontend build, security grep, E2E smoke tests |
-| `codeql.yml` | Static security analysis for Python and JavaScript (weekly + on PRs) |
+| `ci.yml` | **Ruff lint** (`ruff check .`), agent unit tests, API integration tests (Postgres + Redis), frontend build, security grep, E2E smoke tests |
+| `codeql.yml` | **CodeQL** static analysis for Python and JavaScript (`security-and-quality` pack; config [`.github/codeql/codeql-config.yml`](.github/codeql/codeql-config.yml)) |
+
+**Repository security features** (Settings → Code security): Dependabot alerts + security updates, secret scanning + push protection, private vulnerability reporting, Code scanning.
+
+**Before pushing Python changes:**
+
+```bash
+ruff check .
+pytest tests/test_api/ tests/test_agents/ -q --override-ini="addopts="
+```
+
+**Test API keys:** never commit `AIzaSy…` dummy keys — import `DUMMY_GEMINI_API_KEY` from `tests/gemini_test_keys.py`.
 
 Dependabot opens weekly dependency PRs ([`.github/dependabot.yml`](.github/dependabot.yml)). Sensitive paths use [`.github/CODEOWNERS`](.github/CODEOWNERS).
 

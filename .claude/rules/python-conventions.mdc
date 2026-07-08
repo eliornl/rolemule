@@ -141,6 +141,25 @@ if parsed_end <= parsed_start:
 
 Also use `datetime.now(timezone.utc)` everywhere — **never `datetime.utcnow()`**, which is deprecated in Python 3.12+ and also returns a naive datetime.
 
+## Pydantic v2 Validators — `@field_validator`, Not `@validator`
+
+Use module-level functions assigned via `@field_validator` (CodeQL `py/not-named-self`, Pydantic v2 API):
+
+```python
+from pydantic import BaseModel, Field, field_validator
+
+def _validate_status(v: str) -> str:
+    if v not in ALLOWED:
+        raise ValueError("Invalid status")
+    return v
+
+class StatusUpdateRequest(BaseModel):
+    new_status: str = Field(...)
+    validate_status = field_validator("new_status")(_validate_status)
+```
+
+**Never** `@validator("field") def validate_x(cls, v)` — deprecated and flagged by CodeQL.
+
 ## Background Task Error Pattern
 
 Background tasks bypass FastAPI's global exception handler, so errors must be explicitly

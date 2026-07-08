@@ -15,6 +15,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `database-patterns.mdc` | SQLAlchemy JSONB, `flag_modified()`, soft delete, **partial indexes**, race conditions, migrations, `UserWorkflowPreferences` upsert |
 | `auth-patterns.mdc` | JWT structure, `_make_jwt`, all auth endpoints, token revocation, lockout, timing attack fix |
 | `security-python.mdc` | XSS, file upload MIME, `secrets` vs `random`, no-JWT-in-URL rule, user enumeration prevention |
+| `codeql-security-scanning.mdc` | CodeQL CI, `sanitize_log_value()` / `mask_email()` logging, query-filters, secret scanning test keys, Pydantic `field_validator`, extension entity decode |
 | `security-middleware.mdc` | Middleware stack, CORS explicit headers, no wildcard origins, maintenance mode, **CSP nonce-based style-src** (no `'unsafe-inline'`), `.is-hidden` / CSS utility class reference |
 | `settings-and-env.mdc` | All env vars, `get_settings()`, `ENCRYPTION_KEY` requirement, `.env` commit rules |
 | `llm-integration.mdc` | Gemini client, BYOK, `user_facing_message_from_llm_exception()`, `asyncio.wait_for()` timeout, JSON parsing |
@@ -24,7 +25,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `career-tools.mdc` | 6 tools, endpoints, rate limits, agent implementation pattern, output JSON schemas, copy button pattern, no-placeholder rules, UI CSS classes |
 | `caching-redis.mdc` | Cache TTLs, helpers, rate limiting, auth-specific Redis keys |
 | `websocket-patterns.mdc` | Endpoints, connection limits, broadcast helpers, WS-only JWT query-param exception |
-| `logging-patterns.mdc` | StructuredLogger, request context, sensitive data redaction, `exc_info=True` requirement, bulk-script safety |
+| `logging-patterns.mdc` | StructuredLogger, **`sanitize_log_value()` / `mask_email()`**, request context, sensitive data redaction, `exc_info=True` requirement, bulk-script safety |
 | `google-oauth.mdc` | 3-step OAuth flow, CSRF state in Redis, exchange-code pattern, open-redirect prevention |
 | `email-and-misc-utils.mdc` | Gmail SMTP, resume parser, BYOK encryption |
 | `frontend-js-strict.mdc` | JSDoc strict mode, null safety, anti-patterns table, event bus, **no `style=` HTML attributes** |
@@ -121,3 +122,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 73. **`profile-setup.js` must `PUT` empty `work_experience` when “no relevant experience” is checked** — skipping the API call leaves `user_profiles.work_experience` as SQL `NULL`, so `POST /profile/complete` fails with “Work Experience” incomplete; `[]` in JSONB means the user explicitly completed step 2 with no roles (`_check_work_experience_completion` treats `NULL` as incomplete and non-null `[]` as complete).
 74. **`profile-setup.js` must `PUT` empty `education` when “no formal education” is checked** — same pattern as work experience: skipping the call leaves `education` NULL and blocks `POST /profile/complete`; `[]` means step 3 complete with no schools (`_check_education_completion`).
 75. **Duplicate job after start (not only `RES_3002`)** — when start-time dedupe misses, the workflow fails after the Job Analyzer if another application already has the same normalized title+company (`utils/application_dedupe.py`, aligned with list API fallbacks); `_update_job_application_with_final_state` must not “succeed” on `uq_user_job_company` by dropping title/company (revert session + soft-delete). Dashboard `notifyReady` dedupes completion vs failure with `c:{session_id}` / `f:{session_id}` in `applypilot_notified_analyses`. See `applypilot-core.mdc` and `dashboard-home.mdc`.
+76. **Dynamic logger calls must use `%s` placeholders + `sanitize_log_value()`** — never f-strings or raw `%` interpolation with user/request/exception data; see `codeql-security-scanning.mdc`. Never wrap `%d`/`%f`/`%.Nf` args with `sanitize_log_value()` (returns str, breaks numeric formatting).
+77. **Never commit `AIzaSy…` dummy API keys** — GitHub secret scanning flags them; use `tests/gemini_test_keys.DUMMY_GEMINI_API_KEY` (Gsk-prefixed, still passes `validate_gemini_api_key()`).
+78. **Pydantic v2 validators use `@field_validator` + module-level functions** — never `@validator("field") def validate(cls, v)` (CodeQL `py/not-named-self` + deprecated API).
+79. **Extension entity decode: numeric references only** — in `extension/lib/form-autofill.js`, never assign user strings to `innerHTML` for decoding; no named-entity `&amp;` replace chains (CodeQL `js/xss-through-dom` / `js/double-escaping`). Dashboard JS uses `ui/static/js/dom-security.js`.
