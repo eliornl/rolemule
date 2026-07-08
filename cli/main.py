@@ -26,7 +26,7 @@ app = typer.Typer(
     name="applypilot",
     help="ApplyPilot CLI — manage job applications from your terminal.",
     no_args_is_help=True,
-    add_completion=False,
+    add_completion=True,
 )
 
 

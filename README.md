@@ -30,7 +30,7 @@ Runs on your machine. No subscriptions, no data stored on our servers — just y
 
 ---
 
-[Six AI Agents](#six-ai-agents) · [Career Tools](#six-career-tools) · [Quick Start](#quick-start) · [Gemini API Key](#gemini-api-key) · [Chrome Extension](#chrome-extension) · [Highlights](#highlights) · [Optional Features](#optional-features) · [Developer Setup](#developer-setup) · [Environment Variables](#environment-variables) · [How It Works](#how-it-works) · [Project Structure](#project-structure) · [Contributing](#contributing) · [License](#license)
+[Six AI Agents](#six-ai-agents) · [Career Tools](#six-career-tools) · [Quick Start](#quick-start) · [CLI](#cli) · [Gemini API Key](#gemini-api-key) · [Chrome Extension](#chrome-extension) · [Highlights](#highlights) · [Optional Features](#optional-features) · [Developer Setup](#developer-setup) · [Environment Variables](#environment-variables) · [How It Works](#how-it-works) · [Project Structure](#project-structure) · [Contributing](#contributing) · [License](#license)
 
 ---
 
@@ -210,6 +210,32 @@ During profile setup you'll be prompted to add your Gemini API key — or you ca
 
 ---
 
+## CLI
+
+Terminal client for the same API — useful for scripting, AI assistants (Claude Code, Cursor, Codex), and automation.
+
+**Install** (from repo root, with the server already running):
+
+```bash
+pip install -e ".[cli]"
+applypilot doctor
+```
+
+**First session:**
+
+```bash
+applypilot auth login              # or: applypilot auth token set  (OAuth users)
+applypilot profile status          # complete profile if needed
+applypilot workflow analyze job.txt --wait --format json
+applypilot apps list
+```
+
+**Shell completion:** run `applypilot --install-completion` from your terminal (auto-detects bash/zsh/fish).
+
+Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** · Tests: `make cli-test`
+
+---
+
 ## Gemini API Key
 
 AI features require a key from Google AI Studio.
@@ -339,6 +365,7 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 | `make migrate` / `just migrate` | Run Alembic database migrations |
 | `make build-frontend` / `just build-frontend` | Compile and content-hash JS/CSS assets |
 | `make test` / `just test` | Run the test suite |
+| `make cli-test` / `just cli-test` | Run CLI tests (`tests/test_cli/`) |
 | `make lint` / `just lint` | Run ruff linter |
 | `make clean` | Remove venv and compiled artefacts |
 
@@ -415,6 +442,8 @@ Frontend: server-rendered HTML + vanilla JS, no framework. Assets are compiled a
 ```
 applypilot/
 ├── main.py               # FastAPI app entry point
+├── cli/                  # ApplyPilot CLI (Typer commands)
+├── applypilot_client/    # Sync HTTP client for CLI
 ├── agents/               # 5 workflow agents + interview prep + CV optimizer loop + 6 career tool agents
 ├── workflows/            # LangGraph pipeline orchestration and state schema
 ├── api/                  # FastAPI route handlers
@@ -432,9 +461,10 @@ applypilot/
 │   └── static/           # Compiled assets (esbuild output)
 ├── tests/                # Unit + integration tests (pytest)
 │   ├── test_agents/      # Agent unit tests
-│   └── test_api/         # API integration tests (no live server needed)
+│   ├── test_api/         # API integration tests (no live server needed)
+│   └── test_cli/         # CLI tests (CliRunner, mocked HTTP)
 ├── e2e/                  # Playwright end-to-end tests
-├── docs/                 # Demo GIF and logo assets
+├── docs/                 # Demo GIF, logo, CLI reference
 ├── docker-compose.yml    # Local: postgres + redis + app
 ├── Dockerfile            # Multi-stage build: Node (frontend) → Python
 ├── Makefile              # Dev workflow shortcuts (macOS / Linux)

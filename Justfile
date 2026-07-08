@@ -122,6 +122,11 @@ dev: build-frontend
 test:
     {{python}} -m pytest tests/ -v
 
+# Run CLI tests only (no live server)
+cli-test:
+    {{pip}} install -e ".[cli]" -q
+    {{python}} -m pytest tests/test_cli/ -v --override-ini="addopts="
+
 # Run the linter
 lint:
     {{python}} -m ruff check .

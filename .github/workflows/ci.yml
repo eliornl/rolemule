@@ -121,6 +121,26 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - run: bash scripts/ci-security-grep.sh
 
+  cli-tests:
+    name: CLI tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install CLI and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[cli]"
+          pip install pytest
+      - name: Run CLI tests
+        run: pytest tests/test_cli/ -v --override-ini="addopts="
+      - name: CLI help smoke
+        run: applypilot --help && applypilot workflow --help
+
   dependency-audit:
     name: Dependency audit (advisory)
     runs-on: ubuntu-latest
@@ -219,6 +239,7 @@ jobs:
     needs:
       - lint
       - python-tests
+      - cli-tests
       - frontend-build
       - security-grep
       - e2e-smoke
@@ -229,6 +250,7 @@ jobs:
           results=(
             "${{ needs.lint.result }}"
             "${{ needs.python-tests.result }}"
+            "${{ needs.cli-tests.result }}"
             "${{ needs.frontend-build.result }}"
             "${{ needs.security-grep.result }}"
             "${{ needs.e2e-smoke.result }}"

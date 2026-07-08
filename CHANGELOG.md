@@ -31,6 +31,14 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 ### Added
 
+#### CLI — full-parity terminal client
+
+- **`applypilot` CLI** — Typer-based client for auth, profile, workflow, applications, interview prep, CV optimizer, six career tools, extension autofill testing, and admin monitoring. Install with `pip install -e ".[cli]"`.
+- **`applypilot_client/`** — sync httpx resource layer; **`tests/test_cli/`** (156 tests, CI job).
+- **Docs:** [docs/cli-reference.md](docs/cli-reference.md), README CLI quick start, USER_GUIDE CLI section, [docs/cli-implementation-plan.md](docs/cli-implementation-plan.md).
+- **Shell completion:** `applypilot --install-completion bash|zsh|fish`.
+- **Optional live smoke:** `scripts/cli_smoke.sh`.
+
 #### Security — CodeQL, secret scanning, and contributor docs
 
 - **Code scanning at zero open alerts** on `main` (Jul 2026): log-injection hardening (`sanitize_log_value()` / `mask_email()` at call sites), Pydantic v2 `@field_validator` migration, shared `ui/static/js/dom-security.js`, CodeQL query-filters for remaining false positives, extension entity-decode fixes, and `tests/gemini_test_keys.py` (non-`AIza` dummy keys for secret scanning).

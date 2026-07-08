@@ -13,6 +13,7 @@ Welcome to ApplyPilot! This guide walks you through every feature so you can get
 - [CV Optimization](#cv-optimization)
 - [Career Tools](#career-tools)
 - [Settings](#settings)
+- [CLI](#cli)
 - [FAQ](#faq)
 
 ---
@@ -455,6 +456,36 @@ All preferences auto-save — there is no Save button:
 - **Password** — change your password (shown for email-registered users only)
 - **Clear Applications** — delete all applications and AI results, keeping your account and profile
 - **Delete Account** — permanently delete everything
+
+---
+
+## CLI
+
+The **ApplyPilot CLI** (`applypilot`) talks to the same API as the web app and Chrome extension. Install from the repo: `pip install -e ".[cli]"`.
+
+### Setup
+
+1. Start the server (`make start-local` or Docker).
+2. Run `applypilot doctor` to verify connectivity.
+3. Log in: `applypilot auth login` — or paste a browser JWT with `applypilot auth token set` (Google OAuth users).
+4. Check profile completion: `applypilot profile status`.
+
+Config is stored in `~/.applypilot/` (server URL in `config.toml`, JWT in `credentials.json`).
+
+### Common tasks
+
+| Task | Command |
+|------|---------|
+| Analyze a job posting | `applypilot workflow analyze posting.txt --wait` |
+| List applications | `applypilot apps list` |
+| Interview prep | `applypilot interview generate SESSION_ID --wait` |
+| Optimize CV | `applypilot cv start SESSION_ID --wait` |
+| Thank-you email | `applypilot tools thank-you --file request.json` |
+| Salary negotiation | `applypilot tools salary-coach --file offer.json` |
+
+Use `--format json` when piping output to scripts or AI tools. Global flags (`--base-url`, `--format`) go **before** the subcommand.
+
+Full reference: **[docs/cli-reference.md](../docs/cli-reference.md)**
 
 ---
 

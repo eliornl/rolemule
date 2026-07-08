@@ -38,6 +38,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `adding-new-features.mdc` | Checklists: new endpoint, new agent, new tool, new migration, new static asset, **new preference** |
 | `settings-page.mdc` | Settings tabs, Preferences tab, AI Setup tab, auto-save pattern, custom slider/toggle/dropdown, **account-icon color variants**, self-hosted Font Awesome |
 | `frontend-build-pipeline.mdc` | esbuild pipeline, `asset_url()`, adding new JS/CSS files, manifest, CI/Docker build, `make build-frontend` (macOS quarantine fix) |
+| `cli.mdc` | ApplyPilot CLI — Typer commands, applypilot_client, tests, docs |
 | `mobile-responsive.mdc` | Breakpoints, navbar collapse (`navbar-expand-xl` landing / `navbar-expand-lg` dashboard), scrollable tab bars, `app.css` global mobile utilities, per-page patterns |
 | `unit-testing.mdc` | ~227 agent unit tests + ~221 API integration tests (`tests/test_api/`); NullPool engine; `authed_client` vs `authed_client_with_user`; LLM mock pattern; rate-limit 429 override; status code quirks (422 vs 400); `asyncio_default_fixture_loop_scope=session` |
 | `e2e-testing.mdc` | 24 Playwright spec files (~1,450 tests); tier system (mocked CI / live-server / static); `setupAuth` + `page.route()` patterns; JWT/cookie-consent setup; SPA state waits; data shape pitfalls; redirect chain assertions |
