@@ -5,10 +5,11 @@ Provides async Redis connection management with singleton pattern for caching an
 
 import logging
 from typing import Optional
+
 import redis.asyncio as redis
-from redis.asyncio import Redis
 from redis.exceptions import ConnectionError, TimeoutError
 from config.settings import get_database_settings, get_settings
+from utils.logging_config import sanitize_log_value
 
 # =============================================================================
 # CONSTANTS AND CONFIGURATION
@@ -23,14 +24,14 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 # Global Redis connection instance
 # Using singleton pattern for efficient resource management
-_redis_client: Optional[Redis] = None
+_redis_client: Optional[redis.Redis] = None
 
 # =============================================================================
 # CORE CONNECTION FUNCTIONS
 # =============================================================================
 
 
-async def get_redis_client() -> Redis:
+async def get_redis_client() -> redis.Redis:
     """
     Get Redis connection dependency for FastAPI endpoints.
 
@@ -55,7 +56,7 @@ async def get_redis_client() -> Redis:
     return _redis_client
 
 
-async def connect_to_redis() -> Redis:
+async def connect_to_redis() -> redis.Redis:
     """
     Establish Redis connection with proper configuration and validation.
 
@@ -93,10 +94,10 @@ async def connect_to_redis() -> Redis:
         return _redis_client
 
     except (ConnectionError, TimeoutError) as e:
-        logger.error(f"Failed to connect to Redis: {e}", exc_info=True)
+        logger.error('Failed to connect to Redis: %s', sanitize_log_value(e), exc_info=True)
         raise
     except Exception as e:
-        logger.error(f"Redis connection error: {e}", exc_info=True)
+        logger.error('Redis connection error: %s', sanitize_log_value(e), exc_info=True)
         raise
 
 
@@ -126,7 +127,7 @@ async def check_redis_health() -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Redis health check failed: {e}", exc_info=True)
+        logger.error('Redis health check failed: %s', sanitize_log_value(e), exc_info=True)
         return False
 
 

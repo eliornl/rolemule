@@ -205,7 +205,7 @@ class JobApplicationWorkflow:
             gemini_client = await get_gemini_client()
             logger.info("Gemini client initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize Gemini client: {e}", exc_info=True)
+            logger.error('Failed to initialize Gemini client: %s', sanitize_log_value(e), exc_info=True)
             raise RuntimeError(
                 f"Critical dependency failed: Gemini client initialization failed - {e}"
             )
@@ -215,7 +215,7 @@ class JobApplicationWorkflow:
             redis_client = await get_redis_client()
             logger.info("Redis client initialized successfully")
         except Exception as e:
-            logger.warning(f"Redis client initialization failed (non-critical): {e}")
+            logger.warning('Redis client initialization failed (non-critical): %s', sanitize_log_value(e))
             redis_client = None
 
         # Initialize agents with clients
@@ -400,12 +400,7 @@ class JobApplicationWorkflow:
         workflow_start = perf_counter()
         safe_session = sanitize_log_value(str(session_id)[:8])
         safe_input_method = sanitize_log_value(str(input_method))
-        logger.info(
-            "[WORKFLOW] Start  session=%s...  input=%s  byok=%s",
-            safe_session,
-            safe_input_method,
-            "yes" if user_api_key else "no",
-        )
+        logger.info('[WORKFLOW] Start  session=%s...  input=%s  byok=%s', sanitize_log_value(safe_session), sanitize_log_value(safe_input_method), sanitize_log_value("yes" if user_api_key else "no"))
 
         try:
             # Derive workflow preferences from the user's profile data
@@ -438,12 +433,7 @@ class JobApplicationWorkflow:
                     timeout=_WORKFLOW_TOTAL_TIMEOUT_SECONDS,
                 )
             except asyncio.TimeoutError:
-                logger.error(
-                    "Workflow timed out after %ss (session=%s...)",
-                    _WORKFLOW_TOTAL_TIMEOUT_SECONDS,
-                    safe_session,
-                    exc_info=True,
-                )
+                logger.error('Workflow timed out after %ss (session=%s...)', sanitize_log_value(_WORKFLOW_TOTAL_TIMEOUT_SECONDS), sanitize_log_value(safe_session), exc_info=True)
                 raise
 
             total_ms = (perf_counter() - workflow_start) * 1000
@@ -453,24 +443,12 @@ class JobApplicationWorkflow:
             duration_parts = "  ".join(
                 f"{k}={v/1000:.1f}s" for k, v in durations.items()
             )
-            logger.info(
-                "[WORKFLOW] Done  session=%s...  status=%s  total=%.1fs  agents=[%s]",
-                safe_session,
-                sanitize_log_value(status_label),
-                total_ms / 1000,
-                sanitize_log_value(duration_parts),
-            )
+            logger.info('[WORKFLOW] Done  session=%s...  status=%s  total=%.1fs  agents=[%s]', sanitize_log_value(safe_session), sanitize_log_value(status_label), total_ms / 1000, sanitize_log_value(duration_parts))
 
             return self._state_to_dict(final_state)
         except Exception as exc:
             total_ms = (perf_counter() - workflow_start) * 1000
-            logger.error(
-                "[WORKFLOW] Failed  session=%s...  after=%.1fs  error=%s",
-                safe_session,
-                total_ms / 1000,
-                sanitize_log_value(str(exc)),
-                exc_info=True,
-            )
+            logger.error('[WORKFLOW] Failed  session=%s...  after=%.1fs  error=%s', sanitize_log_value(safe_session), total_ms / 1000, sanitize_log_value(str(exc)), exc_info=True)
             raise
         finally:
             # Clear logging context
@@ -526,11 +504,7 @@ class JobApplicationWorkflow:
                     timeout=_WORKFLOW_TOTAL_TIMEOUT_SECONDS,
                 )
             except asyncio.TimeoutError:
-                logger.error(
-                    "Continuation workflow timed out after %ss",
-                    _WORKFLOW_TOTAL_TIMEOUT_SECONDS,
-                    exc_info=True,
-                )
+                logger.error('Continuation workflow timed out after %ss', sanitize_log_value(_WORKFLOW_TOTAL_TIMEOUT_SECONDS), exc_info=True)
                 raise
 
             return self._state_to_dict(final_state)
@@ -690,7 +664,7 @@ class JobApplicationWorkflow:
                 )
                 await self.db.commit()
             except Exception as _pre_save_err:
-                logger.debug("Pre-agent current_agent flush failed (non-critical): %s", _pre_save_err)
+                logger.debug('Pre-agent current_agent flush failed (non-critical): %s', sanitize_log_value(_pre_save_err))
 
         # Get user_id for WebSocket broadcasts
         user_id = str(state.get("user_id", ""))
@@ -698,7 +672,7 @@ class JobApplicationWorkflow:
         try:
             # Check agent initialization inside try block
             if agent_instance is None:
-                logger.error(f"{display_name} agent not initialized")
+                logger.error('%s agent not initialized', sanitize_log_value(display_name))
                 raise ValueError(f"{display_name} agent not initialized")
 
             # Set agent status to RUNNING
@@ -844,10 +818,7 @@ class JobApplicationWorkflow:
         # Clamp to valid range
         gate_threshold = max(0.0, min(1.0, gate_threshold))
 
-        logger.info(
-            f"Gate decision check: recommendation={recommendation}, "
-            f"overall_fit={overall_fit:.2f}, threshold={gate_threshold}"
-        )
+        logger.info('Gate decision check: recommendation=%s, overall_fit=%s, threshold=%s', sanitize_log_value(recommendation), sanitize_log_value(overall_fit), sanitize_log_value(gate_threshold))
 
         # Gate decision logic
         should_gate = (
@@ -860,10 +831,7 @@ class JobApplicationWorkflow:
         session_id = state.get("session_id", "")
 
         if should_gate:
-            logger.info(
-                f"GATE TRIGGERED: Low match score ({overall_fit:.0%}) or "
-                f"weak recommendation ({recommendation}). Awaiting user confirmation."
-            )
+            logger.info('GATE TRIGGERED: Low match score (%s) or weak recommendation (%s). Awaiting user confirmation.', sanitize_log_value(overall_fit), sanitize_log_value(recommendation))
             state["workflow_status"] = WorkflowStatus.AWAITING_CONFIRMATION
             await self._save_workflow_state(state)
 
@@ -875,10 +843,7 @@ class JobApplicationWorkflow:
                 recommendation=recommendation,
             )
         else:
-            logger.info(
-                f"GATE PASSED: Good match score ({overall_fit:.0%}) and "
-                f"positive recommendation ({recommendation}). Continuing workflow."
-            )
+            logger.info('GATE PASSED: Good match score (%s) and positive recommendation (%s). Continuing workflow.', sanitize_log_value(overall_fit), sanitize_log_value(recommendation))
 
             # Broadcast phase change via WebSocket
             await broadcast_phase_change(
@@ -1060,10 +1025,7 @@ class JobApplicationWorkflow:
         completed_agents = state.get("completed_agents", [])
         if completed_agents:
             completed_agent_names = [agent.value for agent in completed_agents]
-            logger.info(
-                "Workflow failed; agents that had completed before failure: %s",
-                completed_agent_names,
-            )
+            logger.info('Workflow failed; agents that had completed before failure: %s', sanitize_log_value(completed_agent_names))
         else:
             logger.info("Workflow failed before any agent completed")
 
@@ -1148,11 +1110,11 @@ class JobApplicationWorkflow:
         if agent_status == AgentStatus.COMPLETED:
             if agent_enum not in state["completed_agents"]:
                 state["completed_agents"].append(agent_enum)
-            logger.info(f"{agent_name} completed successfully")
+            logger.info('%s completed successfully', sanitize_log_value(agent_name))
         else:
             if agent_enum not in state["failed_agents"]:
                 state["failed_agents"].append(agent_enum)
-            logger.warning(f"{agent_name} failed")
+            logger.warning('%s failed', sanitize_log_value(agent_name))
 
         self._merge_messages(state, result)
 
@@ -1258,23 +1220,14 @@ class JobApplicationWorkflow:
                 company_name=company,
             )
         except Exception as exc:
-            logger.debug(
-                "Duplicate job check after analyzer failed (non-fatal): %s",
-                exc,
-                exc_info=True,
-            )
+            logger.debug('Duplicate job check after analyzer failed (non-fatal): %s', sanitize_log_value(exc), exc_info=True)
             return
 
         if conflict is None:
             state["_analyzer_dedupe_checked"] = True
             return
 
-        logger.info(
-            "Duplicate job after analyzer: user=%s session=%s conflicts with application id=%s",
-            uid,
-            state.get("session_id"),
-            conflict.id,
-        )
+        logger.info('Duplicate job after analyzer: user=%s session=%s conflicts with application id=%s', sanitize_log_value(uid), sanitize_log_value(state.get("session_id")), sanitize_log_value(conflict.id))
 
         state["agent_status"][Agent.JOB_ANALYZER.value] = AgentStatus.FAILED
         state["completed_agents"] = [
@@ -1413,9 +1366,7 @@ class JobApplicationWorkflow:
                                         .values(**_early_vals)
                                     )
                             except Exception as _upd_err:
-                                logger.debug(
-                                    "Early title/company update skipped: %s", _upd_err
-                                )
+                                logger.debug('Early title/company update skipped: %s', sanitize_log_value(_upd_err))
                     if state.get("company_research"):
                         workflow_session.company_research = state["company_research"]
                         flag_modified(workflow_session, "company_research")
@@ -1430,21 +1381,19 @@ class JobApplicationWorkflow:
                         flag_modified(workflow_session, "cover_letter")
 
                 await self.db.commit()
-                logger.debug(f"Updated workflow session: {session_id}")
+                logger.debug('Updated workflow session: %s', sanitize_log_value(session_id))
             else:
-                logger.debug(f"Workflow session not found for update: {session_id}")
+                logger.debug('Workflow session not found for update: %s', sanitize_log_value(session_id))
 
         except Exception as e:
-            logger.warning(
-                f"Failed to save workflow state for session {state.get('session_id', 'unknown')}: {e}"
-            )
+            logger.warning('Failed to save workflow state for session %s: %s', sanitize_log_value(state.get('session_id', 'unknown')), sanitize_log_value(e))
             # Roll back so the session is clean for the next _save_workflow_state call.
             # Without this, a failed transaction leaves the session in an aborted state
             # and every subsequent save instantly fails with InFailedSQLTransactionError.
             try:
                 await self.db.rollback()
             except Exception as rb_err:
-                logger.debug("Rollback after failed state save: %s", rb_err)
+                logger.debug('Rollback after failed state save: %s', sanitize_log_value(rb_err))
             # Don't raise exception - state saving failures shouldn't break the workflow
 
     async def _load_workflow_state(

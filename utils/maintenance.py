@@ -34,7 +34,7 @@ async def is_maintenance_mode() -> bool:
             return value == "true"
         return False
     except Exception as e:
-        logger.error(f"Error checking maintenance mode: {e}", exc_info=True)
+        logger.error('Error checking maintenance mode: %s', sanitize_log_value(e), exc_info=True)
         return False
 
 
@@ -66,7 +66,7 @@ async def get_maintenance_info() -> dict:
             "estimated_end": None,
         }
     except Exception as e:
-        logger.error(f"Error getting maintenance info: {e}", exc_info=True)
+        logger.error('Error getting maintenance info: %s', sanitize_log_value(e), exc_info=True)
         return {
             "enabled": False,
             "message": None,
@@ -115,7 +115,7 @@ async def enable_maintenance_mode(
         logger.warning("Redis not available - maintenance mode not enabled")
         return False
     except Exception as e:
-        logger.error(f"Error enabling maintenance mode: {e}", exc_info=True)
+        logger.error('Error enabling maintenance mode: %s', sanitize_log_value(e), exc_info=True)
         return False
 
 
@@ -141,7 +141,7 @@ async def disable_maintenance_mode() -> bool:
         logger.warning("Redis not available - maintenance mode not disabled")
         return False
     except Exception as e:
-        logger.error(f"Error disabling maintenance mode: {e}", exc_info=True)
+        logger.error('Error disabling maintenance mode: %s', sanitize_log_value(e), exc_info=True)
         return False
 
 

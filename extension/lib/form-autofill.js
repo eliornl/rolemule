@@ -2083,13 +2083,9 @@
 
   function decodeHtmlEntities(str) {
     if (str == null) return '';
-    return String(str)
-      .replace(/&amp;/g, '&')
-      .replace(/&#x27;/gi, "'")
-      .replace(/&#039;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>');
+    var textarea = document.createElement('textarea');
+    textarea.innerHTML = String(str);
+    return textarea.value;
   }
 
   function setNativeValue(el, value) {
@@ -2473,18 +2469,6 @@
   function isNoOptionsPlaceholder(text) {
     var t = String(text || '').toLowerCase().trim();
     return t === 'no options' || t === 'no results' || t === 'no matches';
-  }
-
-  function harvestComboboxOptionsSync(el) {
-    if (!(el instanceof HTMLElement)) return [];
-    closeAllComboboxMenus();
-    openComboboxMenu(el);
-    var opts = findComboboxOptionsForElement(el);
-    closeComboboxMenu(el);
-    closeAllComboboxMenus();
-    return opts.map(function (o) {
-      return o.text;
-    });
   }
 
   function isDegreeFieldLabel(labelText) {

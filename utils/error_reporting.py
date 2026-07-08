@@ -48,10 +48,12 @@ def _get_client() -> Optional[object]:
     global _client, _client_lookup_done
     if _client_lookup_done:
         return _client
+
     _client_lookup_done = True
+    _client = None
 
     if not _CLIENT_AVAILABLE:
-        return None
+        return _client
 
     try:
         _client = _gcp_error_reporting.Client()

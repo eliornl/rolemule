@@ -310,10 +310,7 @@ async def _markdown_cv_to_odt_via_libreoffice(
         )
 
         if proc.returncode != 0:
-            logger.error(
-                "LibreOffice ODT conversion failed: %s",
-                proc.stderr.decode(errors="replace"),
-            )
+            logger.error('LibreOffice ODT conversion failed: %s', sanitize_log_value(proc.stderr.decode(errors="replace")))
             raise ValueError(_LIBREOFFICE_CONVERSION_FAILED_MSG)
 
         if not os.path.exists(odt_path):
@@ -355,10 +352,7 @@ async def _export_optimized_cv_file(
         except Exception as exc:
             if is_llm_quota_or_rate_limit_exception(exc):
                 raise
-            logger.warning(
-                "LibreOffice ODT path failed (%s) — using DOCX export",
-                exc,
-            )
+            logger.warning('LibreOffice ODT path failed (%s) — using DOCX export', sanitize_log_value(exc))
 
     docx_bytes = await loop.run_in_executor(
         None, lambda: markdown_cv_to_docx_bytes(cv_markdown)
@@ -385,10 +379,7 @@ async def _markdown_cv_to_odt(cv_markdown: str, user_api_key: Optional[str]) -> 
                 cv_markdown, user_api_key, soffice_path
             )
         except ValueError as exc:
-            logger.warning(
-                "LibreOffice ODT path failed (%s) — trying HTML→ODT fallback",
-                exc,
-            )
+            logger.warning('LibreOffice ODT path failed (%s) — trying HTML→ODT fallback', sanitize_log_value(exc))
 
     try:
         html_content = await _generate_cv_html_from_markdown(cv_markdown, user_api_key)
@@ -396,11 +387,7 @@ async def _markdown_cv_to_odt(cv_markdown: str, user_api_key: Optional[str]) -> 
             None, lambda: html_cv_to_odt_bytes(html_content)
         )
     except Exception as exc:
-        logger.warning(
-            "HTML→ODT export failed (%s) — using markdown fallback",
-            exc,
-            exc_info=True,
-        )
+        logger.warning('HTML→ODT export failed (%s) — using markdown fallback', sanitize_log_value(exc), exc_info=True)
 
     return await loop.run_in_executor(
         None, lambda: markdown_cv_to_odt_bytes(cv_markdown)
@@ -604,13 +591,7 @@ async def start_cv_optimization(
             config=config,
         )
 
-        logger.info(
-            "Started CV optimization for session %s user=%s max_iter=%d threshold=%.1f",
-            session_id,
-            user_id,
-            config.max_iterations,
-            config.score_threshold,
-        )
+        logger.info('Started CV optimization for session %s user=%s max_iter=%d threshold=%.1f', sanitize_log_value(session_id), sanitize_log_value(user_id), config.max_iterations, config.score_threshold)
 
         return CvOptimizationStartResponse(
             session_id=session_id,
@@ -621,7 +602,7 @@ async def start_cv_optimization(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to start CV optimization for session %s: %s", sanitize_log_value(session_id), e, exc_info=True)
+        logger.error('Failed to start CV optimization for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to start CV optimization")
 
 
@@ -686,7 +667,7 @@ async def get_cv_optimization(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to get CV optimization for session %s: %s", sanitize_log_value(session_id), e, exc_info=True)
+        logger.error('Failed to get CV optimization for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to get CV optimization result")
 
 
@@ -746,9 +727,7 @@ async def get_cv_optimization_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            "Failed to get CV optimization status for session %s: %s", session_id, e, exc_info=True
-        )
+        logger.error('Failed to get CV optimization status for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to get CV optimization status")
 
 
@@ -839,16 +818,12 @@ async def download_optimized_cv_odt(
                 msg,
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        logger.error(
-            "ODT conversion validation failed for session %s: %s", session_id, e, exc_info=True
-        )
+        logger.error('ODT conversion validation failed for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate ODT document")
     except Exception as e:
         if is_llm_quota_or_rate_limit_exception(e):
             raise rate_limit_error(user_facing_message_from_llm_exception(e))
-        logger.error(
-            "Failed to generate ODT for session %s: %s", session_id, e, exc_info=True
-        )
+        logger.error('Failed to generate ODT for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate ODT document")
 
 
@@ -907,7 +882,7 @@ async def delete_cv_optimization(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to delete CV optimization for session %s: %s", sanitize_log_value(session_id), e, exc_info=True)
+        logger.error('Failed to delete CV optimization for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to delete CV optimization result")
 
 
@@ -1005,12 +980,7 @@ async def _run_cv_optimization_background(
         result_dict = sanitize_llm_output(optimization_result.to_dict())
         result_dict = _sanitize_optimization_result(result_dict) or result_dict
 
-        logger.info(
-            "CV optimization storing result session=%s cv_len=%d cl_len=%d",
-            session_id,
-            len(result_dict.get("optimized_cv", "")),
-            len(result_dict.get("cover_letter", "")),
-        )
+        logger.info('CV optimization storing result session=%s cv_len=%d cl_len=%d', sanitize_log_value(session_id), len(result_dict.get("optimized_cv", "")), len(result_dict.get("cover_letter", "")))
 
         # Phase 3 — persist with a fresh session after LLM work completes
         async with get_session() as db:
@@ -1022,12 +992,7 @@ async def _run_cv_optimization_background(
 
         await cache_cv_optimization(session_id, result_dict)
 
-        logger.info(
-            "CV optimization complete session=%s best_score=%.1f stop=%s",
-            session_id,
-            optimization_result.best_score,
-            optimization_result.stop_reason,
-        )
+        logger.info('CV optimization complete session=%s best_score=%.1f stop=%s', sanitize_log_value(session_id), optimization_result.best_score, sanitize_log_value(optimization_result.stop_reason))
 
         await broadcast_cv_optimization_complete(
             user_id=ws_user_id,
@@ -1038,9 +1003,7 @@ async def _run_cv_optimization_background(
         )
 
     except Exception as e:
-        logger.error(
-            "CV optimization background task failed session=%s: %s", session_id, e, exc_info=True
-        )
+        logger.error('CV optimization background task failed session=%s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         await report_exception(e, user_id=user_id)
         try:
             ws_user_id = user_id or session_id
@@ -1048,9 +1011,6 @@ async def _run_cv_optimization_background(
                 ws_user_id, session_id, user_facing_message_from_llm_exception(e)
             )
         except Exception as broadcast_err:
-            logger.debug(
-                "Failed to broadcast cv_optimization_error (WebSocket may be closed): %s",
-                broadcast_err,
-            )
+            logger.debug('Failed to broadcast cv_optimization_error (WebSocket may be closed): %s', sanitize_log_value(broadcast_err))
     finally:
         await clear_cv_optimization_running(session_id)

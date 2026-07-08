@@ -267,7 +267,7 @@ async def revoke_token(token: str) -> bool:
         redis_client = await get_redis_client()
         if redis_client:
             await redis_client.setex(f"{_BLOCKLIST_PREFIX}{jti}", ttl, "1")
-            logger.info("JWT %s… added to blocklist (TTL %ss)", sanitize_log_value(jti[:8]), ttl)
+            logger.info('JWT %s… added to blocklist (TTL %ss)', sanitize_log_value(sanitize_log_value(jti)[:8]), sanitize_log_value(ttl))
             return True
 
         logger.warning("Cannot revoke token: Redis unavailable")
@@ -313,7 +313,7 @@ async def invalidate_all_user_tokens(user_id: str) -> bool:
             await redis_client.set(key, str(now_ts), ex=8 * 24 * 3600)
             logger.info(
                 "Invalidated all tokens for user %s",
-                sanitize_log_value(str(user_id)[:8]),
+                sanitize_log_value(sanitize_log_value(str(user_id))[:8]),
             )
             return True
         logger.warning("Cannot invalidate user tokens: Redis unavailable")
@@ -391,7 +391,7 @@ async def _validate_jwt_token(
         # Check revocation blocklist
         jti: Optional[str] = payload.get("jti")
         if jti and await _is_token_revoked(jti):
-            logger.warning("Rejected revoked token (jti=%s)", sanitize_log_value(jti[:8] if jti else "?"))
+            logger.warning("Rejected revoked token (jti=%s)", sanitize_log_value(sanitize_log_value(jti)[:8] if jti else "?"))
             return None
 
         # Check per-user invalidation timestamp (set on password change, account recovery)
@@ -407,7 +407,7 @@ async def _validate_jwt_token(
                     if inv_ts and float(inv_ts) > iat:
                         logger.warning(
                             "Rejected token issued before user invalidation (user=%s)",
-                            sanitize_log_value(str(user_id_for_check)[:8]),
+                            sanitize_log_value(sanitize_log_value(str(user_id_for_check))[:8]),
                         )
                         return None
             except Exception as e:

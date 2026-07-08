@@ -214,15 +214,9 @@ class GeminiClient:
 
         # Log the backend
         if self.use_vertex_ai:
-            logger.info(
-                f"[LLM] Ready  model={settings.gemini_model}  backend=Vertex AI"
-                f"  project={self.vertex_project}  location={self.vertex_location}"
-            )
+            logger.info('[LLM] Ready  model=%s  backend=Vertex AI  project=%s  location=%s', sanitize_log_value(settings.gemini_model), sanitize_log_value(self.vertex_project), sanitize_log_value(self.vertex_location))
         else:
-            logger.info(
-                f"[LLM] Ready  model={settings.gemini_model}  backend=Google AI Studio"
-                f"  BYOK={'enabled (server key set)' if self.api_key else 'user-key only'}"
-            )
+            logger.info('[LLM] Ready  model=%s  backend=Google AI Studio  BYOK=%s', sanitize_log_value(settings.gemini_model), sanitize_log_value('enabled (server key set)' if self.api_key else 'user-key only'))
 
         # google-genai uses Client(api_key=...) per-call — no global configure needed.
 
@@ -389,11 +383,7 @@ class GeminiClient:
             )
             
             prompt_chars = len(combined_prompt)
-            logger.info(
-                f"[LLM] Vertex AI  model={model_to_use}"
-                f"  prompt={prompt_chars:,} chars"
-                f"  temp={temperature}"
-            )
+            logger.info('[LLM] Vertex AI  model=%s  prompt=%s chars  temp=%s', sanitize_log_value(model_to_use), sanitize_log_value(prompt_chars), sanitize_log_value(temperature))
 
             # Generate response (bounded by DEFAULT_TIMEOUT to prevent indefinite hangs)
             api_start_time = perf_counter()
@@ -417,10 +407,7 @@ class GeminiClient:
                 logger.error("[LLM] Failed to extract response text: %s", sanitize_log_value(str(text_error)), exc_info=True)
                 response_text = "Error retrieving response. Please try again."
 
-            logger.info(
-                f"[LLM] Done  {api_duration_ms:.0f}ms"
-                f"  response={len(response_text):,} chars"
-            )
+            logger.info('[LLM] Done  %sms  response=%s chars', sanitize_log_value(api_duration_ms), sanitize_log_value(len(response_text)))
 
             # Log API call performance
             structured_logger.log_external_api_call(
@@ -483,12 +470,7 @@ class GeminiClient:
 
             prompt_chars = len(combined_prompt)
             byok_label = "  byok=user-key" if user_api_key else ""
-            logger.info(
-                f"[LLM] Google AI Studio  model={model_to_use}"
-                f"  prompt={prompt_chars:,} chars"
-                f"  temp={temperature}"
-                f"{byok_label}"
-            )
+            logger.info('[LLM] Google AI Studio  model=%s  prompt=%s chars  temp=%s%s', sanitize_log_value(model_to_use), sanitize_log_value(prompt_chars), sanitize_log_value(temperature), sanitize_log_value(byok_label))
 
             api_start_time = perf_counter()
             response = await asyncio.wait_for(
@@ -517,10 +499,7 @@ class GeminiClient:
                 if finish_reason and str(finish_reason) not in ("FinishReason.STOP", "FinishReason.MAX_TOKENS", "1", "2"):
                     filtered = True
 
-            logger.info(
-                f"[LLM] Done  {api_duration_ms:.0f}ms"
-                f"  response={len(response_text):,} chars"
-            )
+            logger.info('[LLM] Done  %sms  response=%s chars', sanitize_log_value(api_duration_ms), sanitize_log_value(len(response_text)))
 
             structured_logger.log_external_api_call(
                 service="gemini",

@@ -321,7 +321,7 @@ async def list_applications(
         )
 
     except Exception as e:
-        logger.error(f"Failed to list applications: {e}", exc_info=True)
+        logger.error('Failed to list applications: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to list applications")
 
 
@@ -374,9 +374,7 @@ async def update_application_status(
         await db.commit()
         await db.refresh(existing_app)
 
-        logger.info(
-            f"Updated application status to {status_update.new_status} for application {application_id}"
-        )
+        logger.info('Updated application status to %s for application %s', sanitize_log_value(status_update.new_status), sanitize_log_value(application_id))
 
         return await _format_application_response(existing_app, db)
 
@@ -384,7 +382,7 @@ async def update_application_status(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to update application status: {e}", exc_info=True)
+        logger.error('Failed to update application status: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to update application status")
 
 
@@ -423,14 +421,14 @@ async def update_application_notes(
         await db.commit()
         await db.refresh(existing_app)
 
-        logger.info(f"Updated notes for application {sanitize_log_value(application_id)}")
+        logger.info('Updated notes for application %s', sanitize_log_value(application_id))
         return await _format_application_response(existing_app, db)
 
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to update application notes: {e}", exc_info=True)
+        logger.error('Failed to update application notes: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to update application notes")
 
 
@@ -467,9 +465,7 @@ async def delete_application(
         existing_app.deleted_at = datetime.now(timezone.utc)
         await db.commit()
 
-        logger.info(
-            f"Soft-deleted application {application_id} for user {mask_email(current_user['email'])}"
-        )
+        logger.info('Soft-deleted application %s for user %s', sanitize_log_value(application_id), mask_email(current_user['email']))
 
         return {"message": "Application deleted successfully"}
 
@@ -477,7 +473,7 @@ async def delete_application(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Failed to delete application: {e}", exc_info=True)
+        logger.error('Failed to delete application: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to delete application")
 
 
@@ -546,10 +542,7 @@ async def get_application_stats(
         else:
             response_rate = 0.0
 
-        logger.info(
-            f"Stats generated for user {user_id}: total={total}, applied={applied}, "
-            f"interviews={interviews}, responses={responses}, response_rate={response_rate:.1f}%"
-        )
+        logger.info('Stats generated for user %s: total=%s, applied=%s, interviews=%s, responses=%s, response_rate=%s%%', sanitize_log_value(user_id), sanitize_log_value(total), sanitize_log_value(applied), sanitize_log_value(interviews), sanitize_log_value(responses), sanitize_log_value(response_rate))
 
         return ApplicationStatsResponse(
             total=total,
@@ -559,7 +552,7 @@ async def get_application_stats(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get application stats: {e}", exc_info=True)
+        logger.error('Failed to get application stats: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to get application statistics")
 
 
@@ -599,13 +592,13 @@ async def get_application_download(
         application = result.scalar_one_or_none()
 
         if not application:
-            logger.warning(f"Application {sanitize_log_value(application_id)} not found for user {sanitize_log_value(user_id)}")
+            logger.warning('Application %s not found for user %s', sanitize_log_value(application_id), sanitize_log_value(user_id))
             raise not_found_error("Application not found")
 
         session_id = application.session_id
 
         if not session_id:
-            logger.warning(f"Application {sanitize_log_value(application_id)} has no workflow session ID")
+            logger.warning('Application %s has no workflow session ID', sanitize_log_value(application_id))
             raise not_found_error("No workflow data found for this application")
 
         workflow_result = await db.execute(
@@ -619,7 +612,7 @@ async def get_application_download(
         workflow_session = workflow_result.scalar_one_or_none()
 
         if not workflow_session:
-            logger.warning(f"Workflow session {sanitize_log_value(session_id)} not found")
+            logger.warning('Workflow session %s not found', sanitize_log_value(session_id))
             raise not_found_error("Workflow data not found")
 
         workflow_data = workflow_session.to_dict()
@@ -691,7 +684,7 @@ async def _format_application_response(
             if workflow_session:
                 workflow_data = workflow_session.to_dict()
         except Exception as e:
-            logger.error(f"Error fetching workflow session data: {e}", exc_info=True)
+            logger.error('Error fetching workflow session data: %s', sanitize_log_value(e), exc_info=True)
 
     # Fallback to workflow session data when application fields are missing
     job_title = application.job_title

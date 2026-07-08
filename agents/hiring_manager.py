@@ -184,15 +184,12 @@ class HiringManagerAgent:
         duration_ms = (time.monotonic() - start_time) * 1000
 
         if response.get("filtered"):
-            logger.warning("HiringManagerAgent: content filtered at iteration %d", iteration)
+            logger.warning('HiringManagerAgent: content filtered at iteration %d', iteration)
             return self._fallback_evaluation(iteration)
 
         parsed = parse_json_from_llm_response(response.get("response", ""))
         if not parsed:
-            logger.warning(
-                "HiringManagerAgent: JSON parse failed at iteration %d, using fallback",
-                iteration,
-            )
+            logger.warning('HiringManagerAgent: JSON parse failed at iteration %d, using fallback', iteration)
             return self._fallback_evaluation(iteration)
 
         evaluation = self._build_evaluation(parsed)

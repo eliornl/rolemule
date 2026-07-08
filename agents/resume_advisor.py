@@ -212,7 +212,7 @@ class ResumeAdvisorAgent:
             Exception: If LLM generation fails
         """
         session_id = sanitize_log_value(str(state.get("session_id") or "unknown"))
-        logger.info("Starting resume advisory for session %s", session_id)
+        logger.info('Starting resume advisory for session %s', sanitize_log_value(session_id))
         start_time = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)
@@ -254,7 +254,7 @@ class ResumeAdvisorAgent:
             # Store in state
             state["resume_recommendations"] = result.to_dict()
 
-            logger.info("Resume advisory completed for session %s", session_id)
+            logger.info('Resume advisory completed for session %s', sanitize_log_value(session_id))
 
         except Exception as e:
             logger.error("Resume advisory failed: %s", sanitize_log_value(str(e)), exc_info=True)

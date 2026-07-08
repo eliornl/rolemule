@@ -18,7 +18,7 @@
 import * as esbuild from 'esbuild';
 import { createHash } from 'crypto';
 import {
-  readFileSync, writeFileSync, mkdirSync, readdirSync, statSync,
+  writeFileSync, mkdirSync, readdirSync, statSync,
 } from 'fs';
 import { join } from 'path';
 

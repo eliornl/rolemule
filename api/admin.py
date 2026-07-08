@@ -86,7 +86,7 @@ async def get_maintenance_status(
             estimated_end=info.get("estimated_end"),
         )
     except Exception as e:
-        logger.error(f"Failed to get maintenance status: {e}", exc_info=True)
+        logger.error('Failed to get maintenance status: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to get maintenance status")
 
 
@@ -130,7 +130,7 @@ async def set_maintenance_mode(
             success = await disable_maintenance_mode()
             if not success:
                 raise internal_error("Failed to disable maintenance mode. Check Redis connection.")
-            logger.info(f"Maintenance mode DISABLED by {mask_email(user_email)}")
+            logger.info('Maintenance mode DISABLED by %s', mask_email(user_email))
         
         # Return updated status
         info = await get_maintenance_info()
@@ -143,7 +143,7 @@ async def set_maintenance_mode(
     except APIError:
         raise
     except Exception as e:
-        logger.error(f"Failed to set maintenance mode: {e}", exc_info=True)
+        logger.error('Failed to set maintenance mode: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to update maintenance mode")
 
 
@@ -169,13 +169,13 @@ async def clear_maintenance_mode(
         if not success:
             raise internal_error("Failed to disable maintenance mode")
         
-        logger.info(f"Maintenance mode DISABLED by {mask_email(user_email)}")
+        logger.info('Maintenance mode DISABLED by %s', mask_email(user_email))
         return {"message": "Maintenance mode disabled successfully"}
         
     except APIError:
         raise
     except Exception as e:
-        logger.error(f"Failed to disable maintenance mode: {e}", exc_info=True)
+        logger.error('Failed to disable maintenance mode: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to disable maintenance mode")
 
 
@@ -306,7 +306,7 @@ async def get_metrics(
         )
 
     except Exception as e:
-        logger.error(f"Failed to fetch metrics: {e}", exc_info=True)
+        logger.error('Failed to fetch metrics: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to fetch metrics")
 
 
@@ -362,12 +362,9 @@ async def cleanup_orphaned_sessions(request: Request) -> Response:
             rows = result.fetchall()
             await db.commit()
 
-        logger.info(
-            "Cloud Scheduler cleanup: reset %d orphaned workflow session(s) to 'failed'",
-            len(rows),
-        )
+        logger.info("Cloud Scheduler cleanup: reset %d orphaned workflow session(s) to 'failed'", len(rows))
     except Exception as e:
-        logger.error("Orphaned session cleanup failed: %s", e, exc_info=True)
+        logger.error('Orphaned session cleanup failed: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Cleanup failed")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

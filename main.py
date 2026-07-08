@@ -26,7 +26,7 @@ from utils.database import (
 )
 from utils.llm_client import check_gemini_health, close_gemini_client
 from utils.redis_client import check_redis_health, close_redis_connection
-from utils.logging_config import setup_logging, log_startup_info
+from utils.logging_config import setup_logging, log_startup_info, sanitize_log_value
 from utils.request_middleware import RequestLoggingMiddleware, SlowRequestMiddleware
 from api.auth import router as auth_router
 from api.profile import router as profile_router
@@ -89,7 +89,7 @@ def _load_asset_manifest() -> dict:
         try:
             _asset_manifest = json.loads(_MANIFEST_PATH.read_text())
         except (json.JSONDecodeError, OSError) as manifest_err:
-            logger.error("Failed to parse asset manifest at %s: %s", _MANIFEST_PATH, manifest_err)
+            logger.error('Failed to parse asset manifest at %s: %s', sanitize_log_value(_MANIFEST_PATH), sanitize_log_value(manifest_err))
             _asset_manifest = {}
     else:
         _asset_manifest = {}
@@ -172,7 +172,7 @@ async def _cleanup_orphaned_sessions() -> None:
         rows = result.fetchall()
         await db.commit()
         if rows:
-            logger.warning(f"Startup: reset {len(rows)} orphaned workflow session(s) to 'failed'")
+            logger.warning("Startup: reset %s orphaned workflow session(s) to 'failed'", sanitize_log_value(len(rows)))
 
 
 @asynccontextmanager
@@ -239,10 +239,10 @@ async def lifespan(app: FastAPI):
             try:
                 Path(dir_name).mkdir(exist_ok=True)
             except PermissionError:
-                logger.error(f"Permission denied creating directory: {dir_name}")
+                logger.error('Permission denied creating directory: %s', sanitize_log_value(dir_name))
                 raise
             except OSError as e:
-                logger.error(f"Failed to create directory {dir_name}: {e}", exc_info=True)
+                logger.error('Failed to create directory %s: %s', sanitize_log_value(dir_name), sanitize_log_value(e), exc_info=True)
                 raise
 
         # Initialize PostgreSQL database connection
@@ -255,7 +255,7 @@ async def lifespan(app: FastAPI):
             await connect_to_redis()
             logger.info("Redis connection initialized successfully")
         except Exception as e:
-            logger.warning(f"Redis not available - caching disabled: {e}")
+            logger.warning('Redis not available - caching disabled: %s', sanitize_log_value(e))
 
         # Initialize workflow
         await get_initialized_workflow()
@@ -264,7 +264,7 @@ async def lifespan(app: FastAPI):
         # Initialize templates
         _ensure_templates_initialized()
         manifest = _load_asset_manifest()  # Warm the cache at startup
-        logger.info("Loaded asset manifest with %d entries", len(manifest))
+        logger.info('Loaded asset manifest with %d entries', len(manifest))
 
         # Reset orphaned workflow sessions that were left in a running state
         # (e.g., after a crash or forced restart). Background task sessions
@@ -272,12 +272,12 @@ async def lifespan(app: FastAPI):
         try:
             await _cleanup_orphaned_sessions()
         except Exception as e:
-            logger.warning(f"Orphaned session cleanup failed (non-fatal): {e}")
+            logger.warning('Orphaned session cleanup failed (non-fatal): %s', sanitize_log_value(e))
 
         logger.info("Application startup complete")
 
     except Exception as e:
-        logger.error(f"Startup failed: {e}", exc_info=True)
+        logger.error('Startup failed: %s', sanitize_log_value(e), exc_info=True)
         raise
 
     yield
@@ -297,7 +297,7 @@ async def lifespan(app: FastAPI):
         logger.info("Application shutdown complete")
 
     except Exception as e:
-        logger.error(f"Shutdown error: {e}", exc_info=True)
+        logger.error('Shutdown error: %s', sanitize_log_value(e), exc_info=True)
 
 
 def create_app() -> FastAPI:
@@ -600,13 +600,13 @@ def configure_middleware(app: FastAPI):
             if not settings.is_production and "0.0.0.0" not in allowed_hosts:
                 allowed_hosts.append("0.0.0.0")
 
-            logger.info(f"Configuring Trusted Hosts with: {allowed_hosts}")
+            logger.info('Configuring Trusted Hosts with: %s', sanitize_log_value(allowed_hosts))
             app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
     except Exception as e:
-        logger.error(f"Error configuring TrustedHostMiddleware: {e}", exc_info=True)
+        logger.error('Error configuring TrustedHostMiddleware: %s', sanitize_log_value(e), exc_info=True)
         if settings.is_production:
             fallback_hosts = ["localhost", "127.0.0.1"]
-            logger.warning(f"Using fallback hosts: {fallback_hosts}")
+            logger.warning('Using fallback hosts: %s', sanitize_log_value(fallback_hosts))
             app.add_middleware(TrustedHostMiddleware, allowed_hosts=fallback_hosts)
 
 
@@ -673,7 +673,7 @@ def include_routers(app: FastAPI):
             from utils.cache import get_cache_stats
             return await get_cache_stats()
         except Exception as e:
-            logger.warning("Failed to get cache stats: %s", e)
+            logger.warning('Failed to get cache stats: %s', sanitize_log_value(e))
             return {"status": "unavailable", "error": "Cache unavailable"}
 
 
@@ -704,7 +704,7 @@ def add_custom_routes(app: FastAPI):
             except Exception as e:
                 services_status["database"] = "degraded"
                 overall_status = "degraded"
-                logger.error(f"Database health check error: {e}", exc_info=True)
+                logger.error('Database health check error: %s', sanitize_log_value(e), exc_info=True)
 
             # Check Gemini service - non-critical; skip in BYOK-only mode
             server_has_gemini_key = bool(getattr(settings, "gemini_api_key", None)) or getattr(settings, "use_vertex_ai", False)
@@ -714,7 +714,7 @@ def add_custom_routes(app: FastAPI):
                     services_status["gemini"] = "healthy" if gemini_healthy else "degraded"
                 except Exception as e:
                     services_status["gemini"] = "degraded"
-                    logger.error(f"Gemini health check error: {e}", exc_info=True)
+                    logger.error('Gemini health check error: %s', sanitize_log_value(e), exc_info=True)
             else:
                 services_status["gemini"] = "byok_only"
 
@@ -724,7 +724,7 @@ def add_custom_routes(app: FastAPI):
                 services_status["redis"] = "healthy" if redis_healthy else "degraded"
             except Exception as e:
                 services_status["redis"] = "degraded"
-                logger.error(f"Redis health check error: {e}", exc_info=True)
+                logger.error('Redis health check error: %s', sanitize_log_value(e), exc_info=True)
 
             # Check maintenance mode
             maintenance = False
@@ -732,7 +732,7 @@ def add_custom_routes(app: FastAPI):
                 from utils.maintenance import is_maintenance_mode
                 maintenance = await is_maintenance_mode()
             except Exception as e:
-                logger.error(f"Maintenance mode check error: {e}", exc_info=True)
+                logger.error('Maintenance mode check error: %s', sanitize_log_value(e), exc_info=True)
 
             health_status = {
                 "status": overall_status,
@@ -745,7 +745,7 @@ def add_custom_routes(app: FastAPI):
             return JSONResponse(content=health_status, status_code=200)
 
         except Exception as e:
-            logger.error(f"Health check failed: {e}", exc_info=True)
+            logger.error('Health check failed: %s', sanitize_log_value(e), exc_info=True)
             # Always return 200 for Cloud Run; indicate failure in the body without exposing str(e)
             return JSONResponse(
                 content={
@@ -777,7 +777,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving root page: {e}", exc_info=True)
+            logger.error('Error serving root page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>ApplyPilot</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -799,7 +799,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name, **get_analytics_context()},
             )
         except Exception as e:
-            logger.error(f"Error serving dashboard: {e}", exc_info=True)
+            logger.error('Error serving dashboard: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Dashboard</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -819,7 +819,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name},
             )
         except Exception as e:
-            logger.error(f"Error serving new application page: {e}", exc_info=True)
+            logger.error('Error serving new application page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>New Application</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -843,7 +843,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving login page: {e}", exc_info=True)
+            logger.error('Error serving login page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Login</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -868,7 +868,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving register page: {e}", exc_info=True)
+            logger.error('Error serving register page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Register</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -892,7 +892,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving reset password page: {e}", exc_info=True)
+            logger.error('Error serving reset password page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Reset Password</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -916,7 +916,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving forgot password page: {e}", exc_info=True)
+            logger.error('Error serving forgot password page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Forgot Password</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -940,7 +940,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving verify email page: {e}", exc_info=True)
+            logger.error('Error serving verify email page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Verify Email</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -965,7 +965,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving tools page: {e}", exc_info=True)
+            logger.error('Error serving tools page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Career Tools</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -991,7 +991,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving interview prep page: {e}", exc_info=True)
+            logger.error('Error serving interview prep page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Interview Prep</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1013,7 +1013,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name, **get_analytics_context()},
             )
         except Exception as e:
-            logger.error(f"Error serving profile setup page: {e}", exc_info=True)
+            logger.error('Error serving profile setup page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Profile Setup</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1035,7 +1035,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name, **get_analytics_context()},
             )
         except Exception as e:
-            logger.error(f"Error serving help page: {e}", exc_info=True)
+            logger.error('Error serving help page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Help</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1066,7 +1066,7 @@ def add_custom_routes(app: FastAPI):
                 status_code=503 if maintenance_info.get("enabled") else 200,
             )
         except Exception as e:
-            logger.error(f"Error serving maintenance page: {e}", exc_info=True)
+            logger.error('Error serving maintenance page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Maintenance</h1><p>Service under maintenance</p>",
                 status_code=503,
@@ -1088,7 +1088,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name},
             )
         except Exception as e:
-            logger.error(f"Error serving privacy policy page: {e}", exc_info=True)
+            logger.error('Error serving privacy policy page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Privacy Policy</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1109,7 +1109,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name},
             )
         except Exception as e:
-            logger.error(f"Error serving terms of service page: {e}", exc_info=True)
+            logger.error('Error serving terms of service page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Terms of Service</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1131,7 +1131,7 @@ def add_custom_routes(app: FastAPI):
                 {"request": request, "app_name": settings.app_name},
             )
         except Exception as e:
-            logger.error(f"Error serving settings page: {e}", exc_info=True)
+            logger.error('Error serving settings page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Settings</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1157,7 +1157,7 @@ def add_custom_routes(app: FastAPI):
                 },
             )
         except Exception as e:
-            logger.error(f"Error serving application detail page: {e}", exc_info=True)
+            logger.error('Error serving application detail page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>Application</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
@@ -1167,11 +1167,10 @@ def add_custom_routes(app: FastAPI):
     @app.get("/.well-known/security.txt", include_in_schema=False)
     async def security_txt(request: Request):
         """Serve security.txt per RFC 9116 for responsible disclosure."""
-        from datetime import timezone
-        import datetime
+        from datetime import timedelta
 
         expires = (
-            datetime.datetime.now(timezone.utc) + datetime.timedelta(days=365)
+            datetime.now(timezone.utc) + timedelta(days=365)
         ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         domain = settings.base_url.replace("https://", "").replace("http://", "").split("/")[0]
@@ -1221,7 +1220,7 @@ def add_exception_handlers(app: FastAPI):
     @app.exception_handler(APIError)
     async def api_error_handler(request: Request, exc: APIError):
         """Handle custom API errors with standardized format."""
-        logger.warning(f"API Error {exc.error_code.value}: {exc.message} - {request.url}")
+        logger.warning('API Error %s: %s - %s', sanitize_log_value(exc.error_code.value), sanitize_log_value(exc.message), sanitize_log_value(request.url))
         return exc.to_response()
 
     @app.exception_handler(RequestValidationError)
@@ -1240,9 +1239,7 @@ def add_exception_handlers(app: FastAPI):
                 "code": error.get("type", "validation_error"),
             })
 
-        logger.error(
-            f"Validation error for {request.method} {request.url}: {details}"
-        )
+        logger.error('Validation error for %s %s: %s', sanitize_log_value(request.method), sanitize_log_value(request.url), sanitize_log_value(details))
         
         return create_error_response(
             error_code=ErrorCode.VALIDATION_ERROR,
@@ -1254,7 +1251,7 @@ def add_exception_handlers(app: FastAPI):
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
         """Handle HTTP exceptions with standardized format or custom HTML pages."""
-        logger.warning(f"HTTP {exc.status_code}: {exc.detail} - {request.url}")
+        logger.warning('HTTP %s: %s - %s', sanitize_log_value(exc.status_code), sanitize_log_value(exc.detail), sanitize_log_value(request.url))
         if exc.status_code >= 500:
             await report_exception(exc, request=request)
 
@@ -1310,7 +1307,7 @@ def add_exception_handlers(app: FastAPI):
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle general exceptions with standardized format or custom HTML pages."""
-        logger.error(f"Unhandled exception: {str(exc)} - {request.url}", exc_info=True)
+        logger.error('Unhandled exception: %s - %s', sanitize_log_value(str(exc)), sanitize_log_value(request.url), exc_info=True)
         await report_exception(exc, request=request)
 
         # Serve custom HTML error page for browser requests

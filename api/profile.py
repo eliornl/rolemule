@@ -7,12 +7,12 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from enum import Enum
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, validator, field_validator, ValidationInfo, model_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete as sa_delete, func
 from sqlalchemy.exc import IntegrityError
@@ -226,6 +226,233 @@ def _blank_to_none(value: Optional[str]) -> Optional[str]:
     return t or None
 
 
+def _validator_field_values(info_or_values: Union[ValidationInfo, Dict[str, Any], None]) -> Dict[str, Any]:
+    """Partial field data from Pydantic ValidationInfo or a raw dict (unit tests)."""
+    if info_or_values is None:
+        return {}
+    if isinstance(info_or_values, dict):
+        return info_or_values
+    data = getattr(info_or_values, "data", None)
+    return data if isinstance(data, dict) else {}
+
+
+def _validate_required_location_field(v: str, field_name: str) -> str:
+    result = _validate_location(v, field_name)
+    if result is None:
+        raise ValueError(f"{field_name} cannot be empty")
+    return result
+
+
+def _validate_basic_info_years_experience(v: int) -> int:
+    if v < 0:
+        raise ValueError("Years of experience cannot be negative")
+    if v > MAX_YEARS_EXPERIENCE:
+        raise ValueError(
+            f"Years of experience cannot exceed {MAX_YEARS_EXPERIENCE} years"
+        )
+    return v
+
+
+def _validate_basic_info_phone(v: str) -> str:
+    if not v:
+        return ""
+    t = v.strip()
+    if len(t) > MAX_PHONE_LENGTH:
+        raise ValueError(f"Phone cannot exceed {MAX_PHONE_LENGTH} characters")
+    return t
+
+
+def _validate_optional_profile_url(v: str, field_label: str) -> str:
+    if not v or not str(v).strip():
+        return ""
+    _validate_profile_url_field(str(v), field_label)
+    return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
+
+
+def _validate_employment_start_date(v: str) -> str:
+    if not v:
+        raise ValueError("Start date is required")
+
+    start_date: str = v.strip()
+
+    if not re.match(r"^\d{4}-\d{2}$", start_date):
+        raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
+
+    try:
+        year, month = map(int, start_date.split("-"))
+    except ValueError:
+        raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
+
+    if not (1900 <= year <= 2100):
+        raise ValueError("Start date year must be between 1900 and 2100")
+
+    if not (1 <= month <= 12):
+        raise ValueError("Start date month must be between 01 and 12")
+
+    parsed_date: datetime = datetime.strptime(start_date, "%Y-%m").replace(tzinfo=timezone.utc)
+    current_date: datetime = datetime.now(timezone.utc)
+
+    if parsed_date > current_date:
+        raise ValueError("Start date cannot be in the future")
+
+    return start_date
+
+
+def _validate_employment_end_date(v: Optional[str], *_: Any) -> Optional[str]:
+    if not v:
+        return None
+
+    end_date = v.strip()
+
+    if end_date.lower() == "present":
+        return "Present"
+
+    try:
+        parsed_end_date = datetime.strptime(end_date, "%Y-%m")
+    except ValueError:
+        raise ValueError('End date must be in YYYY-MM format or "Present"')
+
+    current_date = datetime.now(timezone.utc)
+    max_future_date = datetime(current_date.year + 1, 12, 31, tzinfo=timezone.utc)
+    parsed_end_date = parsed_end_date.replace(tzinfo=timezone.utc)
+    if parsed_end_date > max_future_date:
+        raise ValueError("End date cannot be more than 1 year in the future")
+
+    return end_date
+
+
+def _validate_employment_is_current(
+    v: bool,
+    info_or_values: Union[ValidationInfo, Dict[str, Any]],
+) -> bool:
+    if v:
+        values = _validator_field_values(info_or_values)
+        end_date = values.get("end_date")
+        if end_date and end_date.strip().lower() not in ["present", ""]:
+            raise ValueError(
+                'If this is your current position, end date should be empty or "Present"'
+            )
+    return v
+
+
+def _validate_work_experience_list(
+    v: List["WorkExperienceItem"],
+) -> List["WorkExperienceItem"]:
+    if not v:
+        return v
+
+    current_positions = [exp for exp in v if exp.is_current]
+    if len(current_positions) > 1:
+        raise ValueError(
+            "You can only have one current position. Please set is_current=True for only one position."
+        )
+
+    return v
+
+
+def _validate_education_field_of_study(v: str) -> str:
+    ft = _validate_professional_name(v, "Field of study")
+    if len(ft) > MAX_FIELD_OF_STUDY_LENGTH:
+        raise ValueError(f"Field of study cannot exceed {MAX_FIELD_OF_STUDY_LENGTH} characters")
+    return ft
+
+
+def _validate_education_start_date(v: str) -> str:
+    if not v or not str(v).strip():
+        raise ValueError("Start date is required")
+    start_date = str(v).strip()
+    if not re.match(r"^\d{4}-\d{2}$", start_date):
+        raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
+    try:
+        year, month = map(int, start_date.split("-"))
+    except ValueError:
+        raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
+    if not (1900 <= year <= 2100):
+        raise ValueError("Start date year must be between 1900 and 2100")
+    if not (1 <= month <= 12):
+        raise ValueError("Start date month must be between 01 and 12")
+    parsed_date: datetime = datetime.strptime(start_date, "%Y-%m").replace(tzinfo=timezone.utc)
+    current_date: datetime = datetime.now(timezone.utc)
+    if parsed_date > current_date:
+        raise ValueError("Start date cannot be in the future")
+    return start_date
+
+
+def _validate_education_end_date(
+    v: Optional[str],
+    info_or_values: Union[ValidationInfo, Dict[str, Any]],
+) -> Optional[str]:
+    if not v:
+        return None
+    end_date = v.strip()
+    try:
+        parsed_end_date = datetime.strptime(end_date, "%Y-%m")
+    except ValueError:
+        raise ValueError("End date must be in YYYY-MM format")
+    current_date = datetime.now(timezone.utc)
+    max_future_date = datetime(current_date.year + 1, 12, 31, tzinfo=timezone.utc)
+    parsed_end_date = parsed_end_date.replace(tzinfo=timezone.utc)
+    if parsed_end_date > max_future_date:
+        raise ValueError("End date cannot be more than 1 year in the future")
+    start_raw = _validator_field_values(info_or_values).get("start_date")
+    if start_raw and isinstance(start_raw, str):
+        try:
+            parsed_start = datetime.strptime(start_raw.strip(), "%Y-%m").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            pass  # unparseable start_date; skip cross-field check
+        else:
+            if parsed_end_date <= parsed_start:
+                raise ValueError("End date must be after start date")
+    return end_date
+
+
+def _validate_education_is_current(
+    v: bool,
+    info_or_values: Union[ValidationInfo, Dict[str, Any]],
+) -> bool:
+    if v:
+        end_date = _validator_field_values(info_or_values).get("end_date")
+        if end_date and str(end_date).strip():
+            raise ValueError("If currently enrolled, leave end date empty")
+    return v
+
+
+def _validate_skills_list(v: List[str]) -> List[str]:
+    if not v:
+        return v
+
+    validated_skills: List[str] = []
+    seen_skills: set = set()
+
+    for skill in v:
+        if not skill or not skill.strip():
+            continue
+
+        skill = skill.strip()
+
+        if not re.match(SKILL_PATTERN, skill):
+            raise ValueError(
+                f'Skill "{skill}" contains invalid characters. Only letters, numbers, spaces, and common technical characters are allowed.'
+            )
+
+        if len(skill.replace(" ", "")) < 2:
+            continue
+
+        skill_lower: str = skill.lower()
+        if skill_lower in seen_skills:
+            continue
+
+        skill = re.sub(r"\s+", " ", skill)
+        skill = skill.strip()
+
+        validated_skills.append(skill)
+        seen_skills.add(skill_lower)
+
+    return validated_skills
+
+
 # =============================================================================
 # ENUMS
 # =============================================================================
@@ -267,6 +494,69 @@ class MaxTravelPreference(str, Enum):
     MODERATE = "50"
     FREQUENT = "75"
     EXTENSIVE = "100"
+
+
+def _transform_career_preference_enums(v: Any, info: ValidationInfo) -> Any:
+    if not v:
+        return v
+
+    enum_map = {
+        "job_types": JobType,
+        "work_arrangements": WorkArrangement,
+        "desired_company_sizes": CompanySize,
+        "max_travel_preference": MaxTravelPreference,
+    }
+
+    target_enum = enum_map.get(info.field_name)
+    if not target_enum:
+        return v
+
+    def convert_value(val: Any) -> Any:
+        if isinstance(val, str):
+            try:
+                return target_enum[val.upper().replace("-", "_")]
+            except KeyError:
+                try:
+                    return target_enum(val)
+                except ValueError:
+                    return val
+        return val
+
+    if isinstance(v, list):
+        return [convert_value(item) for item in v]
+    return convert_value(v)
+
+
+def _validate_desired_salary_range(v: Optional[Dict[str, int]]) -> Optional[Dict[str, int]]:
+    if not v:
+        return None
+
+    normalized: Dict[str, int] = {}
+    for key in ("min", "max"):
+        if key not in v:
+            continue
+        raw = v[key]
+        if isinstance(raw, bool):
+            raise ValueError(f"Salary {key} must be an integer")
+        if isinstance(raw, int):
+            amount = raw
+        elif isinstance(raw, str):
+            digits = re.sub(r"\D", "", raw.strip())
+            if not digits:
+                continue
+            amount = int(digits)
+        else:
+            raise ValueError(f"Salary {key} must be an integer")
+        if amount < 0:
+            raise ValueError(f"Salary {key} must be positive")
+        if amount > 2000000:
+            raise ValueError(f"Salary {key} seems unreasonably high")
+        normalized[key] = amount
+
+    if "min" in normalized and "max" in normalized and normalized["min"] >= normalized["max"]:
+        raise ValueError("Minimum salary must be less than maximum salary")
+
+    return normalized or None
 
 
 # =============================================================================
@@ -323,74 +613,34 @@ class BasicInfoRequest(BaseModel):
     github_url: str = Field(default="", max_length=MAX_PROFILE_URL_LENGTH)
     portfolio_url: str = Field(default="", max_length=MAX_PROFILE_URL_LENGTH)
 
-    @validator("city")
-    def validate_city(cls, v: str) -> str:
-        result = _validate_location(v, "City")
-        if result is None:
-            raise ValueError("City cannot be empty")
-        return result
-
-    @validator("state")
-    def validate_state(cls, v: str) -> str:
-        result = _validate_location(v, "State")
-        if result is None:
-            raise ValueError("State cannot be empty")
-        return result
-
-    @validator("country")
-    def validate_country(cls, v: str) -> str:
-        result = _validate_location(v, "Country")
-        if result is None:
-            raise ValueError("Country cannot be empty")
-        return result
-
-    @validator("professional_title")
-    def validate_professional_title(cls, v: str) -> str:
-        return _validate_professional_name(v, "Professional title")
-
-    @validator("years_experience")
-    def validate_years_experience(cls, v: int) -> int:
-        if v < 0:
-            raise ValueError("Years of experience cannot be negative")
-        if v > MAX_YEARS_EXPERIENCE:
-            raise ValueError(
-                f"Years of experience cannot exceed {MAX_YEARS_EXPERIENCE} years"
-            )
-        return v
-
-    @validator("summary")
-    def validate_summary(cls, v: Optional[str]) -> Optional[str]:
-        return _validate_text_field(v, "Professional summary", MAX_SUMMARY_LENGTH)
-
-    @validator("phone")
-    def validate_phone(cls, v: str) -> str:
-        if not v:
-            return ""
-        t = v.strip()
-        if len(t) > MAX_PHONE_LENGTH:
-            raise ValueError(f"Phone cannot exceed {MAX_PHONE_LENGTH} characters")
-        return t
-
-    @validator("linkedin_url")
-    def validate_linkedin_url(cls, v: str) -> str:
-        if not v or not str(v).strip():
-            return ""
-        _validate_profile_url_field(str(v), "LinkedIn URL")
-        return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
-
-    @validator("github_url")
-    def validate_github_url(cls, v: str) -> str:
-        if not v or not str(v).strip():
-            return ""
-        _validate_profile_url_field(str(v), "GitHub")
-        return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
-
-    @validator("portfolio_url")
-    def validate_portfolio_url(cls, v: str) -> str:
-        if not v or not str(v).strip():
-            return ""
-        _validate_profile_url_field(str(v), "Portfolio URL")
-        return str(v).strip()[:MAX_PROFILE_URL_LENGTH]
+    validate_city = field_validator("city")(
+        lambda v: _validate_required_location_field(v, "City")
+    )
+    validate_state = field_validator("state")(
+        lambda v: _validate_required_location_field(v, "State")
+    )
+    validate_country = field_validator("country")(
+        lambda v: _validate_required_location_field(v, "Country")
+    )
+    validate_professional_title = field_validator("professional_title")(
+        lambda v: _validate_professional_name(v, "Professional title")
+    )
+    validate_years_experience = field_validator("years_experience")(
+        _validate_basic_info_years_experience
+    )
+    validate_summary = field_validator("summary")(
+        lambda v: _validate_text_field(v, "Professional summary", MAX_SUMMARY_LENGTH)
+    )
+    validate_phone = field_validator("phone")(_validate_basic_info_phone)
+    validate_linkedin_url = field_validator("linkedin_url")(
+        lambda v: _validate_optional_profile_url(v, "LinkedIn URL")
+    )
+    validate_github_url = field_validator("github_url")(
+        lambda v: _validate_optional_profile_url(v, "GitHub")
+    )
+    validate_portfolio_url = field_validator("portfolio_url")(
+        lambda v: _validate_optional_profile_url(v, "Portfolio URL")
+    )
 
 
 class WorkExperienceItem(BaseModel):
@@ -428,79 +678,18 @@ class WorkExperienceItem(BaseModel):
     )
     is_current: bool = Field(False, description="Whether this is the current position")
 
-    @validator("company")
-    def validate_company(cls, v: str) -> str:
-        return _validate_professional_name(v, "Company name")
-
-    @validator("job_title")
-    def validate_job_title(cls, v: str) -> str:
-        return _validate_professional_name(v, "Job title")
-
-    @validator("start_date")
-    def validate_start_date(cls, v: str) -> str:
-        if not v:
-            raise ValueError("Start date is required")
-
-        start_date: str = v.strip()
-
-        if not re.match(r"^\d{4}-\d{2}$", start_date):
-            raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
-
-        try:
-            year, month = map(int, start_date.split("-"))
-        except ValueError:
-            raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
-
-        if not (1900 <= year <= 2100):
-            raise ValueError("Start date year must be between 1900 and 2100")
-
-        if not (1 <= month <= 12):
-            raise ValueError("Start date month must be between 01 and 12")
-
-        parsed_date: datetime = datetime.strptime(start_date, "%Y-%m").replace(tzinfo=timezone.utc)
-        current_date: datetime = datetime.now(timezone.utc)
-
-        if parsed_date > current_date:
-            raise ValueError("Start date cannot be in the future")
-
-        return start_date
-
-    @validator("end_date")
-    def validate_end_date(cls, v: Optional[str], values: dict) -> Optional[str]:
-        if not v:
-            return None
-
-        end_date = v.strip()
-
-        if end_date.lower() == "present":
-            return "Present"
-
-        try:
-            parsed_end_date = datetime.strptime(end_date, "%Y-%m")
-        except ValueError:
-            raise ValueError('End date must be in YYYY-MM format or "Present"')
-
-        current_date = datetime.now(timezone.utc)
-        max_future_date = datetime(current_date.year + 1, 12, 31, tzinfo=timezone.utc)
-        parsed_end_date = parsed_end_date.replace(tzinfo=timezone.utc)
-        if parsed_end_date > max_future_date:
-            raise ValueError("End date cannot be more than 1 year in the future")
-
-        return end_date
-
-    @validator("description")
-    def validate_description(cls, v: Optional[str]) -> Optional[str]:
-        return _validate_text_field(v, "Job description", 2000)
-
-    @validator("is_current")
-    def validate_is_current(cls, v: bool, values: dict) -> bool:
-        if v:
-            end_date = values.get("end_date")
-            if end_date and end_date.strip().lower() not in ["present", ""]:
-                raise ValueError(
-                    'If this is your current position, end date should be empty or "Present"'
-                )
-        return v
+    validate_company = field_validator("company")(
+        lambda v: _validate_professional_name(v, "Company name")
+    )
+    validate_job_title = field_validator("job_title")(
+        lambda v: _validate_professional_name(v, "Job title")
+    )
+    validate_start_date = field_validator("start_date")(_validate_employment_start_date)
+    validate_end_date = field_validator("end_date")(_validate_employment_end_date)
+    validate_description = field_validator("description")(
+        lambda v: _validate_text_field(v, "Job description", 2000)
+    )
+    validate_is_current = field_validator("is_current")(_validate_employment_is_current)
 
 
 class WorkExperienceRequest(BaseModel):
@@ -512,20 +701,9 @@ class WorkExperienceRequest(BaseModel):
         description="List of work experience entries",
     )
 
-    @validator("work_experience")
-    def validate_work_experience_list(
-        cls, v: List[WorkExperienceItem]
-    ) -> List[WorkExperienceItem]:
-        if not v:
-            return v
-
-        current_positions = [exp for exp in v if exp.is_current]
-        if len(current_positions) > 1:
-            raise ValueError(
-                "You can only have one current position. Please set is_current=True for only one position."
-            )
-
-        return v
+    validate_work_experience = field_validator("work_experience")(
+        _validate_work_experience_list
+    )
 
 
 class EducationItem(BaseModel):
@@ -562,76 +740,16 @@ class EducationItem(BaseModel):
     )
     is_current: bool = Field(False, description="Currently enrolled")
 
-    @validator("institution")
-    def validate_institution(cls, v: str) -> str:
-        return _validate_professional_name(v, "Institution")
-
-    @validator("degree")
-    def validate_degree(cls, v: str) -> str:
-        return _validate_professional_name(v, "Degree")
-
-    @validator("field_of_study")
-    def validate_field_of_study(cls, v: str) -> str:
-        ft = _validate_professional_name(v, "Field of study")
-        if len(ft) > MAX_FIELD_OF_STUDY_LENGTH:
-            raise ValueError(f"Field of study cannot exceed {MAX_FIELD_OF_STUDY_LENGTH} characters")
-        return ft
-
-    @validator("start_date")
-    def validate_edu_start_date(cls, v: str) -> str:
-        if not v or not str(v).strip():
-            raise ValueError("Start date is required")
-        start_date = str(v).strip()
-        if not re.match(r"^\d{4}-\d{2}$", start_date):
-            raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
-        try:
-            year, month = map(int, start_date.split("-"))
-        except ValueError:
-            raise ValueError("Start date must be in YYYY-MM format (e.g., 2023-01)")
-        if not (1900 <= year <= 2100):
-            raise ValueError("Start date year must be between 1900 and 2100")
-        if not (1 <= month <= 12):
-            raise ValueError("Start date month must be between 01 and 12")
-        parsed_date: datetime = datetime.strptime(start_date, "%Y-%m").replace(tzinfo=timezone.utc)
-        current_date: datetime = datetime.now(timezone.utc)
-        if parsed_date > current_date:
-            raise ValueError("Start date cannot be in the future")
-        return start_date
-
-    @validator("end_date")
-    def validate_edu_end_date(cls, v: Optional[str], values: dict) -> Optional[str]:
-        if not v:
-            return None
-        end_date = v.strip()
-        try:
-            parsed_end_date = datetime.strptime(end_date, "%Y-%m")
-        except ValueError:
-            raise ValueError("End date must be in YYYY-MM format")
-        current_date = datetime.now(timezone.utc)
-        max_future_date = datetime(current_date.year + 1, 12, 31, tzinfo=timezone.utc)
-        parsed_end_date = parsed_end_date.replace(tzinfo=timezone.utc)
-        if parsed_end_date > max_future_date:
-            raise ValueError("End date cannot be more than 1 year in the future")
-        start_raw = values.get("start_date")
-        if start_raw and isinstance(start_raw, str):
-            try:
-                parsed_start = datetime.strptime(start_raw.strip(), "%Y-%m").replace(
-                    tzinfo=timezone.utc
-                )
-            except ValueError:
-                pass  # unparseable start_date; skip cross-field check
-            else:
-                if parsed_end_date <= parsed_start:
-                    raise ValueError("End date must be after start date")
-        return end_date
-
-    @validator("is_current")
-    def validate_edu_is_current(cls, v: bool, values: dict) -> bool:
-        if v:
-            end_date = values.get("end_date")
-            if end_date and str(end_date).strip():
-                raise ValueError("If currently enrolled, leave end date empty")
-        return v
+    validate_institution = field_validator("institution")(
+        lambda v: _validate_professional_name(v, "Institution")
+    )
+    validate_degree = field_validator("degree")(
+        lambda v: _validate_professional_name(v, "Degree")
+    )
+    validate_field_of_study = field_validator("field_of_study")(_validate_education_field_of_study)
+    validate_edu_start_date = field_validator("start_date")(_validate_education_start_date)
+    validate_edu_end_date = field_validator("end_date")(_validate_education_end_date)
+    validate_edu_is_current = field_validator("is_current")(_validate_education_is_current)
 
     @model_validator(mode="after")
     def validate_education_end_when_completed(self) -> "EducationItem":
@@ -665,39 +783,7 @@ class SkillsQualificationsRequest(BaseModel):
         description="List of professional skills",
     )
 
-    @validator("skills")
-    def validate_skills_list(cls, v: List[str]) -> List[str]:
-        if not v:
-            return v
-
-        validated_skills: List[str] = []
-        seen_skills: set = set()
-
-        for skill in v:
-            if not skill or not skill.strip():
-                continue
-
-            skill = skill.strip()
-
-            if not re.match(SKILL_PATTERN, skill):
-                raise ValueError(
-                    f'Skill "{skill}" contains invalid characters. Only letters, numbers, spaces, and common technical characters are allowed.'
-                )
-
-            if len(skill.replace(" ", "")) < 2:
-                continue
-
-            skill_lower: str = skill.lower()
-            if skill_lower in seen_skills:
-                continue
-
-            skill = re.sub(r"\s+", " ", skill)
-            skill = skill.strip()
-
-            validated_skills.append(skill)
-            seen_skills.add(skill_lower)
-
-        return validated_skills
+    validate_skills_list = field_validator("skills")(_validate_skills_list)
 
 
 class CareerPreferencesRequest(BaseModel):
@@ -745,75 +831,16 @@ class CareerPreferencesRequest(BaseModel):
         description="Maximum travel percentage user is willing to accept",
     )
 
-    @field_validator(
+    transform_enums = field_validator(
         "job_types",
         "work_arrangements",
         "desired_company_sizes",
         "max_travel_preference",
         mode="before",
+    )(_transform_career_preference_enums)
+    validate_desired_salary_range = field_validator("desired_salary_range")(
+        _validate_desired_salary_range
     )
-    def transform_enums(cls, v, info: ValidationInfo):
-        if not v:
-            return v
-
-        enum_map = {
-            "job_types": JobType,
-            "work_arrangements": WorkArrangement,
-            "desired_company_sizes": CompanySize,
-            "max_travel_preference": MaxTravelPreference,
-        }
-
-        target_enum = enum_map.get(info.field_name)
-        if not target_enum:
-            return v
-
-        def convert_value(val):
-            if isinstance(val, str):
-                try:
-                    return target_enum[val.upper().replace("-", "_")]
-                except KeyError:
-                    try:
-                        return target_enum(val)
-                    except ValueError:
-                        return val
-            return val
-
-        if isinstance(v, list):
-            return [convert_value(item) for item in v]
-        else:
-            return convert_value(v)
-
-    @field_validator("desired_salary_range")
-    def validate_desired_salary_range(cls, v: Optional[Dict[str, int]]) -> Optional[Dict[str, int]]:
-        if not v:
-            return None
-
-        normalized: Dict[str, int] = {}
-        for key in ("min", "max"):
-            if key not in v:
-                continue
-            raw = v[key]
-            if isinstance(raw, bool):
-                raise ValueError(f"Salary {key} must be an integer")
-            if isinstance(raw, int):
-                amount = raw
-            elif isinstance(raw, str):
-                digits = re.sub(r"\D", "", raw.strip())
-                if not digits:
-                    continue
-                amount = int(digits)
-            else:
-                raise ValueError(f"Salary {key} must be an integer")
-            if amount < 0:
-                raise ValueError(f"Salary {key} must be positive")
-            if amount > 2000000:
-                raise ValueError(f"Salary {key} seems unreasonably high")
-            normalized[key] = amount
-
-        if "min" in normalized and "max" in normalized and normalized["min"] >= normalized["max"]:
-            raise ValueError("Minimum salary must be less than maximum salary")
-
-        return normalized or None
 
     @model_validator(mode="after")
     def _normalize_work_authorization(self) -> "CareerPreferencesRequest":
@@ -1013,12 +1040,7 @@ async def parse_resume_endpoint(
         if not user_api_key and not server_has_key:
             raise no_api_key_error()
 
-        logger.info(
-            "Parsing resume for user %s: %s (%d bytes)",
-            sanitize_log_value(current_user.get("id")),
-            sanitize_log_value(resume.filename),
-            len(content),
-        )
+        logger.info('Parsing resume for user %s: %s (%d bytes)', sanitize_log_value(current_user.get("id")), sanitize_log_value(resume.filename), len(content))
 
         parsed_data = await parse_resume_from_file(content, resume.filename, user_api_key=user_api_key)
 
@@ -1130,7 +1152,10 @@ async def get_profile_data(
         # Try to get from cache first
         cached_profile = await get_cached_user_profile(user_id_str)
         if cached_profile:
-            logger.debug(f"Profile cache hit for user {sanitize_log_value(user_id_str)[:8]}...")
+            logger.debug(
+                'Profile cache hit for user %s...',
+                sanitize_log_value(sanitize_log_value(user_id_str)[:8]),
+            )
             return cached_profile
 
         # Get user profile from database
@@ -1300,9 +1325,7 @@ async def update_work_experience(
         # Invalidate profile cache
         await invalidate_user_profile(str(user_id))
 
-        logger.info(
-            f"Updated work experience for user: {_log_user_email(current_user)} - {len(work_experience)} entries"
-        )
+        logger.info('Updated work experience for user: %s - %s entries', _log_user_email(current_user), sanitize_log_value(len(work_experience)))
 
         current_positions = [
             exp for exp in work_experience if exp.get("is_current", False)
@@ -1360,9 +1383,7 @@ async def update_education(
 
         await invalidate_user_profile(str(user_id))
 
-        logger.info(
-            f"Updated education for user: {_log_user_email(current_user)} — {len(education)} entries"
-        )
+        logger.info('Updated education for user: %s — %s entries', _log_user_email(current_user), sanitize_log_value(len(education)))
 
         return {
             "message": "Education updated successfully",
@@ -1416,9 +1437,7 @@ async def update_skills_qualifications(
         # Invalidate profile cache
         await invalidate_user_profile(str(user_id))
 
-        logger.info(
-            f"Updated skills and qualifications for user: {_log_user_email(current_user)}"
-        )
+        logger.info('Updated skills and qualifications for user: %s', _log_user_email(current_user))
 
         return {"message": "Skills and qualifications updated successfully"}
 
@@ -2155,14 +2174,7 @@ async def update_application_preferences(
 
         await db.commit()
 
-        logger.info(
-            f"Updated workflow preferences for {_log_user_email(current_user)}: "
-            f"gate={prefs_row.workflow_gate_threshold} "
-            f"auto_docs={prefs_row.auto_generate_documents} "
-            f"tone={prefs_row.cover_letter_tone} "
-            f"resume_length={prefs_row.resume_length} "
-            f"model={prefs_row.preferred_model}"
-        )
+        logger.info('Updated workflow preferences for %s: gate=%s auto_docs=%s tone=%s resume_length=%s model=%s', _log_user_email(current_user), sanitize_log_value(prefs_row.workflow_gate_threshold), sanitize_log_value(prefs_row.auto_generate_documents), sanitize_log_value(prefs_row.cover_letter_tone), sanitize_log_value(prefs_row.resume_length), sanitize_log_value(prefs_row.preferred_model))
 
         return ApplicationPreferencesResponse(
             workflow_gate_threshold=prefs_row.workflow_gate_threshold,
@@ -2301,7 +2313,7 @@ async def export_user_data(
         filename = f"job-assistant-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"
         
         masked_email = mask_email(str(user.email))
-        logger.info("User data exported for: %s", masked_email)
+        logger.info('User data exported for: %s', sanitize_log_value(masked_email))
         
         return StreamingResponse(
             buffer,
@@ -2431,10 +2443,7 @@ async def delete_user_account(
                 sanitize_log_value(str(cache_error)),
             )
 
-        logger.info(
-            f"Account deleted for user: {masked_user_email} - "
-            f"Deleted {application_count} applications, {session_count} workflow sessions"
-        )
+        logger.info('Account deleted for user: %s - Deleted %s applications, %s workflow sessions', sanitize_log_value(masked_user_email), sanitize_log_value(application_count), sanitize_log_value(session_count))
 
         return {
             "message": "Account successfully deleted",
@@ -2512,10 +2521,7 @@ async def clear_user_data(
         await db.execute(sa_delete(WorkflowSession).where(WorkflowSession.user_id == user_id))
         await db.commit()
 
-        logger.info(
-            f"Data cleared for user: {masked_user_email} - "
-            f"Deleted {application_count} applications, {session_count} workflow sessions"
-        )
+        logger.info('Data cleared for user: %s - Deleted %s applications, %s workflow sessions', sanitize_log_value(masked_user_email), sanitize_log_value(application_count), sanitize_log_value(session_count))
 
         return {
             "message": "All application data has been cleared",

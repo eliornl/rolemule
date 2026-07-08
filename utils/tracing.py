@@ -24,6 +24,7 @@ Adding a custom span around an agent call:
 import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, Optional
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -134,14 +135,11 @@ def setup_tracing(
             )
 
         _tracer = otel_trace.get_tracer(service_name, service_version)
-        logger.info(
-            f"OpenTelemetry tracing active — "
-            f"service={service_name} version={service_version} env={environment}"
-        )
+        logger.info('OpenTelemetry tracing active — service=%s version=%s env=%s', sanitize_log_value(service_name), sanitize_log_value(service_version), sanitize_log_value(environment))
 
     except Exception as exc:
         # Never crash the application due to tracing setup failures.
-        logger.error(f"OpenTelemetry setup failed — tracing disabled: {exc}", exc_info=True)
+        logger.error('OpenTelemetry setup failed — tracing disabled: %s', sanitize_log_value(exc), exc_info=True)
 
 
 def _build_cloud_trace_exporter():

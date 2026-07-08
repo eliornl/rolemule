@@ -37,9 +37,7 @@ def _get_hostname() -> str:
     try:
         return socket.gethostname()
     except Exception as exc:
-        logging.getLogger(__name__).debug(
-            "Could not resolve hostname for log metadata: %s", exc, exc_info=True
-        )
+        logging.getLogger(__name__).debug('Could not resolve hostname for log metadata: %s', sanitize_log_value(exc), exc_info=True)
         return "unknown"
 
 
@@ -505,10 +503,7 @@ class LoggingConfig:
         sqlalchemy_logger.propagate = True
 
         self._configured = True
-        logging.getLogger(__name__).info(
-            f"Logging configured: level={logging.getLevelName(self.log_level)}, "
-            f"format={self.log_format}, file_logging={self.enable_file_logging}"
-        )
+        logging.getLogger(__name__).info('Logging configured: level=%s, format=%s, file_logging=%s', sanitize_log_value(logging.getLevelName(self.log_level)), sanitize_log_value(self.log_format), sanitize_log_value(self.enable_file_logging))
 
 
 # =============================================================================
@@ -608,7 +603,10 @@ def log_execution_time(
             except Exception as e:
                 duration_ms = (perf_counter() - start) * 1000
                 func_logger.error(
-                    f"{func.__name__} failed after {duration_ms:.2f}ms: {e}",
+                    "%s failed after %.2fms: %s",
+                    sanitize_log_value(func.__name__),
+                    duration_ms,
+                    sanitize_log_value(e),
                     extra={"duration_ms": duration_ms},
                     exc_info=True,
                 )
@@ -629,7 +627,10 @@ def log_execution_time(
             except Exception as e:
                 duration_ms = (perf_counter() - start) * 1000
                 func_logger.error(
-                    f"{func.__name__} failed after {duration_ms:.2f}ms: {e}",
+                    "%s failed after %.2fms: %s",
+                    sanitize_log_value(func.__name__),
+                    duration_ms,
+                    sanitize_log_value(e),
                     extra={"duration_ms": duration_ms},
                     exc_info=True,
                 )
@@ -694,7 +695,11 @@ class StructuredLogger:
     ) -> None:
         """Log an HTTP request with standard fields."""
         self.logger.info(
-            f"{method} {path} - {status_code} ({duration_ms:.2f}ms)",
+            "%s %s - %s (%.2fms)",
+            sanitize_log_value(method),
+            sanitize_log_value(path),
+            status_code,
+            duration_ms,
             extra={
                 "method": method,
                 "path": path,
@@ -707,7 +712,8 @@ class StructuredLogger:
     def log_agent_start(self, agent_name: str, workflow_id: str) -> None:
         """Log agent execution start."""
         self.logger.info(
-            f"Agent '{agent_name}' starting",
+            "Agent %r starting",
+            sanitize_log_value(agent_name),
             extra={"agent": agent_name, "workflow_id": workflow_id},
         )
 
@@ -716,7 +722,9 @@ class StructuredLogger:
     ) -> None:
         """Log agent execution completion."""
         self.logger.info(
-            f"Agent '{agent_name}' completed in {duration_ms:.2f}ms",
+            "Agent %r completed in %.2fms",
+            sanitize_log_value(agent_name),
+            duration_ms,
             extra={
                 "agent": agent_name,
                 "workflow_id": workflow_id,
@@ -736,7 +744,9 @@ class StructuredLogger:
         if duration_ms:
             extra["duration_ms"] = duration_ms
         self.logger.error(
-            f"Agent '{agent_name}' failed: {error}",
+            "Agent %r failed: %s",
+            sanitize_log_value(agent_name),
+            sanitize_log_value(error),
             extra=extra,
             exc_info=True,
         )
@@ -752,7 +762,10 @@ class StructuredLogger:
         """Log external API call."""
         if success:
             self.logger.info(
-                f"External API call: {service}.{operation} - {duration_ms:.2f}ms",
+                "External API call: %s.%s - %.2fms",
+                sanitize_log_value(service),
+                sanitize_log_value(operation),
+                duration_ms,
                 extra={
                     "service": service,
                     "operation": operation,
@@ -761,7 +774,10 @@ class StructuredLogger:
             )
         else:
             self.logger.warning(
-                f"External API call failed: {service}.{operation} - {error}",
+                "External API call failed: %s.%s - %s",
+                sanitize_log_value(service),
+                sanitize_log_value(operation),
+                sanitize_log_value(error),
                 extra={
                     "service": service,
                     "operation": operation,
@@ -778,15 +794,33 @@ class StructuredLogger:
         rows_affected: Optional[int] = None,
     ) -> None:
         """Log database operation."""
-        msg = f"DB {operation} on {table} - {duration_ms:.2f}ms"
         if rows_affected is not None:
-            msg += f" ({rows_affected} rows)"
-        self.logger.debug(msg, extra={
-            "operation": operation,
-            "table": table,
-            "duration_ms": duration_ms,
-            "rows_affected": rows_affected,
-        })
+            self.logger.debug(
+                "DB %s on %s - %.2fms (%s rows)",
+                sanitize_log_value(operation),
+                sanitize_log_value(table),
+                duration_ms,
+                sanitize_log_value(rows_affected),
+                extra={
+                    "operation": operation,
+                    "table": table,
+                    "duration_ms": duration_ms,
+                    "rows_affected": rows_affected,
+                },
+            )
+        else:
+            self.logger.debug(
+                "DB %s on %s - %.2fms",
+                sanitize_log_value(operation),
+                sanitize_log_value(table),
+                duration_ms,
+                extra={
+                    "operation": operation,
+                    "table": table,
+                    "duration_ms": duration_ms,
+                    "rows_affected": rows_affected,
+                },
+            )
 
     # =========================================================================
     # SECURITY EVENT LOGGING
@@ -795,7 +829,9 @@ class StructuredLogger:
     def log_login_success(self, email: str, auth_method: str = "local") -> None:
         """Log successful login."""
         self.logger.info(
-            f"Login successful: {email[:3]}***@*** via {auth_method}",
+            "Login successful: %s via %s",
+            mask_email(email),
+            sanitize_log_value(auth_method),
             extra={"event": "login_success", "auth_method": auth_method},
         )
 
@@ -807,14 +843,18 @@ class StructuredLogger:
         if attempts_remaining is not None:
             extra["attempts_remaining"] = attempts_remaining
         self.logger.warning(
-            f"Login failed for {email[:3]}***@***: {reason}",
+            "Login failed for %s: %s",
+            mask_email(email),
+            sanitize_log_value(reason),
             extra=extra,
         )
 
     def log_account_lockout(self, email: str, duration_seconds: int) -> None:
         """Log account lockout event."""
         self.logger.warning(
-            f"Account locked: {email[:3]}***@*** for {duration_seconds // 60} minutes",
+            "Account locked: %s for %s minutes",
+            mask_email(email),
+            sanitize_log_value(duration_seconds // 60),
             extra={
                 "event": "account_lockout",
                 "duration_seconds": duration_seconds,
@@ -824,35 +864,41 @@ class StructuredLogger:
     def log_registration(self, email: str, auth_method: str = "local") -> None:
         """Log user registration."""
         self.logger.info(
-            f"User registered: {email[:3]}***@*** via {auth_method}",
+            "User registered: %s via %s",
+            mask_email(email),
+            sanitize_log_value(auth_method),
             extra={"event": "registration", "auth_method": auth_method},
         )
 
     def log_password_reset_request(self, email: str) -> None:
         """Log password reset request."""
         self.logger.info(
-            f"Password reset requested for {email[:3]}***@***",
+            "Password reset requested for %s",
+            mask_email(email),
             extra={"event": "password_reset_request"},
         )
 
     def log_password_reset_complete(self, email: str) -> None:
         """Log successful password reset."""
         self.logger.info(
-            f"Password reset completed for {email[:3]}***@***",
+            "Password reset completed for %s",
+            mask_email(email),
             extra={"event": "password_reset_complete"},
         )
 
     def log_password_change(self, email: str) -> None:
         """Log password change."""
         self.logger.info(
-            f"Password changed for {email[:3]}***@***",
+            "Password changed for %s",
+            mask_email(email),
             extra={"event": "password_change"},
         )
 
     def log_token_refresh(self, email: str) -> None:
         """Log token refresh."""
         self.logger.debug(
-            f"Token refreshed for {email[:3]}***@***",
+            "Token refreshed for %s",
+            mask_email(email),
             extra={"event": "token_refresh"},
         )
 
@@ -860,7 +906,10 @@ class StructuredLogger:
         """Log OAuth login."""
         action = "registered" if is_new_user else "logged in"
         self.logger.info(
-            f"OAuth user {action}: {email[:3]}***@*** via {provider}",
+            "OAuth user %s: %s via %s",
+            sanitize_log_value(action),
+            mask_email(email),
+            sanitize_log_value(provider),
             extra={
                 "event": "oauth_login",
                 "provider": provider,
@@ -875,14 +924,18 @@ class StructuredLogger:
     def log_cache_hit(self, cache_type: str, key: str) -> None:
         """Log cache hit."""
         self.logger.debug(
-            f"Cache hit: {cache_type} - {key[:20]}...",
+            "Cache hit: %s - %s...",
+            sanitize_log_value(cache_type),
+            sanitize_log_value(key[:20]),
             extra={"event": "cache_hit", "cache_type": cache_type},
         )
 
     def log_cache_miss(self, cache_type: str, key: str) -> None:
         """Log cache miss."""
         self.logger.debug(
-            f"Cache miss: {cache_type} - {key[:20]}...",
+            "Cache miss: %s - %s...",
+            sanitize_log_value(cache_type),
+            sanitize_log_value(key[:20]),
             extra={"event": "cache_miss", "cache_type": cache_type},
         )
 
@@ -925,16 +978,24 @@ def log_startup_info(
 
     sep = "-" * 60
     _log.info(sep)
-    _log.info(f"  {app_name} v{version}")
+    _log.info("  %s v%s", sanitize_log_value(app_name), sanitize_log_value(version))
     _log.info(sep)
-    _log.info(f"  env        : {environment}{'  [DEBUG]' if debug else ''}")
-    _log.info(f"  listening  : http://{host}:{port}")
-    _log.info(f"  LLM model  : {gemini_model}")
-    _log.info(f"  LLM backend: {llm_backend}")
+    _log.info(
+        "  env        : %s%s",
+        sanitize_log_value(environment),
+        "  [DEBUG]" if debug else "",
+    )
+    _log.info(
+        "  listening  : http://%s:%s",
+        sanitize_log_value(host),
+        sanitize_log_value(port),
+    )
+    _log.info("  LLM model  : %s", sanitize_log_value(gemini_model))
+    _log.info("  LLM backend: %s", sanitize_log_value(llm_backend))
     redis_display = _re.sub(r"://[^@]+@", "://<credentials>@", redis_url)
-    _log.info(f"  database   : {db_display}")
-    _log.info(f"  redis      : {redis_display}")
-    _log.info(f"  log level  : {log_level}")
+    _log.info("  database   : %s", sanitize_log_value(db_display))
+    _log.info("  redis      : %s", sanitize_log_value(redis_display))
+    _log.info("  log level  : %s", sanitize_log_value(log_level))
     _log.info(sep)
 
 

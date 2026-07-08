@@ -116,7 +116,7 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
         if user and user.gemini_api_key_encrypted:
             return decrypt_api_key(user.gemini_api_key_encrypted)
     except Exception as e:
-        logger.warning(f"Failed to decrypt user API key: {e}")
+        logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
     
     return None
 
@@ -207,7 +207,7 @@ async def get_interview_prep(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get interview prep: {e}", exc_info=True)
+        logger.error('Failed to get interview prep: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to get interview prep")
 
 
@@ -265,7 +265,7 @@ async def get_interview_prep_status(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get interview prep status: {e}", exc_info=True)
+        logger.error('Failed to get interview prep status: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to get interview prep status")
 
 
@@ -358,7 +358,7 @@ async def generate_interview_prep(
             user_api_key=user_api_key,
         )
         
-        logger.info(f"Started interview prep generation for session {sanitize_log_value(session_id)}")
+        logger.info('Started interview prep generation for session %s', sanitize_log_value(session_id))
         
         return InterviewPrepGenerateResponse(
             session_id=session_id,
@@ -369,7 +369,7 @@ async def generate_interview_prep(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to start interview prep generation: {e}", exc_info=True)
+        logger.error('Failed to start interview prep generation: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to start interview prep generation")
 
 
@@ -417,12 +417,12 @@ async def delete_interview_prep(
         # Clear from cache
         await invalidate_interview_prep(session_id)
         
-        logger.info(f"Deleted interview prep for session {sanitize_log_value(session_id)}")
+        logger.info('Deleted interview prep for session %s', sanitize_log_value(session_id))
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete interview prep: {e}", exc_info=True)
+        logger.error('Failed to delete interview prep: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to delete interview prep")
 
 
@@ -453,7 +453,7 @@ async def _generate_interview_prep_background(
             workflow_session = result.scalar_one_or_none()
 
             if not workflow_session:
-                logger.error(f"Workflow session {sanitize_log_value(session_id)} not found for interview prep")
+                logger.error('Workflow session %s not found for interview prep', sanitize_log_value(session_id))
                 return
 
             ws_user_id = user_id or str(workflow_session.user_id)
@@ -487,13 +487,13 @@ async def _generate_interview_prep_background(
             # Cache result
             await cache_interview_prep(session_id, interview_prep)
 
-            logger.info(f"Interview prep generated successfully for session {sanitize_log_value(session_id)}")
+            logger.info('Interview prep generated successfully for session %s', sanitize_log_value(session_id))
 
             # Notify clients that generation completed
             await broadcast_interview_prep_complete(ws_user_id, session_id)
 
     except Exception as e:
-        logger.error(f"Interview prep generation failed for session {sanitize_log_value(session_id)}: {e}", exc_info=True)
+        logger.error('Interview prep generation failed for session %s: %s', sanitize_log_value(session_id), sanitize_log_value(e), exc_info=True)
         await report_exception(e, user_id=user_id)
         # Mark session as errored so it can be retried
         try:
@@ -508,14 +508,12 @@ async def _generate_interview_prep_background(
                 )
                 await _err_db.commit()
         except Exception as _db_err:
-            logger.error(
-                f"Interview prep {session_id}: failed to persist error state: {_db_err}"
-            )
+            logger.error('Interview prep %s: failed to persist error state: %s', sanitize_log_value(session_id), sanitize_log_value(_db_err))
         try:
             ws_user_id = user_id or session_id
             await broadcast_interview_prep_error(ws_user_id, session_id, "Interview prep generation failed")
         except Exception as broadcast_err:
-            logger.debug("Failed to broadcast interview prep error (WebSocket may be closed): %s", broadcast_err)
+            logger.debug('Failed to broadcast interview prep error (WebSocket may be closed): %s', sanitize_log_value(broadcast_err))
     finally:
         # Always clear the generating flag so clients don't get stuck on is_generating=True
         await clear_interview_prep_generating(session_id)

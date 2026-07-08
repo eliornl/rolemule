@@ -14,6 +14,7 @@ from typing import Dict, Any, List
 
 from utils.llm_client import get_gemini_client, user_facing_message_from_llm_exception
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.logging_config import sanitize_log_value
 
 # =============================================================================
 # CONSTANTS
@@ -330,17 +331,12 @@ async def parse_resume(resume_text: str, user_api_key: str | None = None) -> Dic
 
         cleaned_data = _clean_parsed_data(parsed_data)
 
-        logger.info(
-            f"Resume parsed successfully in {processing_time:.2f}s - "
-            f"Name: {cleaned_data.get('full_name', 'Unknown')}, "
-            f"Skills: {len(cleaned_data.get('skills', []))}, "
-            f"Experience: {len(cleaned_data.get('work_experience', []))} jobs"
-        )
+        logger.info('Resume parsed successfully in %ss - Name: %s, Skills: %s, Experience: %s jobs', sanitize_log_value(processing_time), sanitize_log_value(cleaned_data.get('full_name', 'Unknown')), sanitize_log_value(len(cleaned_data.get('skills', []))), sanitize_log_value(len(cleaned_data.get('work_experience', []))))
 
         return cleaned_data
 
     except Exception as e:
-        logger.error(f"Resume parsing failed: {str(e)}", exc_info=True)
+        logger.error('Resume parsing failed: %s', sanitize_log_value(str(e)), exc_info=True)
         friendly = user_facing_message_from_llm_exception(e)
         # Quota / rate-limit: use plain-language message only (no "Failed to parse" prefix).
         if friendly != str(e):

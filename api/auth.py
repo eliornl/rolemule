@@ -10,13 +10,13 @@ import logging
 import secrets
 import httpx
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Depends, status, Request, Query, Response
 from fastapi.security import HTTPBearer
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, EmailStr
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -202,6 +202,56 @@ def _validate_password_confirmation(
     return confirm_password
 
 
+def _validator_field_values(info_or_values: Union[ValidationInfo, Dict[str, Any], None]) -> Dict[str, Any]:
+    """Partial field data from Pydantic ValidationInfo or a raw dict (unit tests)."""
+    if info_or_values is None:
+        return {}
+    if isinstance(info_or_values, dict):
+        return info_or_values
+    data = getattr(info_or_values, "data", None)
+    return data if isinstance(data, dict) else {}
+
+
+def _validate_register_full_name(v: str) -> str:
+    """Validate and clean full name."""
+    if not v:
+        raise ValueError("Full name cannot be empty")
+
+    name: str = v.strip()
+
+    if len(name) < MIN_NAME_LENGTH:
+        raise ValueError(f"Full name must be at least {MIN_NAME_LENGTH} characters")
+
+    if len(name) > MAX_NAME_LENGTH:
+        raise ValueError(f"Full name cannot exceed {MAX_NAME_LENGTH} characters")
+
+    if not re.match(NAME_PATTERN, name):
+        raise ValueError(
+            "Full name can only contain letters, spaces, hyphens, apostrophes, and periods"
+        )
+
+    name = re.sub(r"\s+", " ", name)
+    return name.title()
+
+
+def _validate_login_password(v: str) -> str:
+    """Validate password for login authentication."""
+    if not v or not v.strip():
+        raise ValueError("Password cannot be empty")
+
+    return v.strip()
+
+
+def _validate_confirm_password_field(
+    v: str,
+    info_or_values: Union[ValidationInfo, Dict[str, Any], None],
+    password_field: str,
+    field_name: str = "Password",
+) -> str:
+    password: str = _validator_field_values(info_or_values).get(password_field, "")
+    return _validate_password_confirmation(password, v, field_name)
+
+
 # =============================================================================
 # SETUP AND INITIALIZATION
 # =============================================================================
@@ -307,43 +357,12 @@ class RegisterRequest(BaseModel):
         description="Password confirmation - must match password",
     )
 
-    @validator("full_name")
-    def validate_full_name(cls, v: str) -> str:
-        """Validate and clean full name."""
-        if not v:
-            raise ValueError("Full name cannot be empty")
-
-        name: str = v.strip()
-
-        if len(name) < MIN_NAME_LENGTH:
-            raise ValueError(f"Full name must be at least {MIN_NAME_LENGTH} characters")
-
-        if len(name) > MAX_NAME_LENGTH:
-            raise ValueError(f"Full name cannot exceed {MAX_NAME_LENGTH} characters")
-
-        if not re.match(NAME_PATTERN, name):
-            raise ValueError(
-                "Full name can only contain letters, spaces, hyphens, apostrophes, and periods"
-            )
-
-        name = re.sub(r"\s+", " ", name)
-        return name.title()
-
-    @validator("email")
-    def validate_email(cls, v: str) -> str:
-        """Validate and normalize email address."""
-        return _validate_email(v)
-
-    @validator("password")
-    def validate_password_strength(cls, v: str) -> str:
-        """Validate password strength requirements."""
-        return _validate_password_strength(v)
-
-    @validator("confirm_password")
-    def passwords_match(cls, v: str, values: Dict[str, Any]) -> str:
-        """Validate password confirmation matches original password."""
-        password: str = values.get("password", "")
-        return _validate_password_confirmation(password, v)
+    validate_full_name = field_validator("full_name")(_validate_register_full_name)
+    validate_email = field_validator("email")(_validate_email)
+    validate_password_strength = field_validator("password")(_validate_password_strength)
+    passwords_match = field_validator("confirm_password")(
+        lambda v, info: _validate_confirm_password_field(v, info, "password")
+    )
 
 
 class LoginRequest(BaseModel):
@@ -360,18 +379,8 @@ class LoginRequest(BaseModel):
         False, description="Extend session duration for convenience (less secure)"
     )
 
-    @validator("email")
-    def validate_email(cls, v: str) -> str:
-        """Validate and normalize email address for login."""
-        return _validate_email(v)
-
-    @validator("password")
-    def validate_password(cls, v: str) -> str:
-        """Validate password for login authentication."""
-        if not v or not v.strip():
-            raise ValueError("Password cannot be empty")
-
-        return v.strip()
+    validate_email = field_validator("email")(_validate_email)
+    validate_password = field_validator("password")(_validate_login_password)
 
 
 class UserInfo(BaseModel):
@@ -422,16 +431,12 @@ class PasswordChangeRequest(BaseModel):
     )
     confirm_password: str = Field(..., description="New password confirmation")
 
-    @validator("new_password")
-    def validate_new_password_strength(cls, v: str) -> str:
-        """Validate new password strength requirements."""
-        return _validate_password_strength(v, "New password")
-
-    @validator("confirm_password")
-    def new_passwords_match(cls, v: str, values: Dict[str, Any]) -> str:
-        """Validate new password confirmation matches."""
-        new_password: str = values.get("new_password", "")
-        return _validate_password_confirmation(new_password, v, "New password")
+    validate_new_password_strength = field_validator("new_password")(
+        lambda v: _validate_password_strength(v, "New password")
+    )
+    new_passwords_match = field_validator("confirm_password")(
+        lambda v, info: _validate_confirm_password_field(v, info, "new_password", "New password")
+    )
 
 
 # =============================================================================
@@ -1039,7 +1044,7 @@ async def google_callback(
             )
 
         if token_response.status_code != 200:
-            logger.error(f"Google token exchange failed: {token_response.status_code}")
+            logger.error('Google token exchange failed: %s', sanitize_log_value(token_response.status_code))
             return RedirectResponse(
                 url="/auth/login?error=token_exchange_failed",
                 status_code=status.HTTP_302_FOUND,
@@ -1063,7 +1068,7 @@ async def google_callback(
             )
 
         if userinfo_response.status_code != 200:
-            logger.error(f"Google userinfo fetch failed: {userinfo_response.status_code}")
+            logger.error('Google userinfo fetch failed: %s', sanitize_log_value(userinfo_response.status_code))
             return RedirectResponse(
                 url="/auth/login?error=userinfo_failed",
                 status_code=status.HTTP_302_FOUND,
@@ -1160,10 +1165,7 @@ async def google_callback(
                 # explicitly linked.  Auto-linking would let anyone with a Google
                 # account that shares the email take over the local account.
                 # Redirect to a dedicated link-accounts flow instead.
-                logger.warning(
-                    f"OAuth sign-in for {mask_email(email)} blocked: email matches a local-auth "
-                    f"account that has not linked Google. Redirect to account-link page."
-                )
+                logger.warning('OAuth sign-in for %s blocked: email matches a local-auth account that has not linked Google. Redirect to account-link page.', mask_email(email))
                 return RedirectResponse(
                     url="/auth/login?error=google_link_required",
                     status_code=status.HTTP_302_FOUND,
@@ -1452,10 +1454,7 @@ class ForgotPasswordRequest(BaseModel):
 
     email: EmailStr = Field(..., description="Email address for password reset")
 
-    @validator("email")
-    def validate_email(cls, v: str) -> str:
-        """Validate and normalize email address."""
-        return _validate_email(v)
+    validate_email = field_validator("email")(_validate_email)
 
 
 class ResetPasswordRequest(BaseModel):
@@ -1470,16 +1469,12 @@ class ResetPasswordRequest(BaseModel):
     )
     confirm_password: str = Field(..., description="Password confirmation")
 
-    @validator("new_password")
-    def validate_new_password_strength(cls, v: str) -> str:
-        """Validate new password strength requirements."""
-        return _validate_password_strength(v, "New password")
-
-    @validator("confirm_password")
-    def passwords_match(cls, v: str, values: Dict[str, Any]) -> str:
-        """Validate password confirmation matches."""
-        new_password: str = values.get("new_password", "")
-        return _validate_password_confirmation(new_password, v, "New password")
+    validate_new_password_strength = field_validator("new_password")(
+        lambda v: _validate_password_strength(v, "New password")
+    )
+    passwords_match = field_validator("confirm_password")(
+        lambda v, info: _validate_confirm_password_field(v, info, "new_password", "New password")
+    )
 
 
 # Password reset token settings
@@ -1619,10 +1614,7 @@ async def forgot_password(
             else:
                 # No SMTP configured — surface the reset URL directly so self-hosted
                 # users are not permanently locked out without an email service.
-                logger.warning(
-                    f"Email service not configured. Returning reset URL directly for "
-                    f"{mask_email(email)} (self-hosted mode)."
-                )
+                logger.warning('Email service not configured. Returning reset URL directly for %s (self-hosted mode).', mask_email(email))
                 return {
                     "message": (
                         "Email is not configured on this server. "
@@ -1911,7 +1903,7 @@ async def _consume_verification_token(token: str) -> Optional[str]:
                     user_key = f"{VERIFICATION_USER_PREFIX}{email.lower()}"
                     await redis_client.delete(user_key)
                 except Exception as cleanup_err:
-                    logger.debug("Failed to remove verification user key: %s", cleanup_err)
+                    logger.debug('Failed to remove verification user key: %s', sanitize_log_value(cleanup_err))
             return email
         return None
     except Exception as e:

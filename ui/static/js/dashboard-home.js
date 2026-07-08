@@ -81,11 +81,6 @@
     // HELPERS — auth / notify / escape
     // =============================================================================
 
-    /** Decode HTML entities for use with .textContent (doesn't re-encode) */
-    function decodeEntities(str) {
-        return window.decodeEntities(str);
-    }
-
     /** @param {string|null|undefined} str */
     function escapeHtml(str) {
         return window.escapeHtml(str);

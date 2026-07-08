@@ -89,9 +89,12 @@ async def test_get_session_rolls_back_on_error() -> None:
     factory_cm.__aexit__ = AsyncMock(return_value=False)
     db_mod._async_session_factory = MagicMock(return_value=factory_cm)
 
-    with pytest.raises(ValueError) as exc_info:
+    async def _run_raises() -> None:
         async with db_mod.get_session():
             raise ValueError("boom")
+
+    with pytest.raises(ValueError) as exc_info:
+        await _run_raises()
     assert str(exc_info.value) == "boom"
     session.rollback.assert_awaited()
 

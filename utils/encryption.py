@@ -17,6 +17,7 @@ import logging
 from cryptography.fernet import Fernet, InvalidToken
 
 from config.settings import get_settings
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ def encrypt_api_key(api_key: str) -> str:
         return f"{ENCRYPTED_PREFIX}{encrypted_str}"
         
     except Exception as e:
-        logger.error(f"Failed to encrypt API key: {e}", exc_info=True)
+        logger.error('Failed to encrypt API key: %s', sanitize_log_value(e), exc_info=True)
         raise ValueError("Failed to encrypt API key")
 
 
@@ -137,7 +138,7 @@ def decrypt_api_key(encrypted_key: str) -> str:
         logger.warning("Failed to decrypt API key: invalid token")
         raise ValueError("Failed to decrypt API key: invalid or corrupted data")
     except Exception as e:
-        logger.error(f"Failed to decrypt API key: {e}", exc_info=True)
+        logger.error('Failed to decrypt API key: %s', sanitize_log_value(e), exc_info=True)
         raise ValueError("Failed to decrypt API key")
 
 

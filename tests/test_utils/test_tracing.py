@@ -130,9 +130,12 @@ async def test_trace_span_records_exception(monkeypatch) -> None:
     _enable_otel_on_module(monkeypatch)
     monkeypatch.setattr(tracing_mod, "_tracer", mock_tracer, raising=False)
 
-    with pytest.raises(ValueError) as exc_info:
+    async def _run_span_raises() -> None:
         async with tracing_mod.trace_span("agent.test", {"x": 1}):
             raise ValueError("boom")
+
+    with pytest.raises(ValueError) as exc_info:
+        await _run_span_raises()
     assert str(exc_info.value) == "boom"
     mock_span.set_status.assert_called_once()
     mock_span.record_exception.assert_called_once()

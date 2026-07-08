@@ -254,7 +254,7 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
         if user and user.gemini_api_key_encrypted:
             return decrypt_api_key(user.gemini_api_key_encrypted)
     except Exception as e:
-        logger.warning(f"Failed to decrypt user API key: {e}")
+        logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
     
     return None
 
@@ -299,7 +299,7 @@ async def _get_application_context(
         }
         
     except (ValueError, Exception) as e:
-        logger.warning(f"Failed to get application context: {e}")
+        logger.warning('Failed to get application context: %s', sanitize_log_value(e))
         return None
 
 
@@ -383,7 +383,7 @@ async def generate_thank_you_note(
             )
             await cache_tool_result("thank_you", sanitized_payload, result)
 
-        logger.info(f"Generated thank you note for user {sanitize_log_value(user_id)}")
+        logger.info('Generated thank you note for user %s', sanitize_log_value(user_id))
 
         return ThankYouNoteResponse(
             subject_line=result.get("subject_line", ""),
@@ -396,7 +396,7 @@ async def generate_thank_you_note(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate thank you note: {e}", exc_info=True)
+        logger.error('Failed to generate thank you note: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate thank you note")
 
 
@@ -472,7 +472,7 @@ async def analyze_rejection(
             )
             await cache_tool_result("rejection_analysis", sanitized_payload, result)
 
-        logger.info(f"Generated rejection analysis for user {sanitize_log_value(user_id)}")
+        logger.info('Generated rejection analysis for user %s', sanitize_log_value(user_id))
         
         return RejectionAnalysisResponse(
             analysis_summary=result.get("analysis_summary", ""),
@@ -488,7 +488,7 @@ async def analyze_rejection(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to analyze rejection: {e}", exc_info=True)
+        logger.error('Failed to analyze rejection: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to analyze rejection")
 
 
@@ -562,7 +562,7 @@ async def generate_reference_request(
             )
             await cache_tool_result("reference_request", sanitized_payload, result)
 
-        logger.info(f"Generated reference request for user {sanitize_log_value(user_id)}")
+        logger.info('Generated reference request for user %s', sanitize_log_value(user_id))
         
         return ReferenceRequestResponse(
             subject_line=result.get("subject_line", ""),
@@ -576,7 +576,7 @@ async def generate_reference_request(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate reference request: {e}", exc_info=True)
+        logger.error('Failed to generate reference request: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate reference request")
 
 
@@ -900,7 +900,7 @@ async def compare_jobs(
             )
             await cache_tool_result("job_comparison", sanitized_payload, result)
 
-        logger.info(f"Generated job comparison for user {sanitize_log_value(user_id)}")
+        logger.info('Generated job comparison for user %s', sanitize_log_value(user_id))
         
         # Build response with proper type handling
         jobs_analysis = []
@@ -945,7 +945,7 @@ async def compare_jobs(
     except ValueError as e:
         raise validation_error(str(e))
     except Exception as e:
-        logger.error(f"Failed to compare jobs: {e}", exc_info=True)
+        logger.error('Failed to compare jobs: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to compare jobs")
 
 
@@ -1054,7 +1054,7 @@ async def generate_followup(
     except ValueError as e:
         raise validation_error(str(e))
     except Exception as e:
-        logger.error(f"Failed to generate follow-up: {e}", exc_info=True)
+        logger.error('Failed to generate follow-up: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate follow-up email")
 
 
@@ -1149,7 +1149,7 @@ async def get_salary_coaching(
             )
             await cache_tool_result("salary_coach", sanitized_payload, result)
 
-        logger.info(f"Generated salary coaching for user {sanitize_log_value(user_id)}")
+        logger.info('Generated salary coaching for user %s', sanitize_log_value(user_id))
         
         # Build response with proper type handling
         market_analysis = result.get("market_analysis", {})
@@ -1217,5 +1217,5 @@ async def get_salary_coaching(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to generate salary coaching: {e}", exc_info=True)
+        logger.error('Failed to generate salary coaching: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate salary negotiation strategy")

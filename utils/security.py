@@ -7,6 +7,7 @@ import html
 import re
 import logging
 from typing import Any, Dict, List, Optional
+from utils.logging_config import sanitize_log_value
 
 try:
     import bleach
@@ -79,11 +80,7 @@ def sanitize_html(content: str, allow_basic_formatting: bool = False) -> str:
     # Truncate extremely long content
     if len(content) > MAX_TEXT_LENGTH:
         content = content[:MAX_TEXT_LENGTH]
-        logger.warning(
-            "Content truncated from %s to %s chars",
-            len(content),
-            MAX_TEXT_LENGTH,
-        )
+        logger.warning('Content truncated from %s to %s chars', sanitize_log_value(len(content)), sanitize_log_value(MAX_TEXT_LENGTH))
 
     # Remove script tags and their content
     content = _strip_script_tags(content)

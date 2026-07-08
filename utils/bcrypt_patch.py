@@ -6,6 +6,7 @@ but is missing in newer bcrypt versions (4.0.0+).
 """
 
 import logging
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,7 @@ def apply_bcrypt_patch():
             # Attach the mock __about__ module to bcrypt
             bcrypt.__about__ = About()
 
-            logger.info(
-                f"Successfully patched bcrypt module version {bcrypt.__about__.__version__}"
-            )
+            logger.info('Successfully patched bcrypt module version %s', sanitize_log_value(bcrypt.__about__.__version__))
         else:
             logger.debug(
                 "bcrypt module already has __about__ attribute, no patch needed"
@@ -40,7 +39,7 @@ def apply_bcrypt_patch():
     except ImportError:
         logger.warning("Could not import bcrypt module to apply patch")
     except Exception as e:
-        logger.error(f"Error applying bcrypt patch: {e}", exc_info=True)
+        logger.error('Error applying bcrypt patch: %s', sanitize_log_value(e), exc_info=True)
 
 
 # Apply the patch when this module is imported

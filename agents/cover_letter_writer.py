@@ -204,7 +204,7 @@ class CoverLetterWriterAgent:
             Exception: If cover letter generation fails
         """
         session_id = sanitize_log_value(str(state.get("session_id") or "unknown"))
-        logger.info("Starting cover letter writing for session %s", session_id)
+        logger.info('Starting cover letter writing for session %s', sanitize_log_value(session_id))
         start_time = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)

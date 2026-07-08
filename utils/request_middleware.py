@@ -91,15 +91,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             client_ip = _sanitize_log_value(
                 request.client.host if request.client else "unknown"
             )
-            logger.debug(
-                f">> {request.method} {path}{query}  ip={client_ip}",
-                extra={
+            logger.debug('>> %s %s%s  ip=%s', sanitize_log_value(request.method), sanitize_log_value(path), sanitize_log_value(query), sanitize_log_value(client_ip), extra={
                     "method": request.method,
                     "path": path,
                     "query_params": _sanitize_log_value(str(request.query_params)),
                     "client_ip": client_ip,
-                },
-            )
+                })
 
         try:
             # Process request
@@ -144,18 +141,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             duration_ms = (perf_counter() - start_time) * 1000
-            logger.error(
-                f"UNHANDLED {request.method} {path}  ({duration_ms:.0f}ms)"
-                f"  {type(e).__name__}: {e}",
-                extra={
+            logger.error('UNHANDLED %s %s  (%sms)  %s: %s', sanitize_log_value(request.method), sanitize_log_value(path), sanitize_log_value(duration_ms), sanitize_log_value(type(e).__name__), sanitize_log_value(e), extra={
                     "method": request.method,
                     "path": path,
                     "duration_ms": duration_ms,
                     "error": str(e),
                     "error_type": type(e).__name__,
-                },
-                exc_info=True,
-            )
+                }, exc_info=True)
             raise
 
         finally:
@@ -196,16 +188,12 @@ class SlowRequestMiddleware(BaseHTTPMiddleware):
         duration_ms = (perf_counter() - start_time) * 1000
 
         if duration_ms > self.threshold_ms:
-            logger.warning(
-                f"SLOW  {request.method} {request.url.path}"
-                f"  {duration_ms:.0f}ms  (threshold {self.threshold_ms:.0f}ms)",
-                extra={
+            logger.warning('SLOW  %s %s  %sms  (threshold %sms)', sanitize_log_value(request.method), sanitize_log_value(request.url.path), sanitize_log_value(duration_ms), sanitize_log_value(self.threshold_ms), extra={
                     "method": request.method,
                     "path": request.url.path,
                     "duration_ms": duration_ms,
                     "threshold_ms": self.threshold_ms,
-                },
-            )
+                })
 
         return response
 

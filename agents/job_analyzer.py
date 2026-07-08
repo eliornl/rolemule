@@ -295,7 +295,7 @@ class JobAnalyzerAgent:
             Exception: Any exception will be caught by _execute_agent_node
         """
         session_id = sanitize_log_value(str(state.get("session_id", "unknown")))
-        logger.info("Starting job analysis for session %s", session_id)
+        logger.info('Starting job analysis for session %s', sanitize_log_value(session_id))
         start_time: datetime = datetime.now(timezone.utc)
 
         # Store user API key for use in LLM calls (BYOK mode)

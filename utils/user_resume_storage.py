@@ -12,6 +12,7 @@ import logging
 import uuid
 from pathlib import Path
 from typing import Optional, Tuple
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 def _abs_root(base_dir: str) -> Path:
@@ -74,13 +75,13 @@ def delete_resume_file(base_dir: str, storage_relative_path: Optional[str]) -> N
     try:
         path = resume_absolute_path(base_dir, storage_relative_path)
     except ValueError as e:
-        logger.warning("Refusing to delete resume path %s: %s", storage_relative_path, e)
+        logger.warning('Refusing to delete resume path %s: %s', sanitize_log_value(storage_relative_path), sanitize_log_value(e))
         return
     try:
         if path.is_file():
             path.unlink()
     except OSError as e:
-        logger.warning("Failed to delete resume file %s: %s", path, e, exc_info=True)
+        logger.warning('Failed to delete resume file %s: %s', sanitize_log_value(path), sanitize_log_value(e), exc_info=True)
 
     # Remove empty user directory
     try:
@@ -88,4 +89,4 @@ def delete_resume_file(base_dir: str, storage_relative_path: Optional[str]) -> N
         if parent.is_dir() and not any(parent.iterdir()):
             parent.rmdir()
     except OSError as e:
-        logger.debug("Could not remove empty resume directory: %s", e, exc_info=True)
+        logger.debug('Could not remove empty resume directory: %s', sanitize_log_value(e), exc_info=True)

@@ -12,33 +12,20 @@
     }
 
     /** @param {string|null|undefined} str */
-    function escapeHtml(str) {
+    function decodeEntities(str) {
         if (str == null) return '';
-        const decoded = String(str)
-            .replace(/&amp;/g, '&')
-            .replace(/&#x27;/g, "'")
-            .replace(/&#039;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
-        return decoded
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = String(str);
+        return textarea.value;
     }
 
     /** @param {string|null|undefined} str */
-    function decodeEntities(str) {
+    function escapeHtml(str) {
         if (str == null) return '';
-        return String(str)
-            .replace(/&amp;/g, '&')
-            .replace(/&#x27;/g, "'")
-            .replace(/&#039;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>');
+        const decoded = decodeEntities(str);
+        const div = document.createElement('div');
+        div.textContent = decoded;
+        return div.innerHTML;
     }
 
     /** @param {string|null|undefined} text */

@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from agents.hiring_manager import HiringManagerAgent, HiringManagerEvaluation
 from utils.llm_client import get_gemini_client, is_llm_quota_or_rate_limit_exception
 from utils.logging_config import get_structured_logger
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 structured_logger = get_structured_logger(__name__)
@@ -449,28 +450,19 @@ class CVOptimizerAgent:
         _dur_ms = (perf_counter() - _t0) * 1000
 
         if response.get("filtered"):
-            logger.warning(
-                "CVOptimizerAgent: content filtered at iteration %d, keeping original",
-                iteration,
-            )
+            logger.warning('CVOptimizerAgent: content filtered at iteration %d, keeping original', iteration)
             return cv_text
 
         revised = response.get("response", "").strip()
         if not revised:
-            logger.warning(
-                "CVOptimizerAgent: empty response at iteration %d, keeping original",
-                iteration,
-            )
+            logger.warning('CVOptimizerAgent: empty response at iteration %d, keeping original', iteration)
             return cv_text
 
         accepted_cv, accepted = _accept_cv_revision(
             cv_text, revised, source_cv, user_profile
         )
         if not accepted:
-            logger.warning(
-                "CVOptimizerAgent: invalid revision at iteration %d, keeping previous CV",
-                iteration,
-            )
+            logger.warning('CVOptimizerAgent: invalid revision at iteration %d, keeping previous CV', iteration)
 
         structured_logger.log_agent_complete("cv_optimizer", None, _dur_ms)
         return accepted_cv
@@ -632,12 +624,7 @@ class CVOptimizationOrchestrator:
         plateau_count: int = 0
         previous_score: Optional[float] = None
 
-        logger.info(
-            "CVOptimizationOrchestrator: starting loop session=%s max_iter=%d threshold=%.1f",
-            session_id,
-            config.max_iterations,
-            config.score_threshold,
-        )
+        logger.info('CVOptimizationOrchestrator: starting loop session=%s max_iter=%d threshold=%.1f', sanitize_log_value(session_id), config.max_iterations, config.score_threshold)
 
         for iteration in range(config.max_iterations):
             iter_start = perf_counter()
@@ -655,13 +642,7 @@ class CVOptimizationOrchestrator:
             except Exception as exc:
                 if iteration_history and is_llm_quota_or_rate_limit_exception(exc):
                     stop_reason = "api_rate_limit"
-                    logger.warning(
-                        "CVOptimizationOrchestrator: API rate limit at evaluate iteration %d "
-                        "session=%s — returning partial result (%d iterations)",
-                        iteration,
-                        session_id,
-                        len(iteration_history),
-                    )
+                    logger.warning('CVOptimizationOrchestrator: API rate limit at evaluate iteration %d session=%s — returning partial result (%d iterations)', iteration, sanitize_log_value(session_id), len(iteration_history))
                     break
                 raise
 
@@ -688,11 +669,7 @@ class CVOptimizationOrchestrator:
             try:
                 await broadcast_iteration_fn(record)
             except Exception as broadcast_err:
-                logger.warning(
-                    "CVOptimizationOrchestrator: broadcast failed at iteration %d: %s",
-                    iteration,
-                    broadcast_err,
-                )
+                logger.warning('CVOptimizationOrchestrator: broadcast failed at iteration %d: %s', iteration, sanitize_log_value(broadcast_err))
 
             # --- Convergence checks ---
             if evaluation.score >= config.score_threshold:
@@ -719,10 +696,7 @@ class CVOptimizationOrchestrator:
                     plateau_count += 1
                     if plateau_count >= SCORE_PLATEAU_ITERATIONS:
                         stop_reason = "score_plateau"
-                        logger.info(
-                            "CVOptimizationOrchestrator: plateau detected (%d iters), stopping",
-                            plateau_count,
-                        )
+                        logger.info('CVOptimizationOrchestrator: plateau detected (%d iters), stopping', plateau_count)
                         break
                 else:
                     plateau_count = 0
@@ -747,13 +721,7 @@ class CVOptimizationOrchestrator:
             except Exception as exc:
                 if is_llm_quota_or_rate_limit_exception(exc):
                     stop_reason = "api_rate_limit"
-                    logger.warning(
-                        "CVOptimizationOrchestrator: API rate limit at revise iteration %d "
-                        "session=%s — returning partial result (%d iterations)",
-                        iteration + 1,
-                        session_id,
-                        len(iteration_history),
-                    )
+                    logger.warning('CVOptimizationOrchestrator: API rate limit at revise iteration %d session=%s — returning partial result (%d iterations)', iteration + 1, sanitize_log_value(session_id), len(iteration_history))
                     break
                 raise
 
@@ -773,11 +741,7 @@ class CVOptimizationOrchestrator:
             except Exception as exc:
                 if iteration_history and is_llm_quota_or_rate_limit_exception(exc):
                     stop_reason = "api_rate_limit"
-                    logger.warning(
-                        "CVOptimizationOrchestrator: API rate limit during cover letter "
-                        "session=%s — returning partial result",
-                        session_id,
-                    )
+                    logger.warning('CVOptimizationOrchestrator: API rate limit during cover letter session=%s — returning partial result', sanitize_log_value(session_id))
                     cover_letter = ""
                 else:
                     raise
@@ -789,13 +753,7 @@ class CVOptimizationOrchestrator:
 
         completed_at = datetime.now(timezone.utc).isoformat()
 
-        logger.info(
-            "CVOptimizationOrchestrator: done session=%s best_score=%.1f stop=%s iterations=%d",
-            session_id,
-            best_score,
-            stop_reason,
-            len(iteration_history),
-        )
+        logger.info('CVOptimizationOrchestrator: done session=%s best_score=%.1f stop=%s iterations=%d', sanitize_log_value(session_id), best_score, sanitize_log_value(stop_reason), len(iteration_history))
 
         return OptimizationResult(
             status="partial" if stop_reason == "api_rate_limit" else "completed",

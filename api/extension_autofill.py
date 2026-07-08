@@ -59,6 +59,7 @@ from utils.error_responses import (
 from utils.llm_client import GeminiError, get_gemini_client, user_facing_message_from_llm_exception
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.security import sanitize_text
+from utils.logging_config import sanitize_log_value
 
 # Re-exported for tests and extension_autofill_rules consumers
 __all__ = ["AutofillSelectOption"]
@@ -139,7 +140,7 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
         if user and user.gemini_api_key_encrypted:
             return decrypt_api_key(user.gemini_api_key_encrypted)
     except Exception as e:
-        logger.warning("Failed to decrypt user API key for autofill: %s", e, exc_info=True)
+        logger.warning('Failed to decrypt user API key for autofill: %s', sanitize_log_value(e), exc_info=True)
     return None
 
 
@@ -453,19 +454,19 @@ async def map_form_fields_to_profile(
             user_id=str(user_id),
         )
     except GeminiError as e:
-        logger.error("Autofill LLM error: %s", e, exc_info=True)
+        logger.error('Autofill LLM error: %s', sanitize_log_value(e), exc_info=True)
         raise external_service_error(
             user_facing_message_from_llm_exception(e),
             error_code=ErrorCode.LLM_SERVICE_ERROR,
         )
     except Exception as e:
-        logger.error("Autofill unexpected error: %s", e, exc_info=True)
+        logger.error('Autofill unexpected error: %s', sanitize_log_value(e), exc_info=True)
         raise internal_error("Failed to generate autofill suggestions")
 
     raw_text = gen.get("response") or ""
     parsed = parse_json_from_llm_response(raw_text)
     if not isinstance(parsed, dict) or "assignments" not in parsed:
-        logger.warning("Autofill parse failed; raw snippet: %s", raw_text[:400])
+        logger.warning('Autofill parse failed; raw snippet: %s', sanitize_log_value(raw_text[:400]))
         raise external_service_error(
             "Could not parse AI response. Try again with fewer fields visible.",
             error_code=ErrorCode.LLM_SERVICE_ERROR,

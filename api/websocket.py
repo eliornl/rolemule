@@ -99,9 +99,7 @@ class ConnectionManager:
         # Check connection limits before accepting
         allowed, reason = self._check_connection_limits(user_id, session_id)
         if not allowed:
-            logger.warning(
-                f"WebSocket connection rejected for user {user_id[:8]}...: {reason}"
-            )
+            logger.warning('WebSocket connection rejected for user %s...: %s', sanitize_log_value(user_id[:8]), sanitize_log_value(reason))
             await websocket.close(code=4429, reason=reason)  # Custom code for rate limit
             return False
         
@@ -121,10 +119,7 @@ class ConnectionManager:
         # Track connection info for cleanup
         self._connection_info[websocket] = (user_id, session_id)
         
-        logger.info(
-            f"WebSocket connected: user={user_id[:8]}..., session={session_id or 'all'}, "
-            f"user_connections={len(self._user_connections[user_id])}"
-        )
+        logger.info('WebSocket connected: user=%s..., session=%s, user_connections=%s', sanitize_log_value(user_id[:8]), sanitize_log_value(session_id or 'all'), sanitize_log_value(len(self._user_connections[user_id])))
         return True
 
     def disconnect(self, websocket: WebSocket) -> None:
@@ -154,9 +149,7 @@ class ConnectionManager:
         # Remove connection info
         del self._connection_info[websocket]
         
-        logger.info(
-            f"WebSocket disconnected: user={user_id[:8]}..., session={session_id or 'all'}"
-        )
+        logger.info('WebSocket disconnected: user=%s..., session=%s', sanitize_log_value(user_id[:8]), sanitize_log_value(session_id or 'all'))
 
     async def send_to_user(self, user_id: str, message: Dict[str, Any]) -> None:
         """
@@ -177,7 +170,7 @@ class ConnectionManager:
             except Exception as e:
                 logger.warning(
                     "Failed to send to user %s...: %s",
-                    sanitize_log_value(user_id)[:8],
+                    sanitize_log_value(sanitize_log_value(user_id)[:8]),
                     sanitize_log_value(e),
                 )
                 dead_connections.append(websocket)
@@ -205,7 +198,7 @@ class ConnectionManager:
             except Exception as e:
                 logger.warning(
                     "Failed to send to session %s...: %s",
-                    sanitize_log_value(session_id)[:8],
+                    sanitize_log_value(sanitize_log_value(session_id)[:8]),
                     sanitize_log_value(e),
                 )
                 dead_connections.append(websocket)
@@ -250,14 +243,14 @@ async def verify_websocket_token(token: str) -> Optional[Dict[str, Any]]:
         logger.warning("WebSocket token expired")
         return None
     except jwt.InvalidTokenError as e:
-        logger.warning(f"WebSocket token invalid: {e}")
+        logger.warning('WebSocket token invalid: %s', sanitize_log_value(e))
         return None
 
     # Check jti blocklist (covers individual token revocation and logout)
     from utils.auth import _is_token_revoked, _INVALIDATED_PREFIX
     jti: Optional[str] = payload.get("jti")
     if jti and await _is_token_revoked(jti):
-        logger.warning("WebSocket rejected: revoked token (jti=%s)", jti[:8])
+        logger.warning('WebSocket rejected: revoked token (jti=%s)', sanitize_log_value(jti[:8]))
         return None
 
     # Check per-user invalidation timestamp (covers password change, account recovery)
@@ -273,7 +266,7 @@ async def verify_websocket_token(token: str) -> Optional[Dict[str, Any]]:
                     logger.warning("WebSocket rejected: token issued before user invalidation")
                     return None
         except Exception as e:
-            logger.debug(f"WebSocket user invalidation check skipped (Redis error): {e}")
+            logger.debug('WebSocket user invalidation check skipped (Redis error): %s', sanitize_log_value(e))
 
     return payload
 

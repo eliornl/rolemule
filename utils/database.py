@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy import text
 
 from config.settings import get_settings, get_database_settings
+from utils.logging_config import sanitize_log_value
 
 # =============================================================================
 # CONFIGURATION
@@ -178,7 +179,7 @@ async def connect_to_database() -> None:
         logger.info("Database tables created/verified successfully")
 
     except Exception as e:
-        logger.error(f"Database connection failed: {e}", exc_info=True)
+        logger.error('Database connection failed: %s', sanitize_log_value(e), exc_info=True)
         raise
 
 
@@ -204,7 +205,7 @@ async def check_database_health() -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Database health check failed: {e}", exc_info=True)
+        logger.error('Database health check failed: %s', sanitize_log_value(e), exc_info=True)
         return False
 
 

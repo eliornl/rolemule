@@ -9,8 +9,8 @@ import hashlib
 import logging
 import asyncio
 import time
-from datetime import datetime, timezone
 from time import perf_counter
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, TypeVar
 
 from config.settings import get_settings
@@ -235,12 +235,12 @@ async def cache_get(key: str) -> Optional[Dict[str, Any]]:
         cached = await redis.get(key)
         if cached:
             data = json.loads(cached)
-            logger.debug("Cache hit: %s", _safe_log_key(key))
+            logger.debug('Cache hit: %s', sanitize_log_value(_safe_log_key(key)))
             return data
         return None
         
     except Exception as e:
-        logger.warning("Cache get error for %s: %s", _safe_log_key(key), sanitize_log_value(str(e)))
+        logger.warning('Cache get error for %s: %s', sanitize_log_value(_safe_log_key(key)), sanitize_log_value(str(e)))
         return None
 
 
@@ -268,11 +268,11 @@ async def cache_set(key: str, data: Dict[str, Any], ttl: int) -> bool:
         }
         
         await redis.set(key, json.dumps(cache_data), ex=ttl)
-        logger.debug("Cache set: %s (TTL: %ss)", _safe_log_key(key), ttl)
+        logger.debug('Cache set: %s (TTL: %ss)', sanitize_log_value(_safe_log_key(key)), sanitize_log_value(ttl))
         return True
         
     except Exception as e:
-        logger.warning("Cache set error for %s: %s", _safe_log_key(key), sanitize_log_value(str(e)))
+        logger.warning('Cache set error for %s: %s', sanitize_log_value(_safe_log_key(key)), sanitize_log_value(str(e)))
         return False
 
 
@@ -284,11 +284,11 @@ async def cache_delete(key: str) -> bool:
             return False
             
         await redis.delete(key)
-        logger.debug("Cache deleted: %s", _safe_log_key(key))
+        logger.debug('Cache deleted: %s', sanitize_log_value(_safe_log_key(key)))
         return True
         
     except Exception as e:
-        logger.warning("Cache delete error for %s: %s", _safe_log_key(key), sanitize_log_value(str(e)))
+        logger.warning('Cache delete error for %s: %s', sanitize_log_value(_safe_log_key(key)), sanitize_log_value(str(e)))
         return False
 
 
@@ -313,12 +313,16 @@ async def cache_delete_pattern(pattern: str) -> int:
             
         if keys:
             await redis.delete(*keys)
-            logger.info(f"Cache pattern delete: {pattern} ({len(keys)} keys)")
+            logger.info('Cache pattern delete: %s (%s keys)', sanitize_log_value(pattern), sanitize_log_value(len(keys)))
             
         return len(keys)
         
     except Exception as e:
-        logger.warning("Cache pattern delete error for {pattern}: %s", sanitize_log_value(str(e)))
+        logger.warning(
+            "Cache pattern delete error for %s: %s",
+            sanitize_log_value(pattern),
+            sanitize_log_value(str(e)),
+        )
         return 0
 
 
@@ -526,11 +530,7 @@ async def acquire_compute_lock(cache_key: str) -> bool:
         was_set = await redis.set(lock_key, "1", nx=True, ex=TTL_COMPUTE_LOCK)
         return was_set is not None
     except Exception as e:
-        logger.warning(
-            "acquire_compute_lock failed for %s: %s",
-            _safe_log_key(cache_key),
-            sanitize_log_value(str(e)),
-        )
+        logger.warning('acquire_compute_lock failed for %s: %s', sanitize_log_value(_safe_log_key(cache_key)), sanitize_log_value(str(e)))
         return True  # Fail open
 
 
@@ -552,11 +552,7 @@ async def release_compute_lock(cache_key: str) -> bool:
         await redis.delete(lock_key)
         return True
     except Exception as e:
-        logger.warning(
-            "release_compute_lock failed for %s: %s",
-            _safe_log_key(cache_key),
-            sanitize_log_value(str(e)),
-        )
+        logger.warning('release_compute_lock failed for %s: %s', sanitize_log_value(_safe_log_key(cache_key)), sanitize_log_value(str(e)))
         return False
 
 
@@ -649,10 +645,7 @@ def invalidate_all_user_profile_caches_sync() -> int:
             if batch:
                 deleted += int(client.delete(*batch))
         if deleted:
-            logger.info(
-                "Invalidated %s cached user_profile keys (migration / bulk backfill)",
-                deleted,
-            )
+            logger.info('Invalidated %s cached user_profile keys (migration / bulk backfill)', sanitize_log_value(deleted))
         return deleted
     except Exception as e:
         logger.warning(
@@ -1135,7 +1128,7 @@ async def get_cached_tool_result(
         if cached:
             data = json.loads(cached)
             if not isinstance(data, dict):
-                logger.warning(f"tool_result cache entry for {tool_name} is not a dict — evicting")
+                logger.warning('tool_result cache entry for %s is not a dict — evicting', sanitize_log_value(tool_name))
                 await redis.delete(key)
                 _metrics.record_miss(tool_name, latency_ms)
                 structured_logger.log_cache_miss(tool_name, key)
@@ -1147,7 +1140,11 @@ async def get_cached_tool_result(
         structured_logger.log_cache_miss(tool_name, key)
         return None
     except Exception as e:
-        logger.warning("Tool result cache get error ({tool_name}): %s", sanitize_log_value(str(e)))
+        logger.warning(
+            "Tool result cache get error (%s): %s",
+            sanitize_log_value(tool_name),
+            sanitize_log_value(str(e)),
+        )
         _metrics.record_error(tool_name)
         return None
 
@@ -1175,7 +1172,11 @@ async def cache_tool_result(
         await redis.setex(key, TTL_TOOL_RESULT, json.dumps(result))
         return True
     except Exception as e:
-        logger.warning("Tool result cache set error ({tool_name}): %s", sanitize_log_value(str(e)))
+        logger.warning(
+            "Tool result cache set error (%s): %s",
+            sanitize_log_value(tool_name),
+            sanitize_log_value(str(e)),
+        )
         return False
 
 
@@ -1241,7 +1242,7 @@ async def check_rate_limit(
         current_count = int(current) if current else 0
         
         if current_count >= limit:
-            logger.warning("Rate limit exceeded for %s", _safe_log_identifier(identifier))
+            logger.warning('Rate limit exceeded for %s', sanitize_log_value(_safe_log_identifier(identifier)))
             return False, 0
             
         # Increment counter
@@ -1307,7 +1308,7 @@ async def check_rate_limit_with_headers(
         reset_seconds = ttl if ttl and ttl > 0 else window_seconds
         
         if current_count >= limit:
-            logger.warning("Rate limit exceeded for %s", _safe_log_identifier(identifier))
+            logger.warning('Rate limit exceeded for %s', sanitize_log_value(_safe_log_identifier(identifier)))
             return RateLimitResult(
                 allowed=False,
                 limit=limit,
@@ -1400,7 +1401,7 @@ async def record_failed_login(email: str) -> tuple[int, bool]:
         is_locked = current_attempts >= LOCKOUT_THRESHOLD
         
         if is_locked:
-            logger.warning(f"Account locked due to failed attempts: {mask_email(email)}")
+            logger.warning('Account locked due to failed attempts: %s', mask_email(email))
             # Set lockout with longer expiry
             await redis.expire(key, LOCKOUT_DURATION)
             

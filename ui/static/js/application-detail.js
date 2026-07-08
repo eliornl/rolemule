@@ -1176,9 +1176,6 @@
         }
 
         const wordCount = letter.trim().split(/\s+/).filter(Boolean).length;
-        const jobTitle = job ? (job.job_title || '').replace(/\s*[-–—].*$/, '').trim() : '';
-        const companyName =
-            job && !isPlaceholderCompanyName(job.company_name) ? String(job.company_name).trim() : '';
 
         const generatedAt = cover.generated_at
             ? new Date(cover.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

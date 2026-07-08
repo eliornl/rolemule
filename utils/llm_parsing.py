@@ -6,6 +6,7 @@ import json
 import logging
 import re
 from typing import Dict, Any, List, Optional, Match
+from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -160,5 +161,5 @@ def parse_json_from_llm_response(response: Any) -> Dict[str, Any]:
             return result
 
     logger.warning("Failed to parse AI response as JSON after all repair attempts")
-    logger.debug("Raw LLM response (first 500 chars): %s", response_text[:500])
+    logger.debug('Raw LLM response (first 500 chars): %s', sanitize_log_value(response_text[:500]))
     return {}
