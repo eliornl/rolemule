@@ -15,6 +15,7 @@ from cli.commands.cv import cv_app
 from cli.commands.doctor import doctor_app
 from cli.commands.interview import interview_app
 from cli.commands.profile import profile_app
+from cli.commands.tools import tools_app
 from cli.commands.workflow import workflow_app
 from cli.context import CliContext, build_context
 
@@ -71,6 +72,7 @@ app.add_typer(workflow_app, name="workflow")
 app.add_typer(apps_app, name="apps")
 app.add_typer(interview_app, name="interview")
 app.add_typer(cv_app, name="cv")
+app.add_typer(tools_app, name="tools")
 
 
 def main() -> None:

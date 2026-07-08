@@ -290,3 +290,10 @@ class ApplyPilotClient:
         from applypilot_client.resources.cv_optimizer import CvOptimizerResource
 
         return CvOptimizerResource(self)
+
+    @property
+    def tools(self):
+        """Career tools API resource."""
+        from applypilot_client.resources.tools import ToolsResource
+
+        return ToolsResource(self)
