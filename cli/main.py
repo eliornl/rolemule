@@ -9,6 +9,7 @@ from typing import Optional
 import typer
 
 from cli import __version__
+from cli.commands.auth import auth_app
 from cli.commands.doctor import doctor_app
 from cli.context import CliContext, build_context
 
@@ -59,6 +60,7 @@ def version_cmd() -> None:
 
 
 app.add_typer(doctor_app, name="doctor")
+app.add_typer(auth_app, name="auth")
 
 
 def main() -> None:

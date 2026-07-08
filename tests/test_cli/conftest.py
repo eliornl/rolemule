@@ -27,8 +27,8 @@ def applypilot_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def invoke(cli_runner: CliRunner):
-    def _invoke(*args: str, env: dict | None = None):
-        return cli_runner.invoke(app, list(args), env=env)
+    def _invoke(*args: str, env: dict | None = None, input: str | None = None):
+        return cli_runner.invoke(app, list(args), env=env, input=input)
 
     return _invoke
 

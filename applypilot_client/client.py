@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import httpx
 
@@ -27,6 +27,7 @@ class ApplyPilotClient:
         base_url: Server origin, e.g. http://localhost:8000
         access_token: Optional Bearer JWT
         timeout: Request timeout in seconds
+        on_token_refreshed: Called with new access token after a successful refresh
     """
 
     def __init__(
@@ -34,14 +35,16 @@ class ApplyPilotClient:
         base_url: str,
         access_token: Optional[str] = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        on_token_refreshed: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.access_token = access_token
         self.timeout = timeout
+        self.on_token_refreshed = on_token_refreshed
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self, *, auth: bool = True) -> Dict[str, str]:
         headers: Dict[str, str] = {"Accept": "application/json"}
-        if self.access_token:
+        if auth and self.access_token:
             headers["Authorization"] = f"Bearer {self.access_token}"
         return headers
 
@@ -54,6 +57,8 @@ class ApplyPilotClient:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Dict[str, Any]] = None,
         files: Optional[Dict[str, Any]] = None,
+        auth: bool = True,
+        _allow_refresh: bool = True,
     ) -> httpx.Response:
         """
         Send an HTTP request to the API.
@@ -65,6 +70,8 @@ class ApplyPilotClient:
             params: Query parameters
             data: Form fields
             files: Multipart files
+            auth: Attach Bearer token when True
+            _allow_refresh: Internal flag to prevent infinite refresh loops
 
         Returns:
             httpx.Response on success (2xx)
@@ -78,7 +85,7 @@ class ApplyPilotClient:
                 response = client.request(
                     method,
                     url,
-                    headers=self._headers(),
+                    headers=self._headers(auth=auth),
                     json=json,
                     params=params,
                     data=data,
@@ -95,6 +102,27 @@ class ApplyPilotClient:
                 status_code=0,
             ) from exc
 
+        if response.status_code == 401 and auth and _allow_refresh and self.access_token:
+            try:
+                refreshed = self.refresh_token()
+                new_token = refreshed.get("access_token")
+                if new_token:
+                    self.access_token = str(new_token)
+                    if self.on_token_refreshed:
+                        self.on_token_refreshed(self.access_token)
+                    return self.request(
+                        method,
+                        path,
+                        json=json,
+                        params=params,
+                        data=data,
+                        files=files,
+                        auth=auth,
+                        _allow_refresh=False,
+                    )
+            except ApiClientError:
+                pass
+
         if response.is_success:
             return response
 
@@ -105,17 +133,56 @@ class ApplyPilotClient:
 
         raise parse_error_response(response.status_code, body)
 
-    def get_json(self, path: str, **kwargs: Any) -> Any:
+    def get_json(self, path: str, *, auth: bool = True, **kwargs: Any) -> Any:
         """GET and parse JSON body."""
-        response = self.request("GET", path, **kwargs)
+        response = self.request("GET", path, auth=auth, **kwargs)
         if not response.content:
             return {}
         return response.json()
 
+    def post_json(
+        self,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        auth: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """POST JSON and parse response body."""
+        response = self.request("POST", path, json=json or {}, auth=auth, **kwargs)
+        if not response.content:
+            return {}
+        return response.json()
+
+    def put_json(
+        self,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        auth: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """PUT JSON and parse response body."""
+        response = self.request("PUT", path, json=json or {}, auth=auth, **kwargs)
+        if not response.content:
+            return {}
+        return response.json()
+
+    def refresh_token(self) -> Dict[str, Any]:
+        """POST /api/v1/auth/refresh — requires current Bearer token."""
+        return self.post_json(f"{API_V1_PREFIX}/auth/refresh", json={}, auth=True, _allow_refresh=False)
+
     def health(self) -> Dict[str, Any]:
         """GET /health — server health (no auth)."""
-        return self.get_json("/health")
+        return self.get_json("/health", auth=False)
 
     def verify_token(self) -> Dict[str, Any]:
         """GET /api/v1/auth/verify — requires Bearer token."""
         return self.get_json(f"{API_V1_PREFIX}/auth/verify")
+
+    @property
+    def auth(self):
+        """Auth API resource."""
+        from applypilot_client.resources.auth import AuthResource
+
+        return AuthResource(self)
