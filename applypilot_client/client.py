@@ -283,3 +283,10 @@ class ApplyPilotClient:
         from applypilot_client.resources.interview_prep import InterviewPrepResource
 
         return InterviewPrepResource(self)
+
+    @property
+    def cv_optimizer(self):
+        """CV optimizer API resource."""
+        from applypilot_client.resources.cv_optimizer import CvOptimizerResource
+
+        return CvOptimizerResource(self)

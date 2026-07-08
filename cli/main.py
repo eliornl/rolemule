@@ -11,6 +11,7 @@ import typer
 from cli import __version__
 from cli.commands.applications import apps_app
 from cli.commands.auth import auth_app
+from cli.commands.cv import cv_app
 from cli.commands.doctor import doctor_app
 from cli.commands.interview import interview_app
 from cli.commands.profile import profile_app
@@ -69,6 +70,7 @@ app.add_typer(profile_app, name="profile")
 app.add_typer(workflow_app, name="workflow")
 app.add_typer(apps_app, name="apps")
 app.add_typer(interview_app, name="interview")
+app.add_typer(cv_app, name="cv")
 
 
 def main() -> None:
