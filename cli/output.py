@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import typer
 
@@ -95,3 +95,56 @@ def require_client(ctx: CliContext) -> ApplyPilotClient:
         )
         raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
     return make_client(ctx)
+
+
+def _detail_ids(details: Optional[list]) -> Dict[str, str]:
+    ids: Dict[str, str] = {}
+    for item in details or []:
+        if not isinstance(item, dict):
+            continue
+        field = item.get("field")
+        if field in ("application_id", "session_id") and item.get("message"):
+            ids[str(field)] = str(item["message"])
+    return ids
+
+
+def emit_duplicate_application(ctx: CliContext, exc: ApiClientError) -> None:
+    """Emit RES_3002 duplicate warning and exit 0."""
+    ids = _detail_ids(exc.details)
+    payload: Dict[str, Any] = {
+        "warning": True,
+        "error_code": exc.error_code,
+        "message": exc.message,
+        **ids,
+    }
+    if ctx.output_format == "json":
+        typer.echo(json.dumps(payload, indent=2, default=str))
+    else:
+        typer.secho(f"Warning: {exc.message}", fg="yellow", err=True)
+        if ids.get("application_id"):
+            typer.echo(f"Existing application: {ids['application_id']}")
+        if ids.get("session_id"):
+            typer.echo(f"Existing session: {ids['session_id']}")
+    raise typer.Exit(code=int(ExitCode.SUCCESS))
+
+
+def emit_workflow_error(ctx: CliContext, exc: ApiClientError) -> None:
+    """Handle workflow-specific API errors before generic emit_error."""
+    if exc.error_code == "RES_3002":
+        emit_duplicate_application(ctx, exc)
+    if exc.error_code == "CFG_6001":
+        hint = "Add API key: applypilot profile api-key set (or configure server GEMINI_API_KEY / Vertex AI)"
+        if ctx.output_format == "json":
+            payload = {
+                "success": False,
+                "error_code": exc.error_code,
+                "message": exc.message,
+                "hint": hint,
+                "details": exc.details,
+            }
+            typer.echo(json.dumps({k: v for k, v in payload.items() if v is not None}, indent=2))
+        else:
+            typer.secho(f"{exc.message}", fg="red", err=True)
+            typer.secho(hint, fg="yellow", err=True)
+        raise typer.Exit(code=int(exc.exit_code))
+    emit_error(ctx, exc)

@@ -203,8 +203,9 @@ class ApplyPilotClient:
         file_path: str,
         *,
         auth: bool = True,
+        data: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        """POST a single file as multipart form data."""
+        """POST a single file as multipart form data with optional form fields."""
         from pathlib import Path
 
         filename = Path(file_path).name
@@ -212,7 +213,21 @@ class ApplyPilotClient:
             files: Dict[str, Tuple[str, Any, str]] = {
                 field_name: (filename, handle, "application/octet-stream"),
             }
-            response = self.request("POST", path, files=files, auth=auth)
+            response = self.request("POST", path, data=data, files=files, auth=auth)
+        if not response.content:
+            return {}
+        return response.json()
+
+    def post_form(
+        self,
+        path: str,
+        *,
+        data: Optional[Dict[str, Any]] = None,
+        files: Optional[Dict[str, Any]] = None,
+        auth: bool = True,
+    ) -> Any:
+        """POST multipart or urlencoded form data."""
+        response = self.request("POST", path, data=data, files=files, auth=auth)
         if not response.content:
             return {}
         return response.json()
@@ -247,3 +262,10 @@ class ApplyPilotClient:
         from applypilot_client.resources.profile import ProfileResource
 
         return ProfileResource(self)
+
+    @property
+    def workflow(self):
+        """Workflow API resource."""
+        from applypilot_client.resources.workflow import WorkflowResource
+
+        return WorkflowResource(self)
