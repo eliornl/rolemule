@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/analytics.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * PostHog Analytics Integration
  * 
  * Provides product analytics tracking with privacy-first approach.

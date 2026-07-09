@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/app.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * @fileoverview ApplyPilot - Main Application JavaScript
  * Handles core functionality, API communication, and UI interactions.
  * 

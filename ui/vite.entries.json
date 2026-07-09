@@ -4,5 +4,10 @@
   "js/auth-register.js": "src/pages/auth-register.ts",
   "js/auth-verify-email.js": "src/pages/auth-verify-email.ts",
   "js/auth-reset-password.js": "src/pages/auth-reset-password.ts",
-  "js/auth.js": "src/pages/auth.ts"
+  "js/auth.js": "src/pages/auth.ts",
+  "js/app.js": "src/pages/app.ts",
+  "js/landing.js": "src/pages/landing.ts",
+  "js/analytics.js": "src/pages/analytics.ts",
+  "js/cookie-consent.js": "src/pages/cookie-consent.ts",
+  "js/onboarding.js": "src/pages/onboarding.ts"
 }

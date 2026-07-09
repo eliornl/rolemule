@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/onboarding.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * Onboarding Tutorial System
  * Interactive step-by-step guide for new users.
  * 

@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/cookie-consent.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * Cookie Consent Banner
  * GDPR-compliant cookie consent management.
  * 
