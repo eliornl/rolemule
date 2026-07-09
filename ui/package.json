@@ -2,13 +2,23 @@
   "name": "applypilot-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Frontend asset build pipeline — minify and fingerprint JS/CSS",
+  "description": "Frontend asset build — esbuild (legacy JS/CSS) + Vite (TypeScript page entries)",
+  "type": "module",
   "scripts": {
-    "build": "node build.mjs",
-    "build:watch": "node build.mjs --watch"
+    "build": "node scripts/build-all.mjs",
+    "build:legacy": "node build.mjs",
+    "build:vite": "node scripts/build-vite.mjs",
+    "build:watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "@types/node": "^26.1.1",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.0"

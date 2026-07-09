@@ -6,23 +6,28 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# STAGE 0: Frontend asset build (JS/CSS minification + content hashing)
+# STAGE 0: Frontend asset build (legacy esbuild + Vite/TS page entries)
 # -----------------------------------------------------------------------------
 FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/ui
 
-# Install only dev deps (esbuild)
-COPY ui/package.json ./
-RUN npm install --include=dev --no-audit --no-fund
+# Install deps (esbuild, vite, typescript, vitest)
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci --include=dev --no-audit --no-fund
 
-# Copy source assets and build script
+# Copy source assets, TS sources, and build scripts/config
 COPY ui/static/js  ./static/js
 COPY ui/static/css ./static/css
+COPY ui/src        ./src
 COPY ui/build.mjs  ./
+COPY ui/scripts    ./scripts
+COPY ui/tsconfig.json ./
+COPY ui/vite.config.ts ./
+COPY ui/vite.entries.json ./
 
-# Build → generates static/dist/ with hashed filenames + manifest.json
-RUN node build.mjs
+# Build → generates static/dist/ with hashed filenames + merged manifest.json
+RUN npm run build
 
 # -----------------------------------------------------------------------------
 # STAGE 1: Builder

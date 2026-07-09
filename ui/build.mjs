@@ -18,7 +18,7 @@
 import * as esbuild from 'esbuild';
 import { createHash } from 'crypto';
 import {
-  writeFileSync, mkdirSync, readdirSync, statSync,
+  writeFileSync, mkdirSync, readdirSync, statSync, existsSync, readFileSync,
 } from 'fs';
 import { join } from 'path';
 
@@ -30,6 +30,17 @@ const WATCH = process.argv.includes('--watch');
 const SRC_JS  = 'static/js';
 const SRC_CSS = 'static/css';
 const OUT_DIR = 'static/dist';
+const VITE_ENTRIES_PATH = 'vite.entries.json';
+
+/** Manifest keys owned by Vite/TS — skip legacy minify for these JS files. */
+function loadViteOwnedKeys() {
+  if (!existsSync(VITE_ENTRIES_PATH)) return new Set();
+  try {
+    return new Set(Object.keys(JSON.parse(readFileSync(VITE_ENTRIES_PATH, 'utf8'))));
+  } catch {
+    return new Set();
+  }
+}
 
 // =============================================================================
 // HELPERS
@@ -66,10 +77,18 @@ async function build() {
   mkdirSync(`${OUT_DIR}/css`, { recursive: true });
 
   // ── JavaScript ─────────────────────────────────────────────────────────────
+  const viteOwned = loadViteOwnedKeys();
   const jsFiles = collectFiles(SRC_JS, '.js');
   let jsCount = 0;
+  let skipped = 0;
 
   for (const file of jsFiles) {
+    const manifestKey = `js/${file}`;
+    if (viteOwned.has(manifestKey)) {
+      skipped++;
+      continue; // TypeScript/Vite entry owns this key
+    }
+
     const result = await esbuild.build({
       entryPoints: [join(SRC_JS, file)],
       bundle:   false,   // No import resolution — keeps global-scope intact
@@ -86,7 +105,7 @@ async function build() {
 
     mkdirSync(join(OUT_DIR, 'js', outName.split('/').slice(0, -1).join('/')), { recursive: true });
     writeFileSync(outPath, text);
-    manifest[`js/${file}`] = `js/${outName}`;
+    manifest[manifestKey] = `js/${outName}`;
     jsCount++;
   }
 
@@ -123,8 +142,9 @@ async function build() {
   );
 
   const elapsed = Date.now() - startTime;
+  const skipMsg = skipped ? ` (skipped ${skipped} Vite-owned JS)` : '';
   console.log(
-    `✓ Built ${jsCount} JS + ${cssCount} CSS files in ${elapsed}ms → ${OUT_DIR}/manifest.json`,
+    `✓ Legacy built ${jsCount} JS + ${cssCount} CSS files in ${elapsed}ms${skipMsg} → ${OUT_DIR}/manifest.json`,
   );
 }
 
