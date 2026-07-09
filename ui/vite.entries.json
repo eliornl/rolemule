@@ -22,5 +22,8 @@
   "js/cv-optimizer.js": "src/pages/cv-optimizer.ts",
   "js/profile-setup.js": "src/pages/profile-setup.ts",
   "js/profile.js": "src/pages/profile.ts",
-  "js/types.js": "src/pages/types.ts"
+  "js/types.js": "src/pages/types.ts",
+  "js/dom-security.js": "src/pages/dom-security.ts",
+  "js/confirm-modal.js": "src/pages/confirm-modal.ts",
+  "js/event-bus.js": "src/pages/event-bus.ts"
 }

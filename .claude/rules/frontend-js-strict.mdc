@@ -1,14 +1,14 @@
 ---
 description: Frontend JS strict-mode checklist — required patterns in every page file
-globs: ui/static/js/**/*.js
+globs: ui/src/**/*.{ts,js},ui/static/js/**/*.js
 alwaysApply: false
 ---
 
-# Frontend JS — Required Patterns per Page File
+# Frontend JS/TS — Required Patterns per Page File
 
-Every page-level JS file in `ui/static/js/` must include these three local helpers and follow the rules below. Zero TypeScript/JSDoc errors expected.
+Every page-level script under `ui/src/pages/` (Vite TypeScript entries) must follow the rules below. Prefer importing shared helpers from `ui/src/shared/` instead of duplicating them.
 
-**Shared helpers:** `ui/static/js/dom-security.js` is loaded globally via `base.html` and exports `window.escapeHtml`, `window.decodeEntities`, `window.sanitizeLogValue`, etc. New dashboard code may delegate to those instead of duplicating — but per-page copies must still match the decode-first order below.
+**Shared helpers:** `dom-security` / confirm-modal / event-bus are still loaded globally via `base.html` (`asset_url('js/dom-security.js')` etc., built from `ui/src/pages/`). They export `window.escapeHtml`, `window.decodeEntities`, `window.sanitizeLogValue`, etc. New code should `import` from `ui/src/shared/dom-security.ts` when inside a Vite entry — globals remain for classic load order.
 
 ## 1. `escapeHtml()` — XSS Prevention with Decode-First
 

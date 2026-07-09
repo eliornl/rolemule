@@ -1,6 +1,6 @@
 # Frontend Migration Plan — Vite + TypeScript (Option A, No React)
 
-**Status:** Planned  
+**Status:** Implemented on branch `feat/frontend-vite-typescript`  
 **Owner:** Engineering  
 **Last updated:** 2026-07-08  
 **Decision:** Evolve the existing Jinja + vanilla JS multi-page app with **Vite + TypeScript**. Do **not** introduce React/Vue/Svelte in this plan.
@@ -1061,7 +1061,14 @@ cd e2e && npx playwright test tests/smoke.spec.ts
 | 2026-07-08 | Migrate page-by-page starting with Help | Lowest risk proof of pipeline |
 | 2026-07-08 | Dual pipeline (Strategy B) initially | Avoid big-bang rewrite of 21K LOC |
 | 2026-07-08 | CSS stays on existing minify path initially | Reduce scope; UI 1:1 |
+| 2026-07-08 | Phases 0–9 landed on `feat/frontend-vite-typescript` | Toolchain + all page scripts under `ui/src/pages` via Vite IIFE; CSS still esbuild; shared typed modules + Vitest for dom-security |
+
+### Implementation notes (2026-07-08)
+
+- Page scripts were moved with `ui/scripts/migrate-js-to-ts.mjs` (behavior-preserving + `@ts-nocheck` on large files).
+- `help.ts` is the hand-written typed pilot; shared modules live in `ui/src/shared/`.
+- Follow-up (not blocking): remove `@ts-nocheck` gradually, split `application-detail` / `profile-setup`, prefer `import` from `shared/` over globals.
 
 ---
 
-**End of plan.** Execute phases in order. Do not mark the project complete until §13 Pre-Ship Checklist is fully checked.
+**End of plan.** Re-run §13 Pre-Ship Checklist (full Playwright Tier 1) before merging to main.

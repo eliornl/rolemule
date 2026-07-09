@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/confirm-modal.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * Shared confirmation modal — replaces all native confirm()/prompt() calls.
  * Exposes window.showConfirm() for use across all dashboard pages.
  *

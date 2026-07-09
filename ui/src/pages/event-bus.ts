@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/event-bus.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * @fileoverview Lightweight event bus for decoupled cross-module communication.
  *
  * Usage:

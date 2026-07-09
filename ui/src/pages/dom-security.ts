@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/dom-security.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * Shared DOM / log sanitization helpers (loaded globally via base.html).
  * Exported on window for CodeQL barrier models and page scripts.
  */
