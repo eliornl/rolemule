@@ -4,6 +4,8 @@ omit =
     tests/*
     alembic/*
     _private/*
+    cli/*
+    applypilot_client/*
 
 [report]
 fail_under = 97

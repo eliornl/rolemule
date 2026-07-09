@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from applypilot_client.client import API_V1_PREFIX, ApplyPilotClient

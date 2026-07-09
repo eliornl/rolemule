@@ -21,7 +21,7 @@ from cli.commands.interview import interview_app
 from cli.commands.profile import profile_app
 from cli.commands.tools import tools_app
 from cli.commands.workflow import workflow_app
-from cli.context import CliContext, build_context
+from cli.context import build_context
 
 app = typer.Typer(
     name="applypilot",

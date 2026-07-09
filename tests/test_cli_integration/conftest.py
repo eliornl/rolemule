@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import os
 import uuid
 from typing import Generator
 
 import pytest
 
 _plugins = ["tests.test_cli.conftest"]
-if os.getenv("DATABASE_URL"):
-    _plugins.append("tests.test_api.conftest")
+# test_api/conftest.py is auto-loaded when tests/test_api/ is collected; do not
+# register it again here (pytest raises ValueError on duplicate plugin registration).
 pytest_plugins = _plugins
 
 

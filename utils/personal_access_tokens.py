@@ -14,7 +14,6 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.database import PersonalAccessToken, User
-from utils.logging_config import sanitize_log_value
 
 PAT_PREFIX = "ap_pat_"
 DEFAULT_PAT_EXPIRE_DAYS = 90

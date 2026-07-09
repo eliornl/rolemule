@@ -6,7 +6,7 @@ import json
 from contextlib import ExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 from unittest.mock import patch
 
 import pytest

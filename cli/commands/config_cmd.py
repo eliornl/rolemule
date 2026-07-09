@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from cli.config import CliConfig, load_config, save_config
+from cli.config import load_config, save_config
 from cli.context import CliContext
 from cli.output import emit
 

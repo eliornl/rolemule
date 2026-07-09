@@ -12,7 +12,7 @@ import typer
 
 from applypilot_client.client import ApplyPilotClient
 from applypilot_client.errors import ApiClientError, ExitCode
-from cli.config import Credentials, clear_credentials, load_credentials, mask_token, save_credentials
+from cli.config import Credentials, load_credentials, save_credentials
 from cli.context import CliContext
 
 

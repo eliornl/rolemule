@@ -6,7 +6,6 @@ import os
 import stat
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from applypilot_client.errors import ApiClientError
 from cli.config import credentials_path, load_credentials

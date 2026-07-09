@@ -59,7 +59,7 @@ def _run_tool(
     payload: Dict[str, Any],
     api_call: Callable[[Dict[str, Any]], Dict[str, Any]],
 ) -> None:
-    client = require_client(ctx)
+    require_client(ctx)
     try:
         data = api_call(payload)
     except ApiClientError as exc:

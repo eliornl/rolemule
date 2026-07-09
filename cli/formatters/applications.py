@@ -63,7 +63,7 @@ def format_applications_table(data: Dict[str, Any]) -> str:
 
     total = data.get("total", len(apps))
     page = data.get("page", 1)
-    per_page = data.get("per_page", len(apps))
+    data.get("per_page", len(apps))
     lines.append("")
     lines.append(f"Showing page {page} ({len(apps)} of {total} applications)")
     if data.get("has_next"):

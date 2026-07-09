@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 from applypilot_client.client import API_V1_PREFIX, ApplyPilotClient
 

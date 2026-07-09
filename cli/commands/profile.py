@@ -7,7 +7,7 @@ from __future__ import annotations
 import getpass
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import typer
 

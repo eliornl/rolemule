@@ -11,7 +11,6 @@ def _mock_client(handler) -> ApplyPilotClient:
     client = ApplyPilotClient("http://localhost:8000", access_token="jwt")
 
     def _request(method, path, **kwargs):
-        url = f"{client.base_url}{path}"
         response = handler(method, path, kwargs)
         if response.is_success:
             return response
