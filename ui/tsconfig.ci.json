@@ -28,6 +28,8 @@
     "src/pages/confirm-modal.ts",
     "src/pages/auth-verify-email.ts",
     "src/pages/auth-reset-password.ts",
+    "src/pages/auth-login.ts",
+    "src/pages/auth-register.ts",
     "src/**/*.test.ts",
     "src/vite-env.d.ts",
     "src/placeholder.ts",

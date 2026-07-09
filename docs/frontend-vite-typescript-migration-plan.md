@@ -1079,9 +1079,9 @@ cd e2e && npx playwright test tests/smoke.spec.ts
 |------|--------|
 | Shared | `src/shared/*` (dom-security, auth, api, auth-ui, auth-api, event-bus-impl, confirm-modal-impl) |
 | Globals | `dom-security.ts`, `event-bus.ts`, `confirm-modal.ts` entries |
-| Pages | `help.ts`, `landing.ts`, `auth-verify-email.ts`, `auth-reset-password.ts` |
+| Pages | `help.ts`, `landing.ts`, `auth-verify-email.ts`, `auth-reset-password.ts`, `auth-login.ts`, `auth-register.ts` |
 
-**Next in queue:** `auth-login.ts`, `auth-register.ts`, then dashboard cluster, then split `application-detail` / `profile-setup`.
+**Next in queue:** dashboard home + new-application, then split `application-detail` / `profile-setup`.
 
 **Tests:** Vitest on shared helpers; Playwright smoke (mocked) green; full Tier 1 before merge to `main`.
 

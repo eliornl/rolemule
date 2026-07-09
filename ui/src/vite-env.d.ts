@@ -28,6 +28,10 @@ declare global {
       inputType?: string;
       requiredInput?: string;
     }) => Promise<string | boolean | null>;
+    resendCode?: () => Promise<void>;
+    togglePassword?: (inputId: string) => void;
+    handleGoogleLogin?: () => void;
+    handleGoogleSignup?: () => void;
     eventBus?: {
       on: (event: string, callback: (event: { type: string; data: unknown; timestamp: number }) => void) => () => void;
       once: (event: string, callback: (event: { type: string; data: unknown; timestamp: number }) => void) => void;

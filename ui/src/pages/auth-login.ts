@@ -1,550 +1,360 @@
 /**
- * Migrated from ui/static/js/auth-login.js
- * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ * Login page — email/password auth, Google OAuth, URL-param messages.
  */
-// @ts-nocheck
-(function () {
-    'use strict';
+import { getApiBase } from '../shared/auth';
+import type { LoginResponse } from '../shared/auth-api';
+import {
+  fetchOAuthStatus,
+  getExistingAuthToken,
+  parseOAuthErrorMessages,
+  redirectAfterLogin,
+  showOAuthButtons,
+  storeLoginAuthData,
+} from '../shared/auth-session';
+import { escapeHtml, stripHtmlForAlert } from '../shared/dom-security';
+import { validateLoginEmail } from '../shared/auth-validation';
+import { validateStrongPassword } from '../shared/auth-ui';
 
-    /** @param {string|null|undefined} str */
-    function escapeHtml(str) {
-        return window.escapeHtml(str);
-    }
+const VALIDATION_DELAY = 500;
 
-    /** @param {string} text */
-    function stripHtmlForAlert(text) {
-        return window.stripHtmlForAlert(text);
-    }
+type LoginAlertType = 'success' | 'error' | 'info';
 
-    // =============================================================================
-    // CONSTANTS AND CONFIGURATION
-    // =============================================================================
+interface LoginDom {
+  form: HTMLFormElement | null;
+  submitBtn: HTMLButtonElement | null;
+  loginText: HTMLElement | null;
+  loginSpinner: HTMLElement | null;
+  emailField: HTMLInputElement | null;
+  passwordField: HTMLInputElement | null;
+  rememberMeField: HTMLInputElement | null;
+  alertContainer: HTMLElement | null;
+  passwordToggle: HTMLElement | null;
+}
 
-    const CONFIG = {
-        API_BASE: (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '/api/v1',
-        LOGIN_URL: (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || '/auth/login',
-        REDIRECT_DELAY: 1000,
-        VALIDATION_DELAY: 500
-    };
+const DOM: LoginDom = {
+  form: document.getElementById('loginForm') as HTMLFormElement | null,
+  submitBtn: document.getElementById('login-btn') as HTMLButtonElement | null,
+  loginText: document.querySelector('.login-text'),
+  loginSpinner: document.querySelector('.login-spinner'),
+  emailField: document.getElementById('email') as HTMLInputElement | null,
+  passwordField: document.getElementById('password') as HTMLInputElement | null,
+  rememberMeField: document.getElementById('remember-me') as HTMLInputElement | null,
+  alertContainer: document.getElementById('alert-container'),
+  passwordToggle: document.querySelector('.password-toggle'),
+};
 
-    /** @type {Record<string, string[]>} */
-    const EMAIL_TYPO_DOMAINS = {
-        'gmail.com':   ['gmail.co', 'gamil.com', 'gmial.com', 'gmail.comm', 'gmail.con', 'gmail.om'],
-        'yahoo.com':   ['yahoo.co', 'yaho.com', 'yahooo.com', 'yahoo.con', 'yahoo.comm'],
-        'outlook.com': ['outlook.co', 'outllok.com', 'outlook.con', 'outlook.comm'],
-        'hotmail.com': ['hotmai.com', 'hotmial.com', 'hotmail.co', 'hotmail.con'],
-        'aol.com':     ['aol.co', 'aol.con', 'aol.comm'],
-        'icloud.com':  ['icloud.co', 'icloud.con', 'icloud.comm']
-    };
+let emailValidationTimeout = 0;
 
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function showAlert(message: string, type: LoginAlertType = 'info', persist = false): void {
+  if (!DOM.alertContainer) return;
+  const alertTypes: Record<LoginAlertType, { class: string; icon: string }> = {
+    success: { class: 'alert-success', icon: 'fas fa-check-circle' },
+    error: { class: 'alert-danger', icon: 'fas fa-exclamation-triangle' },
+    info: { class: 'alert-info', icon: 'fas fa-info-circle' },
+  };
+  const alertInfo = alertTypes[type];
+  DOM.alertContainer.innerHTML = `
+    <div class="alert ${alertInfo.class} alert-dismissible" role="alert">
+      <i class="${alertInfo.icon} me-2"></i>${escapeHtml(message)}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+  if (!persist && type !== 'error') {
+    window.setTimeout(() => {
+      if (DOM.alertContainer) DOM.alertContainer.innerHTML = '';
+    }, 5000);
+  }
+}
 
-    const STORAGE_KEYS = {
-        AUTH_TOKEN:        'access_token',
-        AUTH_TOKEN_LEGACY: 'authToken',
-        USER_DATA:         'user'
-    };
+function hideAllAlerts(): void {
+  if (DOM.alertContainer) DOM.alertContainer.innerHTML = '';
+}
 
-    // =============================================================================
-    // DOM ELEMENTS CACHE
-    // =============================================================================
+function setFormLoading(loading: boolean): void {
+  if (
+    !DOM.submitBtn ||
+    !DOM.loginText ||
+    !DOM.loginSpinner ||
+    !DOM.emailField ||
+    !DOM.passwordField ||
+    !DOM.rememberMeField
+  ) {
+    return;
+  }
+  if (loading) {
+    DOM.submitBtn.disabled = true;
+    DOM.loginText.classList.add('d-none');
+    DOM.loginSpinner.classList.remove('d-none');
+    DOM.submitBtn.setAttribute('aria-busy', 'true');
+    DOM.emailField.disabled = true;
+    DOM.passwordField.disabled = true;
+    DOM.rememberMeField.disabled = true;
+  } else {
+    DOM.submitBtn.disabled = false;
+    DOM.loginText.classList.remove('d-none');
+    DOM.loginSpinner.classList.add('d-none');
+    DOM.submitBtn.setAttribute('aria-busy', 'false');
+    DOM.emailField.disabled = false;
+    DOM.passwordField.disabled = false;
+    DOM.rememberMeField.disabled = false;
+  }
+}
 
-    const DOM = {
-        form:           /** @type {HTMLFormElement|null} */      (document.getElementById('loginForm')),
-        submitBtn:      /** @type {HTMLButtonElement|null} */    (document.getElementById('login-btn')),
-        loginText:      /** @type {HTMLElement|null} */          (document.querySelector('.login-text')),
-        loginSpinner:   /** @type {HTMLElement|null} */          (document.querySelector('.login-spinner')),
-        emailField:     /** @type {HTMLInputElement|null} */     (document.getElementById('email')),
-        passwordField:  /** @type {HTMLInputElement|null} */     (document.getElementById('password')),
-        rememberMeField:/** @type {HTMLInputElement|null} */     (document.getElementById('remember-me')),
-        alertContainer: /** @type {HTMLElement|null} */          (document.getElementById('alert-container')),
-        passwordToggle: /** @type {HTMLElement|null} */          (document.querySelector('.password-toggle'))
-    };
+function updatePasswordUI(password: string): void {
+  const passwordInput = document.getElementById('password') as HTMLInputElement | null;
+  const container = document.getElementById('password-container');
+  const requirements = document.getElementById('password-requirements');
+  if (!passwordInput || !container) return;
 
-    // =============================================================================
-    // UI UTILITY FUNCTIONS
-    // =============================================================================
+  if (password.length > 0 && validateStrongPassword(password)) {
+    passwordInput.classList.add('is-valid');
+    passwordInput.classList.remove('is-invalid');
+    container.classList.add('email-validation-valid');
+    container.classList.remove('email-validation-invalid');
+    requirements?.classList.add('hidden');
+  } else if (password.length > 0) {
+    passwordInput.classList.remove('is-valid', 'is-invalid');
+    container.classList.remove('email-validation-valid', 'email-validation-invalid');
+    requirements?.classList.remove('hidden');
+  } else {
+    passwordInput.classList.remove('is-valid', 'is-invalid');
+    container.classList.remove('email-validation-valid', 'email-validation-invalid');
+    requirements?.classList.add('hidden');
+  }
+}
 
-    /**
-     * @param {string} message
-     * @param {string} [type]
-     * @param {boolean} [persist] - if true, never auto-clears (user must interact)
-     */
-    function showAlert(message, type = 'info', persist = false) {
-        if (!DOM.alertContainer) return;
-        /** @type {Record<string,{class:string,icon:string}>} */
-        const alertTypes = {
-            success: { class: 'alert-success', icon: 'fas fa-check-circle' },
-            error:   { class: 'alert-danger',  icon: 'fas fa-exclamation-triangle' },
-            info:    { class: 'alert-info',    icon: 'fas fa-info-circle' }
-        };
-        const alertInfo = alertTypes[type] ?? alertTypes['info'];
-        DOM.alertContainer.innerHTML = `
-            <div class="alert ${alertInfo.class} alert-dismissible" role="alert">
-                <i class="${alertInfo.icon} me-2"></i>${escapeHtml(message)}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>`;
-        if (!persist && type !== 'error') {
-            setTimeout(() => { if (DOM.alertContainer) DOM.alertContainer.innerHTML = ''; }, 5000);
-        }
-    }
-
-    function hideAllAlerts() {
-        if (DOM.alertContainer) DOM.alertContainer.innerHTML = '';
-    }
-
-    /** @param {boolean} loading */
-    function setFormLoading(loading) {
-        if (!DOM.submitBtn || !DOM.loginText || !DOM.loginSpinner ||
-            !DOM.emailField || !DOM.passwordField || !DOM.rememberMeField) return;
-        if (loading) {
-            DOM.submitBtn.disabled = true;
-            DOM.loginText.classList.add('d-none');
-            DOM.loginSpinner.classList.remove('d-none');
-            DOM.submitBtn.setAttribute('aria-busy', 'true');
-            DOM.emailField.disabled = true;
-            DOM.passwordField.disabled = true;
-            DOM.rememberMeField.disabled = true;
-        } else {
-            DOM.submitBtn.disabled = false;
-            DOM.loginText.classList.remove('d-none');
-            DOM.loginSpinner.classList.add('d-none');
-            DOM.submitBtn.setAttribute('aria-busy', 'false');
-            DOM.emailField.disabled = false;
-            DOM.passwordField.disabled = false;
-            DOM.rememberMeField.disabled = false;
-        }
-    }
-
-    // =============================================================================
-    // VALIDATION FUNCTIONS
-    // =============================================================================
-
-    /**
-     * @param {string} email
-     * @returns {{ valid: boolean, message?: string, suggestion?: string }}
-     */
-    function validateEmail(email) {
-        if (!EMAIL_REGEX.test(email)) {
-            return { valid: false, message: 'Please enter a valid email address' };
-        }
-        const parts = email.split('@');
-        if (parts.length === 2) {
-            const domain = parts[1].toLowerCase();
-            for (const [correct, typos] of Object.entries(EMAIL_TYPO_DOMAINS)) {
-                if (typos.includes(domain)) {
-                    return { valid: false, message: `Did you mean ${parts[0]}@${correct}?`, suggestion: `${parts[0]}@${correct}` };
-                }
-            }
-            if (!domain.includes('.')) {
-                return { valid: false, message: 'Your email domain appears to be missing a TLD (e.g. .com, .org)' };
-            }
-            const tld = domain.split('.').pop();
-            if (tld && tld.length < 2) {
-                return { valid: false, message: 'Your email domain appears to have an invalid TLD' };
-            }
-        }
-        return { valid: true };
-    }
-
-    /** @param {string} password */
-    function validatePassword(password) {
-        if (!password || password.length < 8) return false;
-        return /[A-Z]/.test(password) && /[a-z]/.test(password) &&
-               /[0-9]/.test(password) && /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-    }
-
-    /** @param {string} password */
-    function updatePasswordUI(password) {
-        const passwordInput  = /** @type {HTMLInputElement|null} */  (document.getElementById('password'));
-        const container      = document.getElementById('password-container');
-        const requirements   = document.getElementById('password-requirements');
-        if (!passwordInput || !container) return;
-
-        if (password.length > 0 && validatePassword(password)) {
-            passwordInput.classList.add('is-valid');
-            passwordInput.classList.remove('is-invalid');
-            container.classList.add('email-validation-valid');
-            container.classList.remove('email-validation-invalid');
-            requirements?.classList.add('hidden');
-        } else if (password.length > 0) {
-            passwordInput.classList.remove('is-valid', 'is-invalid');
-            container.classList.remove('email-validation-valid', 'email-validation-invalid');
-            requirements?.classList.remove('hidden');
-        } else {
-            passwordInput.classList.remove('is-valid', 'is-invalid');
-            container.classList.remove('email-validation-valid', 'email-validation-invalid');
-            requirements?.classList.add('hidden');
-        }
-    }
-
-    /** @param {HTMLInputElement} field */
-    function validateField(field) {
-        const fieldValue  = field.value.trim();
-        const fieldType   = field.dataset['validate'];
-        const feedbackEl  = document.getElementById(`${field.id}-feedback`);
-        /** @type {{ valid: boolean, message?: string, suggestion?: string }} */
-        let validationResult = { valid: false };
-
-        const container = /** @type {HTMLElement|null} */ (
-            field.closest('.email-validation-container') || field.parentNode
-        );
-        if (!container) return false;
-        container.classList.remove('email-validation-pending', 'email-validation-valid', 'email-validation-invalid');
-
-        switch (fieldType) {
-            case 'email':
-                validationResult = validateEmail(fieldValue);
-                if (validationResult.valid) {
-                    container.classList.add('email-validation-valid');
-                } else if (fieldValue.length > 0) {
-                    container.classList.add('email-validation-invalid');
-                    if (feedbackEl) {
-                        feedbackEl.innerHTML = escapeHtml(validationResult.message ?? 'Please enter a valid email address');
-                        if (validationResult.suggestion) {
-                            const link = document.createElement('a');
-                            link.href = '#';
-                            link.classList.add('suggestion-link');
-                            link.textContent = ' Use this instead';
-                            link.addEventListener('click', function (e) {
-                                e.preventDefault();
-                                field.value = /** @type {string} */ (validationResult.suggestion);
-                                setTimeout(() => validateField(field), 10);
-                            });
-                            feedbackEl.appendChild(link);
-                        }
-                    }
-                }
-                break;
-            case 'password':
-                validationResult = { valid: validatePassword(fieldValue) };
-                if (validationResult.valid) {
-                    container.classList.add('email-validation-valid');
-                    container.classList.remove('email-validation-invalid');
-                } else if (fieldValue.length > 0) {
-                    container.classList.add('email-validation-invalid');
-                    container.classList.remove('email-validation-valid');
-                    if (feedbackEl) feedbackEl.textContent = 'Please enter your password';
-                }
-                break;
-        }
-
-        if (validationResult.valid) {
-            field.classList.add('is-valid');
-            field.classList.remove('is-invalid');
-            container.classList.add('email-validation-valid');
-            container.classList.remove('email-validation-invalid');
-            feedbackEl?.classList.remove('show');
-        } else {
-            field.classList.remove('is-valid');
-            field.classList.add('is-invalid');
-            feedbackEl?.classList.add('show');
-        }
-        return validationResult.valid;
-    }
-
-    // =============================================================================
-    // AUTHENTICATION FUNCTIONS
-    // =============================================================================
-
-    /** @param {string|null} token */
-    function setAuthToken(token) {
-        if (token) {
-            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY, token);
-        } else {
-            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY);
-        }
-    }
-
-    /** @param {Record<string,unknown>} authData */
-    function storeAuthData(authData) {
-        try {
-            if (!authData['access_token']) {
-                console.error('Missing access_token in auth data');
-                return false;
-            }
-            setAuthToken(/** @type {string} */ (authData['access_token']));
-            localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(authData['user']));
-            localStorage.setItem('profile_completed', String(authData['profile_completed']));
-            return true;
-        } catch (error) {
-            console.error('Failed to store authentication data:', error);
-            showAlert('Failed to save login data. Please try again.', 'error');
-            return false;
-        }
-    }
-
-    /** @param {boolean} profileCompleted */
-    function redirectUser(profileCompleted) {
-        const defaultDestination = profileCompleted ? '/dashboard' : '/profile/setup';
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            let rawRedirect = urlParams.get('redirect');
-            if (rawRedirect && rawRedirect.startsWith('/ui/')) {
-                rawRedirect = rawRedirect
-                    .replace('/ui/dashboard/index.html', '/dashboard')
-                    .replace('/ui/profile/setup.html', '/profile/setup');
-            }
-            const validatedRedirect = window.validateRelativeRedirectPath(rawRedirect);
-            const safeDestination = validatedRedirect ?? defaultDestination;
-            const redirectUrl = new URL(safeDestination, window.location.origin);
-            if (redirectUrl.origin !== window.location.origin) {
-                setTimeout(() => { window.location.assign(defaultDestination); }, CONFIG.REDIRECT_DELAY);
-                return;
-            }
-            const navPath = redirectUrl.pathname + redirectUrl.search + redirectUrl.hash;
-            // JWT is stored in localStorage and retrieved by each page on load.
-            // Never append it to redirect URLs (leaks into server logs and browser history).
-            setTimeout(() => { window.location.assign(navPath); }, CONFIG.REDIRECT_DELAY);
-        } catch (error) {
-            console.error(
-                'Redirect failed:',
-                window.sanitizeLogValue(error instanceof Error ? error.message : String(error)),
-            );
-            window.location.assign('/dashboard');
-        }
-    }
-
-    // =============================================================================
-    // API FUNCTIONS
-    // =============================================================================
-
-    /**
-     * @param {{ email: string, password: string, remember_me?: boolean }} credentials
-     */
-    async function performLogin(credentials) {
-        if (!credentials.email || !credentials.password) {
-            throw new Error('Email and password are required');
-        }
-        /** @type {Record<string,unknown>} */
-        const payload = { email: credentials.email, password: credentials.password };
-        if (Object.prototype.hasOwnProperty.call(credentials, 'remember_me')) {
-            payload['remember_me'] = credentials.remember_me;
-        }
-
-        const response = await fetch(`${CONFIG.API_BASE}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-
-        if (!response.ok) {
-            if (response.status === 403) {
-                localStorage.setItem('pendingVerificationEmail', credentials.email.toLowerCase());
-                window.location.href = `/auth/verify-email?email=${encodeURIComponent(credentials.email.toLowerCase())}`;
-                throw new Error('VERIFICATION_REQUIRED');
-            }
-            let errorMessage = 'Invalid email or password';
-            if (response.status === 423) errorMessage = result.detail || 'Account temporarily locked. Please try again later.';
-            else if (response.status === 422 || response.status === 400) errorMessage = 'Please enter both email and password';
-            else if (response.status === 500) errorMessage = 'Server error. Please try again later.';
-            throw new Error(errorMessage);
-        }
-        return result;
-    }
-
-    // =============================================================================
-    // EVENT HANDLERS
-    // =============================================================================
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const passwordInput = /** @type {HTMLInputElement|null} */ (document.getElementById('password'));
-        if (passwordInput) {
-            passwordInput.addEventListener('input', function () { updatePasswordUI(this.value); });
-        }
-
-        const emailInput = /** @type {HTMLInputElement|null} */ (document.getElementById('email'));
-        if (emailInput) {
-            let emailValidationTimeout = 0;
-            const emailContainer = emailInput.closest('.email-validation-container');
-
-            emailInput.addEventListener('input', function () {
-                clearTimeout(emailValidationTimeout);
-                emailContainer?.classList.remove('email-validation-valid', 'email-validation-invalid');
-
-                emailValidationTimeout = window.setTimeout(() => {
-                    const result = validateEmail(emailInput.value.trim());
-                    if (result.valid) {
-                        emailContainer?.classList.add('email-validation-valid');
-                        emailContainer?.classList.remove('email-validation-invalid');
-                        document.getElementById('email-feedback')?.classList.remove('show');
-                    } else if (emailInput.value.trim().length > 0) {
-                        emailContainer?.classList.add('email-validation-invalid');
-                        emailContainer?.classList.remove('email-validation-valid');
-                        const feedbackEl = document.getElementById('email-feedback');
-                        if (feedbackEl) {
-                            feedbackEl.innerHTML = escapeHtml(result.message ?? 'Please enter a valid email address');
-                            feedbackEl.classList.add('show');
-                            if (result.suggestion) {
-                                const link = document.createElement('a');
-                                link.href = '#';
-                                link.classList.add('suggestion-link');
-                                link.textContent = ' Use this instead';
-                                link.addEventListener('click', function (e) {
-                                    e.preventDefault();
-                                    emailInput.value = /** @type {string} */ (result.suggestion);
-                                    emailInput.dispatchEvent(new Event('input'));
-                                });
-                                feedbackEl.appendChild(link);
-                            }
-                        }
-                    }
-                }, CONFIG.VALIDATION_DELAY);
-            });
-        }
-
-        if (DOM.form) {
-            DOM.form.addEventListener('submit', async function (e) {
-                e.preventDefault();
-                hideAllAlerts();
-                if (!DOM.emailField || !DOM.passwordField || !DOM.rememberMeField) return;
-
-                const email    = DOM.emailField.value.trim();
-                const password = DOM.passwordField.value;
-
-                if (!email) { DOM.emailField.classList.add('is-invalid'); showAlert('Please enter your email address', 'error'); return; }
-                if (!password) { DOM.passwordField.classList.add('is-invalid'); showAlert('Please enter your password', 'error'); return; }
-
-                const emailResult = validateEmail(email);
-                if (!emailResult.valid) {
-                    DOM.emailField.classList.add('is-invalid');
-                    showAlert(stripHtmlForAlert(emailResult.message ?? 'Invalid email'), 'error');
-                    return;
-                }
-
-                try {
-                    setFormLoading(true);
-                    const authData = await performLogin({
-                        email, password, remember_me: DOM.rememberMeField.checked
-                    });
-                    // Clear password from DOM before redirecting
-                    if (DOM.passwordField) DOM.passwordField.value = '';
-                    if (storeAuthData(authData)) {
-                        showAlert('Login successful! Redirecting...', 'success');
-                        redirectUser(authData.profile_completed);
-                    }
-                } catch (error) {
-                    // Clear password on failure to prevent resubmission with stale value
-                    if (DOM.passwordField) DOM.passwordField.value = '';
-                    const err = /** @type {Error} */ (error);
-                    if (err.message === 'VERIFICATION_REQUIRED') return;
-                    let msg = err.message || 'Login failed. Please check your credentials.';
-                    if (msg.includes('401') || msg.includes('unauthorized')) {
-                        msg = 'Invalid email or password. Please try again.';
-                        DOM.passwordField?.classList.add('is-invalid');
-                    } else if (msg.includes('500')) {
-                        msg = 'Server error. Please try again later or contact support.';
-                    } else if (msg.includes('Failed to fetch') || msg.includes('network')) {
-                        msg = 'Network error. Please check your internet connection.';
-                    }
-                    showAlert(msg, 'error');
-                    setFormLoading(false);
-                }
-            });
-        }
-
-        if (DOM.passwordToggle) {
-            DOM.passwordToggle.addEventListener('click', function () {
-                if (!DOM.passwordField) return;
-                const isPassword = DOM.passwordField.getAttribute('type') === 'password';
-                DOM.passwordField.setAttribute('type', isPassword ? 'text' : 'password');
-                /** @type {HTMLElement} */ (DOM.passwordToggle).innerHTML = isPassword
-                    ? '<i class="fas fa-eye-slash"></i>'
-                    : '<i class="fas fa-eye"></i>';
-            });
-        }
-
-        // Redirect already-authenticated users straight to the dashboard
-        const existingToken = localStorage.getItem('access_token') || localStorage.getItem('authToken');
-        if (existingToken) {
-            window.location.href = '/dashboard';
-            return;
-        }
-
-        checkOAuthErrors();
-        checkUrlMessages();
-        checkGoogleOAuthStatus();
-
-        // Clear pending validation timers on navigation to avoid memory leaks
-        window.addEventListener('beforeunload', () => {
-            clearTimeout(emailValidationTimeout);
-        });
+function renderEmailSuggestion(
+  feedbackEl: HTMLElement,
+  result: ReturnType<typeof validateLoginEmail>,
+  emailInput: HTMLInputElement,
+): void {
+  feedbackEl.innerHTML = escapeHtml(result.message ?? 'Please enter a valid email address');
+  if (result.suggestion) {
+    const link = document.createElement('a');
+    link.href = '#';
+    link.classList.add('suggestion-link');
+    link.textContent = ' Use this instead';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      emailInput.value = result.suggestion ?? '';
+      emailInput.dispatchEvent(new Event('input'));
     });
+    feedbackEl.appendChild(link);
+  }
+}
 
-    // =============================================================================
-    // GOOGLE OAUTH
-    // =============================================================================
+async function performLogin(credentials: {
+  email: string;
+  password: string;
+  remember_me?: boolean;
+}): Promise<LoginResponse> {
+  if (!credentials.email || !credentials.password) {
+    throw new Error('Email and password are required');
+  }
+  const payload: Record<string, unknown> = {
+    email: credentials.email,
+    password: credentials.password,
+  };
+  if (Object.prototype.hasOwnProperty.call(credentials, 'remember_me')) {
+    payload['remember_me'] = credentials.remember_me;
+  }
 
-    async function checkGoogleOAuthStatus() {
-        try {
-            const response = await fetch(`${CONFIG.API_BASE}/auth/oauth/status`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.google_oauth_enabled) {
-                    const divider   = document.getElementById('oauth-divider');
-                    const googleBtn = document.getElementById('google-login-btn');
-                    if (divider)   divider.style.display   = 'flex';
-                    if (googleBtn) googleBtn.style.display = 'flex';
-                }
-            }
-        } catch (error) {
-            console.debug('Could not check OAuth status:', error);
-        }
+  const response = await fetch(`${getApiBase()}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const result = (await response.json()) as LoginResponse & { detail?: string };
+
+  if (!response.ok) {
+    if (response.status === 403) {
+      localStorage.setItem('pendingVerificationEmail', credentials.email.toLowerCase());
+      window.location.href = `/auth/verify-email?email=${encodeURIComponent(credentials.email.toLowerCase())}`;
+      throw new Error('VERIFICATION_REQUIRED');
     }
-
-    function handleGoogleLogin() {
-        const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/dashboard';
-        window.location.href = `/api/v1/auth/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
+    let errorMessage = 'Invalid email or password';
+    if (response.status === 423) {
+      errorMessage = result.detail || 'Account temporarily locked. Please try again later.';
+    } else if (response.status === 422 || response.status === 400) {
+      errorMessage = 'Please enter both email and password';
+    } else if (response.status === 500) {
+      errorMessage = 'Server error. Please try again later.';
     }
+    throw new Error(errorMessage);
+  }
+  return result;
+}
 
-    function checkUrlMessages() {
-        const params = new URLSearchParams(window.location.search);
-        /** @type {Record<string, {msg: string, type: 'success'|'error'|'info'}>} */
-        const knownParams = {
-            verified:        { msg: 'Email verified successfully! You can now sign in.', type: 'success' },
-            registered:      { msg: 'Account created! Please sign in.', type: 'success' },
-            password_reset:  { msg: 'Password reset successfully. Please sign in with your new password.', type: 'success' },
-            account_deleted: { msg: 'Your account has been deleted. Sorry to see you go.', type: 'info' },
-        };
-        for (const [key, { msg, type }] of Object.entries(knownParams)) {
-            if (params.has(key)) {
-                showAlert(msg, type, true); // persist — URL-param messages stay until dismissed
-                window.history.replaceState({}, document.title, window.location.pathname);
-                return;
-            }
-        }
+function checkUrlMessages(): void {
+  const params = new URLSearchParams(window.location.search);
+  const knownParams: Record<string, { msg: string; type: LoginAlertType }> = {
+    verified: { msg: 'Email verified successfully! You can now sign in.', type: 'success' },
+    registered: { msg: 'Account created! Please sign in.', type: 'success' },
+    password_reset: {
+      msg: 'Password reset successfully. Please sign in with your new password.',
+      type: 'success',
+    },
+    account_deleted: { msg: 'Your account has been deleted. Sorry to see you go.', type: 'info' },
+  };
+  for (const [key, { msg, type }] of Object.entries(knownParams)) {
+    if (params.has(key)) {
+      showAlert(msg, type, true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
     }
+  }
+}
 
-    function checkOAuthErrors() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const error     = urlParams.get('error');
-        const message   = urlParams.get('message');
-        if (!error) return;
+function checkOAuthErrors(): void {
+  const urlParams = new URLSearchParams(window.location.search);
+  const error = urlParams.get('error');
+  const message = urlParams.get('message');
+  if (!error) return;
+  showAlert(parseOAuthErrorMessages(error, message), 'error');
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
 
-        /** @type {Record<string,string>} */
-        const messages = {
-            oauth_failed:           message ? `OAuth error: ${message}` : 'Google authentication failed.',
-            oauth_not_configured:   'Google sign-in is not available at the moment.',
-            token_exchange_failed:  'Failed to complete authentication. Please try again.',
-            no_access_token:        'Authentication incomplete. Please try again.',
-            userinfo_failed:        'Could not retrieve your account information.',
-            missing_user_info:      'Required account information is missing.',
-            oauth_error:            message ? `Error: ${message}` : 'An error occurred during authentication.'
-        };
-        showAlert(messages[error] ?? 'Authentication failed. Please try again.', 'error');
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
+function handleGoogleLogin(): void {
+  const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/dashboard';
+  window.location.href = `/api/v1/auth/google?redirect_url=${encodeURIComponent(redirectUrl)}`;
+}
 
-    // Wire Google login button (replaces inline onclick="handleGoogleLogin()")
-    document.addEventListener('DOMContentLoaded', function () {
-        document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleLogin);
+async function checkGoogleOAuthStatus(): Promise<void> {
+  if (await fetchOAuthStatus()) {
+    showOAuthButtons('oauth-divider', 'google-login-btn');
+  }
+}
+
+function initLoginPage(): void {
+  const passwordInput = document.getElementById('password') as HTMLInputElement | null;
+  if (passwordInput) {
+    passwordInput.addEventListener('input', function (this: HTMLInputElement) {
+      updatePasswordUI(this.value);
     });
+  }
 
-    // Public API
-    // @ts-ignore
-    window.handleGoogleLogin = handleGoogleLogin;
+  const emailInput = document.getElementById('email') as HTMLInputElement | null;
+  if (emailInput) {
+    const emailContainer = emailInput.closest('.email-validation-container');
+    emailInput.addEventListener('input', () => {
+      window.clearTimeout(emailValidationTimeout);
+      emailContainer?.classList.remove('email-validation-valid', 'email-validation-invalid');
 
-}());
+      emailValidationTimeout = window.setTimeout(() => {
+        const result = validateLoginEmail(emailInput.value.trim());
+        if (result.valid) {
+          emailContainer?.classList.add('email-validation-valid');
+          emailContainer?.classList.remove('email-validation-invalid');
+          document.getElementById('email-feedback')?.classList.remove('show');
+        } else if (emailInput.value.trim().length > 0) {
+          emailContainer?.classList.add('email-validation-invalid');
+          emailContainer?.classList.remove('email-validation-valid');
+          const feedbackEl = document.getElementById('email-feedback');
+          if (feedbackEl) {
+            renderEmailSuggestion(feedbackEl, result, emailInput);
+            feedbackEl.classList.add('show');
+          }
+        }
+      }, VALIDATION_DELAY);
+    });
+  }
+
+  DOM.form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAllAlerts();
+    if (!DOM.emailField || !DOM.passwordField || !DOM.rememberMeField) return;
+
+    const email = DOM.emailField.value.trim();
+    const password = DOM.passwordField.value;
+
+    if (!email) {
+      DOM.emailField.classList.add('is-invalid');
+      showAlert('Please enter your email address', 'error');
+      return;
+    }
+    if (!password) {
+      DOM.passwordField.classList.add('is-invalid');
+      showAlert('Please enter your password', 'error');
+      return;
+    }
+
+    const emailResult = validateLoginEmail(email);
+    if (!emailResult.valid) {
+      DOM.emailField.classList.add('is-invalid');
+      showAlert(stripHtmlForAlert(emailResult.message ?? 'Invalid email'), 'error');
+      return;
+    }
+
+    try {
+      setFormLoading(true);
+      const authData = await performLogin({
+        email,
+        password,
+        remember_me: DOM.rememberMeField.checked,
+      });
+      if (DOM.passwordField) DOM.passwordField.value = '';
+      if (storeLoginAuthData(authData)) {
+        showAlert('Login successful! Redirecting...', 'success');
+        redirectAfterLogin(authData.profile_completed);
+      } else {
+        showAlert('Failed to save login data. Please try again.', 'error');
+        setFormLoading(false);
+      }
+    } catch (error) {
+      if (DOM.passwordField) DOM.passwordField.value = '';
+      const err = error as Error;
+      if (err.message === 'VERIFICATION_REQUIRED') return;
+      let msg = err.message || 'Login failed. Please check your credentials.';
+      if (msg.includes('401') || msg.includes('unauthorized')) {
+        msg = 'Invalid email or password. Please try again.';
+        DOM.passwordField?.classList.add('is-invalid');
+      } else if (msg.includes('500')) {
+        msg = 'Server error. Please try again later or contact support.';
+      } else if (msg.includes('Failed to fetch') || msg.includes('network')) {
+        msg = 'Network error. Please check your internet connection.';
+      }
+      showAlert(msg, 'error');
+      setFormLoading(false);
+    }
+  });
+
+  DOM.passwordToggle?.addEventListener('click', () => {
+    if (!DOM.passwordField) return;
+    const isPassword = DOM.passwordField.getAttribute('type') === 'password';
+    DOM.passwordField.setAttribute('type', isPassword ? 'text' : 'password');
+    if (DOM.passwordToggle) {
+      DOM.passwordToggle.innerHTML = isPassword
+        ? '<i class="fas fa-eye-slash"></i>'
+        : '<i class="fas fa-eye"></i>';
+    }
+  });
+
+  const existingToken = getExistingAuthToken();
+  if (existingToken) {
+    window.location.href = '/dashboard';
+    return;
+  }
+
+  void checkGoogleOAuthStatus();
+  checkOAuthErrors();
+  checkUrlMessages();
+
+  document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleLogin);
+
+  window.addEventListener('beforeunload', () => {
+    window.clearTimeout(emailValidationTimeout);
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLoginPage);
+} else {
+  initLoginPage();
+}
+
+declare global {
+  interface Window {
+    handleGoogleLogin?: () => void;
+  }
+}
+
+window.handleGoogleLogin = handleGoogleLogin;
