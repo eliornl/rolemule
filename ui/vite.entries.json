@@ -19,5 +19,8 @@
   "js/dashboard-tools.js": "src/pages/dashboard-tools.ts",
   "js/dashboard-interview-prep.js": "src/pages/dashboard-interview-prep.ts",
   "js/application-detail.js": "src/pages/application-detail.ts",
-  "js/cv-optimizer.js": "src/pages/cv-optimizer.ts"
+  "js/cv-optimizer.js": "src/pages/cv-optimizer.ts",
+  "js/profile-setup.js": "src/pages/profile-setup.ts",
+  "js/profile.js": "src/pages/profile.ts",
+  "js/types.js": "src/pages/types.ts"
 }

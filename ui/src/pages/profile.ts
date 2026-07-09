@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/profile.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * @fileoverview ApplyPilot - Profile Management JavaScript
  * Handles profile setup, editing, and data management.
  * 

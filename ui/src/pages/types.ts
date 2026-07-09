@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/types.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * @fileoverview Shared TypeScript-compatible JSDoc type definitions for the ApplyPilot frontend.
  * These types provide IDE autocomplete and type checking without requiring TypeScript compilation.
  */
