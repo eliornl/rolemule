@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 
@@ -25,8 +27,9 @@ def test_show_completion_zsh(invoke, typer_explicit_shell) -> None:
     assert "compdef" in result.output
 
 
-def test_completion_flags_in_help(invoke) -> None:
+def test_completion_flags_in_help(invoke, typer_explicit_shell) -> None:
     result = invoke("--help")
     assert result.exit_code == 0
-    assert "--install-completion" in result.output
-    assert "--show-completion" in result.output
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "--install-completion" in plain
+    assert "--show-completion" in plain
