@@ -1069,6 +1069,22 @@ cd e2e && npx playwright test tests/smoke.spec.ts
 - `help.ts` is the hand-written typed pilot; shared modules live in `ui/src/shared/`.
 - Follow-up (not blocking): remove `@ts-nocheck` gradually, split `application-detail` / `profile-setup`, prefer `import` from `shared/` over globals.
 
+### Proper finish in progress (2026-07-09)
+
+**CI strict gate:** `npm run typecheck` uses `ui/tsconfig.ci.json` — only files that pass strict TypeScript without `@ts-nocheck`. Grow `include` as each page is properly typed.
+
+**Completed (strict, shared modules):**
+
+| Area | Files |
+|------|--------|
+| Shared | `src/shared/*` (dom-security, auth, api, auth-ui, auth-api, event-bus-impl, confirm-modal-impl) |
+| Globals | `dom-security.ts`, `event-bus.ts`, `confirm-modal.ts` entries |
+| Pages | `help.ts`, `landing.ts`, `auth-verify-email.ts`, `auth-reset-password.ts` |
+
+**Next in queue:** `auth-login.ts`, `auth-register.ts`, then dashboard cluster, then split `application-detail` / `profile-setup`.
+
+**Tests:** Vitest on shared helpers; Playwright smoke (mocked) green; full Tier 1 before merge to `main`.
+
 ---
 
 **End of plan.** Re-run §13 Pre-Ship Checklist (full Playwright Tier 1) before merging to main.

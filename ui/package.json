@@ -9,7 +9,8 @@
     "build:legacy": "node build.mjs",
     "build:vite": "node scripts/build-vite.mjs",
     "build:watch": "node build.mjs --watch",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.ci.json",
+    "typecheck:all": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest"
   },

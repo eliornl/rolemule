@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": [
+    "src/shared/**/*.ts",
+    "src/pages/help.ts",
+    "src/pages/landing.ts",
+    "src/pages/dom-security.ts",
+    "src/pages/event-bus.ts",
+    "src/pages/confirm-modal.ts",
+    "src/pages/auth-verify-email.ts",
+    "src/pages/auth-reset-password.ts",
+    "src/**/*.test.ts",
+    "src/vite-env.d.ts",
+    "src/placeholder.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "static/dist"]
+}
