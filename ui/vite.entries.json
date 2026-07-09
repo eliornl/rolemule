@@ -1,3 +1,8 @@
 {
-  "js/help.js": "src/pages/help.ts"
+  "js/help.js": "src/pages/help.ts",
+  "js/auth-login.js": "src/pages/auth-login.ts",
+  "js/auth-register.js": "src/pages/auth-register.ts",
+  "js/auth-verify-email.js": "src/pages/auth-verify-email.ts",
+  "js/auth-reset-password.js": "src/pages/auth-reset-password.ts",
+  "js/auth.js": "src/pages/auth.ts"
 }

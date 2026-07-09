@@ -1,4 +1,9 @@
 /**
+ * Migrated from ui/static/js/auth.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
+/**
  * @fileoverview ApplyPilot - Authentication Manager
  * Handles login, registration, form validation, and session management.
  * 

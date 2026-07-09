@@ -1,3 +1,8 @@
+/**
+ * Migrated from ui/static/js/auth-verify-email.js
+ * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ */
+// @ts-nocheck
 (function () {
     'use strict';
 
