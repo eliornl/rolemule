@@ -25,7 +25,7 @@ Tests are split into two tiers based on whether they require a live server.
 | `security.spec.ts` | XSS, JWT format, API headers, content security (all mocked) |
 | `extension.spec.ts` | Manifest V3, content script, service worker, popup JS |
 | `error-handling.spec.ts` | 401/403/429/500 + mocked network errors, form validation |
-| `smoke.spec.ts` | Critical path in ~3 min — use as first CI gate |
+| `smoke.spec.ts` | Critical path in ~3 min — optional local quick check (CI runs the full live suite) |
 | `workflow-mocked.spec.ts` | Workflow processing/complete/error states (mocked) |
 | `api-validation.spec.ts` | API response shapes: full/partial/null fields, error bodies, auth tokens |
 | `form-edge-cases.spec.ts` | Unicode, boundary values, special characters, XSS |
@@ -58,17 +58,11 @@ These register real users, call real endpoints, and may invoke real LLM agents.
 cd e2e
 npm install && npx playwright install chromium
 
-# CI — all Tier 1 mocked tests (no server needed)
-npx playwright test \
-  landing auth-pages auth-complete dashboard dashboard-pages \
-  profile-setup application-detail interview-prep onboarding \
-  workflow-mocked smoke security error-handling complete-coverage \
-  visual-regression extension api-validation keyboard-nav rate-limit \
-  journey form-edge-cases performance accessibility websocket file-upload \
-  --project=chromium --workers=4
+# GitHub Actions — full live suite when ui/api/e2e/etc. change (see .github/workflows/ci.yml)
+CI=1 npx playwright test --project=chromium --workers=4
 
-# Smoke tests only (~3 min)
-SMOKE=1 npx playwright test --project=chromium
+# Smoke tests only (~3 min, local quick check)
+SMOKE=1 npx playwright test tests/smoke.spec.ts --project=chromium
 
 # Single suite
 npx playwright test tests/onboarding.spec.ts --project=chromium

@@ -26,6 +26,33 @@ env:
   ALLOWED_HOSTS: localhost,127.0.0.1
 
 jobs:
+  changes:
+    name: Detect E2E-relevant changes
+    runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            e2e:
+              - 'api/**'
+              - 'agents/**'
+              - 'workflows/**'
+              - 'models/**'
+              - 'utils/**'
+              - 'middleware/**'
+              - 'main.py'
+              - 'alembic/**'
+              - 'requirements.txt'
+              - 'scripts/ci-migrate.sh'
+              - 'ui/**'
+              - 'e2e/**'
+              - 'extension/**'
+              - '.github/workflows/ci.yml'
+
   lint:
     name: Lint (ruff)
     runs-on: ubuntu-latest
@@ -204,9 +231,12 @@ jobs:
           npm ci
           npm audit --audit-level=high
 
-  e2e-smoke:
-    name: E2E smoke tests
+  e2e-full:
+    name: E2E tests (full suite)
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17-alpine
@@ -264,12 +294,17 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Run smoke tests
+      - name: Run full Playwright suite
         working-directory: e2e
         env:
-          SMOKE: "1"
           CI: "1"
-        run: npx playwright test tests/smoke.spec.ts --project=chromium
+        run: npx playwright test --project=chromium --workers=4
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-results
+          path: e2e/test-results/
+          retention-days: 7
 
   ci-success:
     name: CI success
@@ -280,7 +315,7 @@ jobs:
       - cli-tests
       - frontend-build
       - security-grep
-      - e2e-smoke
+      - e2e-full
     if: always()
     steps:
       - name: Verify required checks passed
@@ -291,7 +326,6 @@ jobs:
             "${{ needs.cli-tests.result }}"
             "${{ needs.frontend-build.result }}"
             "${{ needs.security-grep.result }}"
-            "${{ needs.e2e-smoke.result }}"
           )
           for result in "${results[@]}"; do
             if [[ "$result" != "success" ]]; then
@@ -299,4 +333,12 @@ jobs:
               exit 1
             fi
           done
+          e2e_result="${{ needs.e2e-full.result }}"
+          if [[ "$e2e_result" == "failure" || "$e2e_result" == "cancelled" ]]; then
+            echo "E2E job failed."
+            exit 1
+          fi
+          if [[ "$e2e_result" == "skipped" ]]; then
+            echo "E2E skipped — no UI/backend/e2e/extension changes in this push."
+          fi
           echo "All required CI jobs passed."

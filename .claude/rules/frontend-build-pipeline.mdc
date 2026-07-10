@@ -8,8 +8,8 @@ alwaysApply: false
 
 ApplyPilot uses a **dual pipeline** unified by `ui/scripts/build-all.mjs`:
 
-1. **Legacy esbuild** (`ui/build.mjs`) — minifies and content-hashes **CSS** (and any remaining unconverted JS under `ui/static/js/`).
-2. **Vite** (`ui/scripts/build-vite.mjs`) — bundles each TypeScript page entry from `ui/vite.entries.json` as an IIFE, content-hashes it, and writes `vite-manifest.json`.
+1. **Legacy esbuild** (`ui/build.mjs`) — minifies and content-hashes **CSS** only.
+2. **Vite** (`ui/scripts/build-vite.mjs`) — bundles each TypeScript page entry from `ui/vite.entries.json` as an IIFE, emits **hidden source maps** (`.js.map` on disk, no `sourceMappingURL` in the bundle), content-hashes JS, and writes `vite-manifest.json`.
 3. **Merge** — Vite keys override legacy keys in `ui/static/dist/manifest.json`.
 
 Jinja templates still use `{{ asset_url('js/...') }}` / `{{ asset_url('css/...') }}`. FastAPI resolves hashed paths via `asset_url()` in `main.py`.
@@ -62,6 +62,14 @@ npm run build
 ## asset_url()
 
 Unchanged: production uses `/static/dist/<hashed>`; missing manifest falls back to `/static/<path>`.
+
+## Source maps (production)
+
+Vite builds use `sourcemap: 'hidden'`: hashed `*.js.map` files are written next to bundles under `ui/static/dist/js/` for server-side debugging, but browsers do not auto-load them (no comment in the bundle). Do not expose `/static/dist/js/*.map` publicly unless you accept revealing TS source structure.
+
+## Source maps (production)
+
+Vite builds use `sourcemap: 'hidden'`: hashed `*.js.map` files are written next to bundles under `ui/static/dist/js/` for server-side debugging, but browsers do not auto-load them (no comment in the bundle). Do not expose `/static/dist/js/*.map` publicly unless you accept revealing TS source structure.
 
 ## CI / Docker
 

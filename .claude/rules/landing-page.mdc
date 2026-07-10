@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Landing Page
 
-The landing page lives at `ui/index.html` and uses `ui/static/css/landing.css` + `ui/static/js/landing.js`.
+The landing page lives at `ui/index.html` and uses `ui/static/css/landing.css` + `ui/src/pages/landing.ts` (bundled as `landing.js`).
 
 ## Page Sections (in order)
 

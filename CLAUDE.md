@@ -28,7 +28,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/logging-patterns.mdc` | `StructuredLogger`, **`sanitize_log_value()` / `mask_email()`**, redaction, `exc_info=True`, bulk-script safety |
 | `.claude/rules/google-oauth.mdc` | OAuth flow, CSRF state in Redis, exchange-code pattern, open-redirect |
 | `.claude/rules/email-and-misc-utils.mdc` | Gmail SMTP, resume parser, BYOK encryption |
-| `.claude/rules/frontend-js-strict.mdc` | any `.js` file — JSDoc, null safety, event delegation, no `style=` attrs |
+| `.claude/rules/frontend-js-strict.mdc` | any `ui/src/**/*.ts` — TypeScript strict, null safety, event delegation, no `style=` attrs |
 | `.claude/rules/landing-page.mdc` | `index.html`, landing page sections, screenshot showcase |
 | `.claude/rules/dashboard-home.mdc` | dashboard app list, **`workflow_sessions` join (hide workflow-failed)**, **funnel stats formula**, search/filter/sort, **single-flight `loadApplications`**, **EXISTS pagination**, toasts (`notifyReady` **`c:`/`f:`** keys, duplicate headline), **`isPlaceholderCompanyName` / Unknown employer**, card CSS, session storage |
 | `.claude/rules/ui-application-detail.mdc` | application detail page, 8-tab layout (Optimize CV), **View posting link**, **`additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown / About this opportunity**, CSS classes |

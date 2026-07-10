@@ -28,10 +28,10 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `logging-patterns.mdc` | StructuredLogger, **`sanitize_log_value()` / `mask_email()`**, request context, sensitive data redaction, `exc_info=True` requirement, bulk-script safety |
 | `google-oauth.mdc` | 3-step OAuth flow, CSRF state in Redis, exchange-code pattern, open-redirect prevention |
 | `email-and-misc-utils.mdc` | Gmail SMTP, resume parser, BYOK encryption |
-| `frontend-js-strict.mdc` | JSDoc strict mode, null safety, anti-patterns table, event bus, **no `style=` HTML attributes** |
+| `frontend-js-strict.mdc` | TypeScript strict mode, null safety, anti-patterns table, event bus, **no `style=` HTML attributes** |
 | `landing-page.mdc` | Landing page sections, **screenshot showcase** (`.ss-tabs`, `.ss-panel`, `ssActivateTab`), screenshot file locations, update workflow |
 | `dashboard-home.mdc` | Dashboard application list — **list/stats join `workflow_sessions` (hide workflow-failed)**, **funnel stats (Applied card + response rate formula)**, search/filter/sort, toasts (`notifyReady` **`c:`/`f:`** dedupe keys, `formatWorkflowFailureDetail`, duplicate headline), **`isPlaceholderCompanyName` / `displayCompanyNameOrUnknown` (Unknown employer label)**, card CSS, auth guard, **EXISTS pagination / Load More dedupe** |
-| `ui-application-detail.mdc` | 8-tab layout (includes Optimize CV), sub-tab patterns (Resume + Interview), cover letter card, **`cv-optimizer.js`**, **`View posting` / `additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown employer / About this opportunity**, all CSS classes |
+| `ui-application-detail.mdc` | 8-tab layout (includes Optimize CV), sub-tab patterns (Resume + Interview), cover letter card, **`ui/src/pages/cv-optimizer.ts`**, **`View posting` / `additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown employer / About this opportunity**, all CSS classes |
 | `accessibility.mdc` | WCAG 2.1 AA, heading hierarchy, landmarks, aria-label rules |
 | `analytics-consent-onboarding.mdc` | PostHog, cookie consent API, onboarding tour |
 | `chrome-extension.mdc` | Extension structure, **popup vs service-worker submit paths**, **`source_url` → `job_url`**, **dev/prod `IS_DEV` URL toggle**, popup design system, icon generation, landing-page mockup sync, **`extractPageContent` split-view / detail-pane root** (`popup.js` + `service-worker.js`), form autofill, `InputMethod.EXTENSION` |
@@ -41,7 +41,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `cli.mdc` | ApplyPilot CLI — Typer commands, applypilot_client, tests, docs |
 | `mobile-responsive.mdc` | Breakpoints, navbar collapse (`navbar-expand-xl` landing / `navbar-expand-lg` dashboard), scrollable tab bars, `app.css` global mobile utilities, per-page patterns |
 | `unit-testing.mdc` | ~227 agent unit tests + ~230 API integration tests + **364** CLI mocked tests + **6** ASGI CLI integration tests (`tests/test_api/`, `tests/test_cli/`); NullPool engine; `authed_client` vs `authed_client_with_user`; LLM mock pattern; rate-limit 429 override; status code quirks (422 vs 400); `asyncio_default_fixture_loop_scope=session` |
-| `e2e-testing.mdc` | 24 Playwright spec files (~1,450 tests); tier system (mocked CI / live-server / static); `setupAuth` + `page.route()` patterns; JWT/cookie-consent setup; SPA state waits; data shape pitfalls; redirect chain assertions |
+| `e2e-testing.mdc` | ~1,430 Playwright tests; live-server CI (full suite + paths filter); `setupAuth` + `page.route()` patterns; JWT/cookie-consent setup |
 
 ---
 

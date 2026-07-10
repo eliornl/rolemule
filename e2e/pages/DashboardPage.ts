@@ -132,11 +132,25 @@ export class DashboardPage extends BasePage {
   }
   
   /**
-   * Logout
+   * Logout — wait for navigation and cleared auth storage (avoids flake under parallel load).
    */
   async logout() {
-    await this.logoutButton.click();
-    await this.waitForURL(/login/);
+    await this.page.waitForLoadState('domcontentloaded');
+    try {
+      await this.onboardingOverlay.waitFor({ state: 'hidden', timeout: 5000 });
+    } catch {
+      // Onboarding not shown
+    }
+    const btn = this.logoutButton.first();
+    await expect(btn).toBeVisible({ timeout: 10000 });
+    await Promise.all([
+      this.page.waitForURL(/auth\/login/, { timeout: 30000 }),
+      btn.click(),
+    ]);
+    await this.page.waitForFunction(
+      () => !localStorage.getItem('access_token') && !localStorage.getItem('authToken'),
+      { timeout: 10000 },
+    );
   }
   
   /**

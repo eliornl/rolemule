@@ -1,12 +1,12 @@
 ---
 description: Dashboard home page — application list, search/filter/sort, bulk actions, inline status, load-more, session state
-globs: ui/dashboard/index.html,ui/static/js/dashboard-home.js
+globs: ui/dashboard/index.html,ui/src/pages/dashboard-home.ts
 alwaysApply: false
 ---
 
 # Dashboard Home (`/dashboard`)
 
-`ui/dashboard/index.html` + `ui/static/js/dashboard-home.js`
+`ui/dashboard/index.html` + `ui/src/pages/dashboard-home.ts`
 
 The dashboard home is the **only** application list page. `/dashboard/history` was permanently removed — do not re-add it. All filtering, sorting, searching, and bulk operations live here.
 
@@ -386,7 +386,7 @@ The skeleton classes (`.skeleton-line`, `.skeleton-title`, `.skeleton-subtitle`)
 
 ## Cross-Page Navbar Notification Badge (`navbar-notifications.js`)
 
-`ui/static/js/navbar-notifications.js` is loaded globally in `base.html`. It shows a small pulsing cyan dot on the "← Back to Dashboard" button in `navbar_subpage.html` when an analysis completes while the user is on a subpage (Career Tools, New Application, etc.).
+`ui/src/pages/navbar-notifications.ts` is loaded globally in `base.html`. It shows a small pulsing cyan dot on the "← Back to Dashboard" button in `navbar_subpage.html` when an analysis completes while the user is on a subpage (Career Tools, New Application, etc.).
 
 ### localStorage keys
 | Key | Purpose |

@@ -1,6 +1,6 @@
 ---
 description: Career tools — 6 tools, API endpoints, rate limits, agent implementation pattern, UI output structure, copy button pattern
-globs: agents/*.py,api/tools.py,ui/dashboard/tools.html,ui/static/js/dashboard-tools.js
+globs: agents/*.py,api/tools.py,ui/dashboard/tools.html,ui/src/pages/dashboard-tools.ts,ui/src/dashboard-tools/**/*.ts
 alwaysApply: false
 ---
 

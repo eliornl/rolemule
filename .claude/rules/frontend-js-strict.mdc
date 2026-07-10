@@ -1,6 +1,6 @@
 ---
 description: Frontend JS strict-mode checklist — required patterns in every page file
-globs: ui/src/**/*.{ts,js},ui/static/js/**/*.js
+globs: ui/src/**/*.ts
 alwaysApply: false
 ---
 
@@ -127,7 +127,7 @@ window.location.href = '/';
 `btn-primary` is globally overridden in `app.css` to use `var(--accent-gradient)` (cyan→purple). Do not re-define it per-page. The same applies to `btn-outline-primary` (uses `var(--accent-primary)` for border/text).
 
 ### Confirmation Dialogs — Never Use Native `confirm()` / `prompt()`
-All destructive/confirmation flows must use `window.showConfirm()` from `ui/static/js/confirm-modal.js`, which is loaded globally via `base.html` on every page.
+All destructive/confirmation flows must use `window.showConfirm()` from `ui/src/pages/confirm-modal.ts` (bundled as `confirm-modal.js` via `asset_url()`), which is loaded globally via `base.html` on every page.
 
 ```javascript
 // ✅ Correct — custom modal, consistent design, works in e2e tests

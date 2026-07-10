@@ -47,7 +47,7 @@ async function buildEntry(manifestKey, relSrc) {
     build: {
       outDir: entryOutDir,
       emptyOutDir: true,
-      sourcemap: false,
+      sourcemap: 'hidden',
       cssCodeSplit: false,
       lib: {
         entry: absSrc,
@@ -68,7 +68,8 @@ async function buildEntry(manifestKey, relSrc) {
   if (!existsSync(builtPath)) {
     throw new Error(`Vite did not emit ${builtPath}`);
   }
-  return { manifestKey, inputName, builtPath };
+  const mapPath = join(entryOutDir, `${inputName}.js.map`);
+  return { manifestKey, inputName, builtPath, mapPath: existsSync(mapPath) ? mapPath : null };
 }
 
 async function main() {
@@ -87,12 +88,15 @@ async function main() {
 
   const fragment = {};
   for (const [manifestKey, relSrc] of Object.entries(entries)) {
-    const { inputName, builtPath } = await buildEntry(manifestKey, relSrc);
+    const { inputName, builtPath, mapPath } = await buildEntry(manifestKey, relSrc);
     const text = readFileSync(builtPath, 'utf8');
     const hash = contentHash(text);
     const outName = `${inputName}.${hash}.js`;
     const outRel = `js/${outName}`;
     writeFileSync(join(OUT_DIR, 'js', outName), text);
+    if (mapPath) {
+      writeFileSync(join(OUT_DIR, 'js', `${inputName}.${hash}.js.map`), readFileSync(mapPath, 'utf8'));
+    }
     fragment[manifestKey] = outRel;
     console.log(`  vite ${manifestKey} → ${outRel}`);
   }

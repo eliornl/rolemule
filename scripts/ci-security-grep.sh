@@ -33,15 +33,15 @@ if rg -n 'style="' ui --glob '*.html' >/dev/null 2>&1; then
   fail=1
 fi
 
-if rg -n 'window\.confirm\(' ui/static/js --glob '*.js' >/dev/null 2>&1; then
+if rg -n 'window\.confirm\(' ui/src --glob '*.ts' >/dev/null 2>&1; then
   echo "::error title=No native dialogs::Use window.showConfirm() instead of window.confirm()"
-  rg -n 'window\.confirm\(' ui/static/js --glob '*.js' || true
+  rg -n 'window\.confirm\(' ui/src --glob '*.ts' || true
   fail=1
 fi
 
-if rg -n '(?<![\w.])alert\(' ui/static/js --glob '*.js' >/dev/null 2>&1; then
+if rg -n '(?<![\w.])alert\(' ui/src --glob '*.ts' >/dev/null 2>&1; then
   echo "::error title=No native dialogs::Use notify() / showNotification() instead of alert()"
-  rg -n '(?<![\w.])alert\(' ui/static/js --glob '*.js' || true
+  rg -n '(?<![\w.])alert\(' ui/src --glob '*.ts' || true
   fail=1
 fi
 

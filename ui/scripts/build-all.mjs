@@ -1,6 +1,6 @@
 /**
  * Unified frontend build:
- * 1) Legacy esbuild minify/hash for CSS + unconverted JS (build.mjs)
+ * 1) esbuild minify/hash for CSS (build.mjs)
  * 2) Vite IIFE bundles for TypeScript entries (build-vite.mjs)
  * 3) Merge vite-manifest.json over legacy manifest (TS wins on same key)
  */
@@ -26,7 +26,7 @@ function run(command, args) {
   }
 }
 
-// 1) Legacy pipeline (CSS always; JS for files not overridden by Vite)
+// 1) CSS pipeline (legacy esbuild)
 run(process.execPath, ['build.mjs']);
 
 // 2) Vite TS entries

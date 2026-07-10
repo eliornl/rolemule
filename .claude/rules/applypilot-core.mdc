@@ -77,7 +77,7 @@ The app **does not** fetch job descriptions from a pasted URL (that input method
 - **Sources:** extension `source_url` (Form/JSON), optional `job_url` on manual/dashboard submit, or canonical URL when the legacy JSON `WorkflowStartRequest.job_url` path is used.
 - **Persist:** `effective_job_url` → `job_applications.job_url` and duplicate check via `_canonical_job_url`.
 - **Guard:** In `start_workflow`, discard `effective_job_url` (and clear `source_url`) when the scheme is not `http://` or `https://` — Form fields are not Pydantic-validated like `WorkflowStartRequest.job_url`.
-- **UI:** `application-detail.js` shows `#jobUrlLink` only when `job_url` matches `/^https?:\/\//`.
+- **UI:** `ui/src/pages/application-detail.ts` shows `#jobUrlLink` only when `job_url` matches `/^https?:\/\//`.
 
 ### Duplicate job after start (workflow run — not `RES_3002`)
 

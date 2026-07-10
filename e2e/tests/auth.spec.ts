@@ -237,11 +237,9 @@ test.describe('Authentication', () => {
       
       await dashboardPage.skipOnboarding();
       await page.waitForLoadState('domcontentloaded');
-      
-      const logoutBtn = page.locator('[data-action="logout"]').first();
-      await expect(logoutBtn).toBeVisible({ timeout: 10000 });
-      await logoutBtn.click();
-      await page.waitForURL(/auth\/login/, { timeout: 15000 });
+      await expect(page.locator('.welcome-card, #applicationsList, nav.navbar').first()).toBeVisible({ timeout: 15000 });
+
+      await dashboardPage.logout();
     });
     
     test('should not be able to access dashboard after logout', async ({ page }) => {
@@ -272,17 +270,16 @@ test.describe('Authentication', () => {
       }
       
       await dashboardPage.skipOnboarding();
-      
-      const logoutBtn = page.locator('[data-action="logout"]').first();
-      await expect(logoutBtn).toBeVisible({ timeout: 10000 });
-      await logoutBtn.click();
-      await page.waitForURL(/auth\/login/, { timeout: 15000 });
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('.welcome-card, #applicationsList, nav.navbar').first()).toBeVisible({ timeout: 15000 });
+
+      await dashboardPage.logout();
       
       // Try to access dashboard
       await page.goto('/dashboard');
       
       // Should redirect to login
-      await expect(page).toHaveURL(/auth\/login/);
+      await expect(page).toHaveURL(/auth\/login/, { timeout: 15000 });
     });
   });
   

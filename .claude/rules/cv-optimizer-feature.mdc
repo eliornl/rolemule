@@ -1,6 +1,6 @@
 ---
 description: CV Optimizer — iterative hiring-manager loop, background task, Redis lock, application detail tab, CV export
-globs: agents/cv_optimizer_loop.py,agents/hiring_manager.py,api/cv_optimizer.py,ui/static/js/cv-optimizer.js,utils/cv_html_normalize.py,utils/cv_docx_export.py,ui/dashboard/application.html
+globs: agents/cv_optimizer_loop.py,agents/hiring_manager.py,api/cv_optimizer.py,ui/src/pages/cv-optimizer.ts,ui/src/cv-optimizer/**/*.ts,utils/cv_html_normalize.py,utils/cv_docx_export.py,ui/dashboard/application.html
 alwaysApply: false
 ---
 
@@ -106,7 +106,7 @@ Frontend listens on `window` event `applypilot:ws` (same WS as workflow). Pollin
 
 **Partial / quota results:** yellow `#cvo-results-notice` banner explains quota; if `cover_letter` is empty show `#cvo-cover-letter-missing` (dashed stub) — **never** put error text inside `.cover-letter-box` or show fake “0 words / Generated” metadata.
 
-JS: `ui/static/js/cv-optimizer.js` — `window.initCvOptimizerTab(sessionId)` from `application-detail.js` on tab activate. Toasts via `window.showApplicationToast`.
+TS: `ui/src/pages/cv-optimizer.ts` — `window.initCvOptimizerTab(sessionId)` from `application-detail.ts` on tab activate. Toasts via `window.showApplicationToast`.
 
 | `data-action` | Handler |
 |---|---|

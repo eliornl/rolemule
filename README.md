@@ -449,7 +449,7 @@ Browser / Chrome Extension
                         ← standalone, no job description needed
 ```
 
-Frontend: server-rendered HTML + vanilla JS, no framework. Assets are compiled and content-hashed with esbuild. The Chrome extension uses Manifest V3 and posts directly to your local server.
+Frontend: server-rendered HTML + **TypeScript** (Vite-bundled per page), no React/Vue. CSS is esbuild-minified; JS is built from `ui/src/` into content-hashed bundles. The Chrome extension uses Manifest V3 and posts directly to your server.
 
 ---
 
@@ -468,13 +468,14 @@ applypilot/
 ├── utils/                # Auth, email, Redis, encryption, LLM client helpers
 ├── alembic/              # Database migrations
 ├── extension/            # Chrome Extension (Manifest V3)
-├── ui/                   # HTML templates + JS + CSS
+├── ui/                   # HTML templates + TypeScript frontend + CSS
+│   ├── src/              # TypeScript page entries + shared modules (Vite)
 │   ├── index.html        # Landing page
 │   ├── dashboard/        # All dashboard pages
 │   ├── auth/             # Login, register, verify
 │   ├── profile/          # Profile setup
 │   ├── partials/         # Shared template fragments
-│   └── static/           # Compiled assets (esbuild output)
+│   └── static/           # CSS source + dist/ build output (gitignored)
 ├── tests/                # Unit + integration tests (pytest)
 │   ├── test_agents/      # Agent unit tests
 │   ├── test_api/         # API integration tests (no live server needed)

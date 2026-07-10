@@ -352,56 +352,29 @@ await expect(page).toHaveURL(/login/);
 
 ## CI/CD Integration
 
-### GitHub Actions — Recommended Configuration
+GitHub Actions runs the **full live Playwright suite** (~1,430 tests, chromium) in `.github/workflows/ci.yml` when app-related files change.
+
+**Runs E2E when any of these change:** `ui/`, `e2e/`, `api/`, `agents/`, `workflows/`, `models/`, `utils/`, `middleware/`, `main.py`, `alembic/`, `requirements.txt`, `extension/`, or the CI workflow itself.
+
+**Skips E2E** on docs-only / rules-only PRs (e.g. `docs/`, `CHANGELOG.md`, `.cursor/rules/` with no app code).
 
 ```yaml
-name: E2E Tests
+# ci.yml (simplified)
+e2e-full:
+  needs: changes          # dorny/paths-filter@v3
+  if: needs.changes.outputs.e2e == 'true'
+  run: npx playwright test --project=chromium --workers=4
+  env: { CI: "1", TESTING: "true" }   # live server + Postgres + Redis
+```
 
-on:
-  pull_request:
-    branches: [main]
+**Local equivalents:**
 
-jobs:
-  smoke:
-    name: Smoke (Tier 1 — no server)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm', cache-dependency-path: 'e2e/package-lock.json' }
-      - run: npm ci
-        working-directory: e2e
-      - run: npx playwright install chromium --with-deps
-        working-directory: e2e
-      - run: SMOKE=1 npx playwright test tests/smoke.spec.ts --project=chromium
-        working-directory: e2e
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with: { name: smoke-results, path: e2e/test-results/ }
+```bash
+# Full suite (same as CI)
+cd e2e && CI=1 npx playwright test --project=chromium --workers=4
 
-  tier1:
-    name: Full Tier 1 (sharded)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        shard: [1, 2, 3, 4]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm', cache-dependency-path: 'e2e/package-lock.json' }
-      - run: npm ci
-        working-directory: e2e
-      - run: npx playwright install chromium --with-deps
-        working-directory: e2e
-      - run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/4
-        working-directory: e2e
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: tier1-shard-${{ matrix.shard }}-results
-          path: e2e/test-results/
+# Quick smoke only (~3 min, optional)
+SMOKE=1 npx playwright test tests/smoke.spec.ts --project=chromium
 ```
 
 ---

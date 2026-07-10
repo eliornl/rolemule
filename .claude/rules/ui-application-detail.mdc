@@ -1,6 +1,6 @@
 ---
 description: Application detail page — 8-tab layout, render functions, CSS classes, data field mappings, content regeneration
-globs: ui/dashboard/application.html,ui/static/js/application-detail.js
+globs: ui/dashboard/application.html,ui/src/pages/application-detail.ts,ui/src/application-detail/**/*.ts
 alwaysApply: false
 ---
 
@@ -24,7 +24,7 @@ Tab order (left to right): Job Details → Your Fit → Strategy → Company →
 
 ## CV Optimizer Tab
 
-Standalone on-demand feature — **not** part of the 5-agent LangGraph workflow. Logic lives in `ui/static/js/cv-optimizer.js`; styles in `application.html` `<style>` block (`.cvo-*` classes). Full export + loop details: **`cv-optimizer-feature.mdc`**.
+Standalone on-demand feature — **not** part of the 5-agent LangGraph workflow. Logic lives in `ui/src/pages/cv-optimizer.ts` and `ui/src/cv-optimizer/**/*.ts`; styles in `application.html` `<style>` block (`.cvo-*` classes). Full export + loop details: **`cv-optimizer-feature.mdc`**.
 
 `application-detail.js` calls `window.initCvOptimizerTab(currentSessionId)` when the user switches to `data-tab="optimize"`.
 

@@ -17,7 +17,6 @@ COPY ui/package.json ui/package-lock.json ./
 RUN npm ci --include=dev --no-audit --no-fund
 
 # Copy source assets, TS sources, and build scripts/config
-COPY ui/static/js  ./static/js
 COPY ui/static/css ./static/css
 COPY ui/src        ./src
 COPY ui/build.mjs  ./
