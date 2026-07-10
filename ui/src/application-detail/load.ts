@@ -21,6 +21,13 @@ import type {
   WorkflowResults,
 } from './types';
 
+function buildJobView(data: WorkflowResults): JobAnalysis {
+  const job: JobAnalysis = { ...((data.job_analysis as JobAnalysis | undefined) ?? {}) };
+  job.application_company_name = data.application_company_name;
+  job.detected_company = data.detected_company;
+  return job;
+}
+
 const API_BASE = getApiBase();
 
 const PROCESSING_STATUSES = new Set(['in_progress', 'initialized', 'pending']);
@@ -112,7 +119,7 @@ export function renderApplication(): void {
   const data = getApplicationData();
   if (!data) return;
 
-  const job = (data.job_analysis as JobAnalysis | undefined) ?? {};
+  const job = buildJobView(data);
   const match = (data.profile_matching as ProfileMatching | undefined) ?? {};
   const company = (data.company_research as CompanyResearch | undefined) ?? {};
   const resume = (data.resume_recommendations as ResumeRecommendations | undefined) ?? {};

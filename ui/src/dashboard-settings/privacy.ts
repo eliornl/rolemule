@@ -7,28 +7,90 @@ import { getUserHasPassword } from './state-access';
 import { showAlert } from './notify';
 import type { ApplicationStatsOverview } from './types';
 
+function exportFilenameFromHeaders(
+  contentDisposition: string | null,
+  fallback: string,
+): string {
+  if (!contentDisposition) return fallback;
+  const quoted = /filename="([^"]+)"/i.exec(contentDisposition);
+  if (quoted?.[1]) return quoted[1];
+  const plain = /filename=([^;\s]+)/i.exec(contentDisposition);
+  if (plain?.[1]) return plain[1].replace(/"/g, '');
+  return fallback;
+}
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = 'noopener';
+  document.body.appendChild(anchor);
+  anchor.click();
+  window.setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+    anchor.remove();
+  }, 1000);
+}
+
 export async function exportData(): Promise<void> {
+  const suggestedName = `applypilot-data-${new Date().toISOString().split('T')[0]}.json`;
+  showAlert('Preparing your export…', 'info', { loading: true });
+
   try {
     const response = await fetch(`${getApiBase()}/profile/export`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
     });
-    if (response.ok) {
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `applypilot-data-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      showAlert('Data export downloaded successfully!', 'success');
-    } else {
-      throw new Error('Failed to export data');
+
+    if (!response.ok) {
+      const errData = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        detail?: string;
+      };
+      const message =
+        errData.message ||
+        errData.detail ||
+        (response.status === 429
+          ? 'Too many export requests. Please try again later.'
+          : 'Failed to export data');
+      throw new Error(message);
     }
+
+    const blob = await response.blob();
+    if (!blob.size) {
+      throw new Error('Export file was empty. Please try again.');
+    }
+
+    const filename = exportFilenameFromHeaders(
+      response.headers.get('Content-Disposition'),
+      suggestedName,
+    );
+
+    if (typeof window.showSaveFilePicker === 'function') {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        showAlert('Data export downloaded successfully!', 'success');
+        return;
+      } catch (pickerError) {
+        if ((pickerError as DOMException).name === 'AbortError') {
+          return;
+        }
+        console.debug('showSaveFilePicker unavailable, falling back to download link', pickerError);
+      }
+    }
+
+    triggerBlobDownload(blob, filename);
+    showAlert('Data export downloaded successfully!', 'success');
   } catch (error) {
-    console.error('Error exporting data:', error);
-    showAlert('Error exporting data. Please try again.', 'danger');
+    const err = error as Error;
+    console.error('Error exporting data:', err);
+    showAlert(err.message || 'Error exporting data. Please try again.', 'danger');
   }
 }
 

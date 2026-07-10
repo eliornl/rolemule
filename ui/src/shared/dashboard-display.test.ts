@@ -3,6 +3,7 @@ import {
   displayCompanyNameOrUnknown,
   isPlaceholderCompanyName,
   isPlaceholderJobTitle,
+  resolveEffectiveCompanyName,
 } from './dashboard-display';
 import { formatWorkflowFailureDetail } from './workflow-errors';
 
@@ -11,6 +12,21 @@ describe('dashboard-display', () => {
     expect(isPlaceholderCompanyName('—')).toBe(true);
     expect(displayCompanyNameOrUnknown('—')).toBe('Unknown');
     expect(displayCompanyNameOrUnknown('Acme Corp')).toBe('Acme Corp');
+  });
+
+  it('falls back to application company when analyzer employer is absent', () => {
+    expect(
+      resolveEffectiveCompanyName({
+        analysisCompanyName: null,
+        applicationCompanyName: 'Syndesus, Inc.',
+      }),
+    ).toBe('Syndesus, Inc.');
+    expect(
+      resolveEffectiveCompanyName({
+        analysisCompanyName: 'Acme Corp',
+        applicationCompanyName: 'Syndesus, Inc.',
+      }),
+    ).toBe('Acme Corp');
   });
 
   it('flags UI chrome as placeholder job titles', () => {

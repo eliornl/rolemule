@@ -1,5 +1,5 @@
 import { escapeHtml } from '../shared/dom-security';
-import { isPlaceholderCompanyName } from '../shared/dashboard-display';
+import { isPlaceholderCompanyName, resolveEffectiveCompanyName } from '../shared/dashboard-display';
 import { asResumeRecord, strField } from './render-resume-helpers';
 import { getCurrentSessionId, getWorkflowStatus } from './state';
 import type { CompanyResearch, JobAnalysis, ProfileMatching } from './types';
@@ -21,6 +21,21 @@ function getBarClass(v: unknown): string {
   const n = typeof v === 'number' ? v : Number(v);
   const p = Number.isNaN(n) ? 0 : n > 1 ? n : n * 100;
   return p >= 70 ? 'good' : p >= 40 ? 'medium' : 'low';
+}
+
+function displayMissionVision(missionVision: unknown, effectiveCompanyName: string): string {
+  const mv = strField(missionVision);
+  if (!mv) return '';
+  if (
+    effectiveCompanyName &&
+    /Unable to complete research for Employer not stated in posting/i.test(mv)
+  ) {
+    return '';
+  }
+  if (effectiveCompanyName && /^Unable to complete research for /i.test(mv)) {
+    return `We couldn't automatically load company research for ${effectiveCompanyName}. Consider reviewing their website before your interview.`;
+  }
+  return mv;
 }
 
 function dbCheckItemHtml(label: string, item: Record<string, unknown>): string {
@@ -100,11 +115,14 @@ export function renderMainContent(
     const growthOpportunities = ensureArray(company.growth_opportunities);
     const employeeBenefits = ensureArray(company.employee_benefits);
 
-    const companyNameTrimmed = job.company_name && String(job.company_name).trim();
-    const aboutCompanyHeading =
-        companyNameTrimmed && !isPlaceholderCompanyName(job.company_name)
-            ? escapeHtml(companyNameTrimmed)
-            : 'this opportunity';
+    const effectiveCompanyName = resolveEffectiveCompanyName({
+        analysisCompanyName: job.company_name,
+        applicationCompanyName: job.application_company_name,
+        detectedCompany: job.detected_company,
+    });
+    const aboutCompanyHeading = effectiveCompanyName
+        ? escapeHtml(effectiveCompanyName)
+        : 'this opportunity';
 
     const researchQuality = String(company.research_quality || '').toLowerCase();
     const confidenceAssessment = asResumeRecord(company.confidence_assessment);
@@ -113,12 +131,27 @@ export function renderMainContent(
         researchQuality === 'uncertain' ||
         confidenceOverall === 'LOW';
     const showPostingOnlyBanner = researchQuality === 'posting_only';
+    const missionVisionText = displayMissionVision(company.mission_vision, effectiveCompanyName);
+    const recruitingAgencyLabel =
+        effectiveCompanyName &&
+        isPlaceholderCompanyName(job.company_name)
+            ? effectiveCompanyName
+            : '';
 
     // ========== SUB-PANE 1: COMPANY INFO ==========
     let companyHtml = '';
     if (company && Object.keys(company).length > 0) {
         let researchNoticeHtml = '';
-        if (showUncertaintyBanner) {
+        if (recruitingAgencyLabel) {
+            researchNoticeHtml = `
+                <div class="company-research-notice company-research-notice--posting-only" role="status">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    <div class="company-research-notice-body">
+                        <strong>Posted by ${escapeHtml(recruitingAgencyLabel)} (recruiting agency).</strong>
+                        <span>The actual hiring employer is not named in this posting. Details below are about the agency unless noted otherwise.</span>
+                    </div>
+                </div>`;
+        } else if (showUncertaintyBanner) {
             researchNoticeHtml = `
                 <div class="company-research-notice company-research-notice--uncertain" role="status">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
@@ -128,12 +161,13 @@ export function renderMainContent(
                     </div>
                 </div>`;
         } else if (showPostingOnlyBanner) {
+            const noticeBody = `<strong>Employer not named in this posting.</strong>
+                        <span>Guidance below is tailored to this role and industry, not a specific company.</span>`;
             researchNoticeHtml = `
                 <div class="company-research-notice company-research-notice--posting-only" role="status">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
                     <div class="company-research-notice-body">
-                        <strong>Employer not named in this posting.</strong>
-                        <span>Guidance below is tailored to this role and industry, not a specific company.</span>
+                        ${noticeBody}
                     </div>
                 </div>`;
         }
@@ -161,7 +195,7 @@ export function renderMainContent(
                         ${strField(company.hiring_timeline) ? `<div class="company-stat"><span class="stat-label">Hiring Timeline</span><span class="stat-value">${escapeHtml(strField(company.hiring_timeline))} <span class="stat-estimated">(estimated)</span></span></div>` : ''}
                     </div>
                 </div>
-                ${strField(company.mission_vision) ? `<div class="section-subtitle">Mission &amp; Vision</div><div class="mission-box"><i class="fas fa-bullseye"></i><span>${escapeHtml(strField(company.mission_vision))}</span></div>` : ''}
+                ${missionVisionText ? `<div class="section-subtitle">Mission &amp; Vision</div><div class="mission-box"><i class="fas fa-bullseye"></i><span>${escapeHtml(missionVisionText)}</span></div>` : ''}
                 ${keyProducts.length ? `<div class="section-subtitle">Key Products &amp; Services</div><div class="tags-grid">${keyProducts.slice(0, 8).map(p => `<span class="tag product">${escapeHtml(String(p))}</span>`).join('')}</div>` : ''}
                 ${coreValues.length ? `<div class="section-subtitle">Values</div><div class="values-grid">${coreValues.map(v => {
                     const s = String(v);

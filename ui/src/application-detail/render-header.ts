@@ -1,5 +1,7 @@
 import { decodeEntities } from '../shared/dom-security';
-import { isPlaceholderCompanyName } from '../shared/dashboard-display';
+import {
+  resolveEffectiveCompanyName,
+} from '../shared/dashboard-display';
 import { formatPostedDate, toTitleCase } from './utils';
 import type { JobAnalysis, ProfileMatching } from './types';
 
@@ -9,11 +11,12 @@ export function renderHeader(job: JobAnalysis, match: ProfileMatching): void {
   const cdEl = document.getElementById('createdDate');
   if (jtEl) jtEl.textContent = decodeEntities(job.job_title || 'Job Application');
   if (cnEl) {
-    const companyTrimmed = job.company_name && String(job.company_name).trim();
-    cnEl.textContent =
-      companyTrimmed && !isPlaceholderCompanyName(job.company_name)
-        ? decodeEntities(companyTrimmed)
-        : 'Unknown';
+    const effective = resolveEffectiveCompanyName({
+      analysisCompanyName: job.company_name,
+      applicationCompanyName: job.application_company_name,
+      detectedCompany: job.detected_company,
+    });
+    cnEl.textContent = effective ? decodeEntities(effective) : 'Unknown';
   }
   if (cdEl) cdEl.textContent = new Date().toLocaleDateString();
 

@@ -21,18 +21,25 @@ import {
 } from '../dashboard-settings/privacy';
 import { handleResumeUpload } from '../dashboard-settings/resume';
 
-document.addEventListener('DOMContentLoaded', async () => {
+async function bootstrapSettingsPage(): Promise<void> {
   if (!requireLogin()) return;
-  if (
-    typeof window.syncProfileCompletionFromApi !== 'function' ||
-    !(await window.syncProfileCompletionFromApi())
-  ) {
+  if (typeof window.syncProfileCompletionFromApi !== 'function') {
+    console.error('profile-completion-sync.js must load before dashboard-settings.js');
     return;
   }
+  if (!(await window.syncProfileCompletionFromApi())) return;
 
   attachEventListeners();
   await initSettingsPage();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    void bootstrapSettingsPage();
+  });
+} else {
+  void bootstrapSettingsPage();
+}
 
 window.clearAllData = clearAllData;
 window.deleteAccount = deleteAccount;

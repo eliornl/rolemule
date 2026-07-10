@@ -121,6 +121,8 @@ export function attachEventListeners(): void {
   const tab = new URLSearchParams(window.location.search).get('tab');
   if (tab === 'ai-setup') {
     showSection('apiKeys');
+  } else if (tab === 'privacy') {
+    showSection('privacy');
   }
 
   el('preferredModelSelect')?.addEventListener('change', scheduleModelSave);

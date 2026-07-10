@@ -391,7 +391,7 @@ def configure_middleware(app: FastAPI):
         # nonce="{{ request.state.csp_nonce | default('') }}", generated above before
         # call_next() so the template can embed it.
         csp_directives = [
-            "default-src 'self'",
+            "default-src 'self' blob:",
             f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net "
             "https://us-assets.i.posthog.com https://eu-assets.i.posthog.com",
             f"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com https://cdn.jsdelivr.net",

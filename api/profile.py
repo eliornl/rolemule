@@ -30,6 +30,8 @@ from utils.cache import (
     invalidate_user_profile,
     invalidate_user_llm_cache,
     check_rate_limit,
+    get_rate_limit_remaining,
+    increment_rate_limit,
 )
 from utils.encryption import (
     encrypt_api_key,
@@ -2231,25 +2233,26 @@ async def export_user_data(
     
     This endpoint supports the GDPR right to data portability.
     """
-    from fastapi.responses import StreamingResponse
+    from fastapi.responses import Response
     from models.database import (
         User,
         UserProfile as UserProfileModel,
     )
-    import io
     import json
-    
     try:
         user_id = get_user_id_from_token(current_user)
+        settings = get_settings()
+        export_identifier = f"export_data:{user_id}"
+        export_limit = 5
+        export_window = 3600
 
-        # Rate limit: 5 exports per hour (large DB read — prevent resource exhaustion)
-        is_allowed, _remaining = await check_rate_limit(
-            identifier=f"export_data:{user_id}",
-            limit=5,
-            window_seconds=3600,
-        )
-        if not is_allowed:
-            raise rate_limit_error("Too many export requests. Please try again later.", retry_after=3600)
+        if settings.is_production:
+            remaining = await get_rate_limit_remaining(export_identifier, export_limit)
+            if remaining <= 0:
+                raise rate_limit_error(
+                    "Too many export requests. Please try again later.",
+                    retry_after=export_window,
+                )
 
         # Get user data
         result = await db.execute(select(User).where(User.id == user_id))
@@ -2306,21 +2309,19 @@ async def export_user_data(
         # Create JSON file
         json_content = json.dumps(export_data, indent=2, default=str)
         
-        # Create streaming response
-        buffer = io.BytesIO(json_content.encode('utf-8'))
-        buffer.seek(0)
-        
-        filename = f"job-assistant-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"
+        filename = f"applypilot-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"
         
         masked_email = mask_email(str(user.email))
         logger.info('User data exported for: %s', sanitize_log_value(masked_email))
+
+        if settings.is_production:
+            await increment_rate_limit(export_identifier, export_window)
         
-        return StreamingResponse(
-            buffer,
+        return Response(
+            content=json_content.encode('utf-8'),
             media_type="application/json",
             headers={
-                "Content-Disposition": f"attachment; filename={filename}",
-                "Content-Type": "application/json",
+                "Content-Disposition": f'attachment; filename="{filename}"',
             },
         )
 

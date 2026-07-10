@@ -9,6 +9,9 @@ export interface SalaryRange {
 export interface JobAnalysis {
   job_title?: string;
   company_name?: string;
+  application_company_name?: string;
+  detected_company?: string;
+  employer_type?: string;
   job_city?: string;
   job_state?: string;
   job_country?: string;
@@ -82,6 +85,8 @@ export interface WorkflowResults {
   current_agent?: string | null;
   error_messages?: string[];
   job_url?: string;
+  application_company_name?: string;
+  detected_company?: string;
   job_analysis?: JobAnalysis;
   profile_matching?: ProfileMatching;
   company_research?: CompanyResearch;

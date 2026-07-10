@@ -75,6 +75,10 @@ declare global {
     deleteAccount?: () => void | Promise<void>;
     deleteApiKey?: () => void | Promise<void>;
     exportData?: () => void | Promise<void>;
+    showSaveFilePicker?: (options: {
+      suggestedName?: string;
+      types?: Array<{ description: string; accept: Record<string, string[]> }>;
+    }) => Promise<FileSystemFileHandle>;
     handleResumeUpload?: (input: HTMLInputElement) => void | Promise<void>;
     restartOnboarding?: () => void;
     showSection?: (sectionName: string, evt?: MouseEvent) => void;

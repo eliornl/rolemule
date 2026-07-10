@@ -35,3 +35,24 @@ export function displayCompanyNameOrUnknown(raw: unknown): string {
   if (isPlaceholderCompanyName(raw)) return 'Unknown';
   return String(raw).trim();
 }
+
+/**
+ * Same company label as the dashboard card: prefer Job Analyzer employer, else
+ * application/detected header (e.g. recruiting agency on a staffing post).
+ */
+export function resolveEffectiveCompanyName(options: {
+  analysisCompanyName?: unknown;
+  applicationCompanyName?: unknown;
+  detectedCompany?: unknown;
+}): string {
+  const { analysisCompanyName, applicationCompanyName, detectedCompany } = options;
+  if (!isPlaceholderCompanyName(analysisCompanyName)) {
+    return String(analysisCompanyName).trim();
+  }
+  for (const candidate of [applicationCompanyName, detectedCompany]) {
+    if (!isPlaceholderCompanyName(candidate)) {
+      return String(candidate).trim();
+    }
+  }
+  return '';
+}

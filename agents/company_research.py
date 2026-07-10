@@ -301,6 +301,27 @@ def _should_use_unnamed_research_path(
     return employer_type in ("staffing_agency", "confidential")
 
 
+def _extract_posting_agency_name(
+    job_input_data: Optional[Dict[str, Any]],
+) -> Optional[str]:
+    """Recruiter/poster name from optional submit header or extension metadata."""
+    if not job_input_data or not isinstance(job_input_data, dict):
+        return None
+    raw = job_input_data.get("detected_company")
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        return stripped if stripped else None
+    return None
+
+
+_POSTING_AGENCY_RESEARCH_PREFIX: str = """### RECRUITING AGENCY POSTING
+The end hiring employer is NOT named in this job listing. Research the RECRUITING AGENCY / POSTER named below.
+Distinguish agency facts from the unknown end-client employer in mission_vision and application_insights.
+Do NOT invent an end-client company name, website, or leadership.
+
+"""
+
+
 def _normalize_confidence(value: Optional[str]) -> str:
     """Normalize confidence string to HIGH, MEDIUM, or LOW."""
     upper = (value or "").upper().strip()
@@ -409,20 +430,30 @@ class CompanyResearchAgent:
             job_input_data: Dict[str, Any] = state.get("job_input_data") or {}
             raw_company: Optional[str] = job_analysis.get("company_name")
 
+            posting_agency_mode = False
             if _should_use_unnamed_research_path(job_analysis, raw_company):
-                logger.info(
-                    "Using unnamed-posting company research (missing name, staffing, or confidential)"
-                )
-                research_result = await self._research_company_with_llm(
-                    "Employer not stated in posting",
-                    job_analysis=job_analysis,
-                    job_input_data=job_input_data,
-                    unnamed=True,
-                )
-                state["company_research"] = research_result.to_dict()
-                return state
-
-            company_name = str(raw_company).strip()
+                posting_agency = _extract_posting_agency_name(job_input_data)
+                if _has_usable_company_name(posting_agency):
+                    company_name = str(posting_agency).strip()
+                    posting_agency_mode = True
+                    logger.info(
+                        "Using posting-agency company research for %s",
+                        sanitize_log_value(company_name),
+                    )
+                else:
+                    logger.info(
+                        "Using unnamed-posting company research (missing name, staffing, or confidential)"
+                    )
+                    research_result = await self._research_company_with_llm(
+                        "Employer not stated in posting",
+                        job_analysis=job_analysis,
+                        job_input_data=job_input_data,
+                        unnamed=True,
+                    )
+                    state["company_research"] = research_result.to_dict()
+                    return state
+            else:
+                company_name = str(raw_company).strip()
             disambiguators = build_company_research_cache_disambiguators(
                 company_name, job_analysis, job_input_data
             )
@@ -472,6 +503,7 @@ class CompanyResearchAgent:
                     job_analysis=job_analysis,
                     job_input_data=job_input_data,
                     unnamed=False,
+                    posting_agency_mode=posting_agency_mode,
                 )
                 result_dict = research_result.to_dict()
                 if not skip_cache:
@@ -547,6 +579,7 @@ class CompanyResearchAgent:
         unnamed: bool,
         disambiguation: Optional[Dict[str, Any]] = None,
         use_grounding: bool = False,
+        posting_agency_mode: bool = False,
     ) -> str:
         """Assemble the full research prompt with context and optional disambiguation."""
         job_context = _format_job_context_for_research(job_analysis, job_input_data)
@@ -583,7 +616,11 @@ class CompanyResearchAgent:
                         str(r) for r in rejected[:3]
                     ) + "\n"
                 disambig_block += "\n"
+            agency_block = (
+                _POSTING_AGENCY_RESEARCH_PREFIX if posting_agency_mode else ""
+            )
             prefix = (
+                f"{agency_block}"
                 f"{COMPANY_RESEARCH_DISAMBIGUATION_RULES}\n\n"
                 f"### EMPLOYER NAME (from job analysis)\n{company_name}\n\n"
                 f"{disambig_block}"
@@ -604,6 +641,7 @@ class CompanyResearchAgent:
         job_analysis: Optional[Dict[str, Any]] = None,
         job_input_data: Optional[Dict[str, Any]] = None,
         unnamed: bool = False,
+        posting_agency_mode: bool = False,
     ) -> CompanyResearchResult:
         """
         Research company using Gemini LLM with optional disambiguation and grounding.
@@ -655,6 +693,7 @@ class CompanyResearchAgent:
                 unnamed=unnamed,
                 disambiguation=disambiguation,
                 use_grounding=use_grounding,
+                posting_agency_mode=posting_agency_mode,
             )
 
             response = await self._generate_research(
@@ -689,11 +728,20 @@ class CompanyResearchAgent:
                 disambiguation_confidence=disambiguation_confidence,
                 final_confidence=final_conf,
             )
+            if posting_agency_mode:
+                if result.research_quality == "verified":
+                    result.research_quality = "uncertain"
+                result.employer_type = "staffing_agency"
+                result.disambiguation_notes = (
+                    "Research reflects the recruiting agency that posted this role; "
+                    "the actual hiring employer was not stated in the posting."
+                )
             if disambiguation:
                 result.resolved_company_name = disambiguation.get("resolved_company_name")
-                result.employer_type = disambiguation.get("employer_type")
+                if not posting_agency_mode:
+                    result.employer_type = disambiguation.get("employer_type")
                 notes = disambiguation.get("notes")
-                if notes:
+                if notes and not posting_agency_mode:
                     result.disambiguation_notes = str(notes)
 
             result.processing_time = (

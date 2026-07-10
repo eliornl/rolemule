@@ -53,6 +53,8 @@ credentials*.json
 # IDE files
 .idea/
 .vscode/
+.agents/
+skills-lock.json
 *.swp
 *.swo
 .DS_Store

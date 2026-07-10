@@ -110,3 +110,31 @@ async def test_staffing_agency_uses_unnamed_path() -> None:
     mock_get.assert_not_called()
     mock_set.assert_not_called()
     assert result["company_research"].get("research_quality") == "posting_only"
+
+
+@pytest.mark.asyncio
+async def test_staffing_post_with_detected_company_researches_agency() -> None:
+    """When analyzer omits employer but user/extension named the poster, research that agency."""
+    agent = CompanyResearchAgent(gemini_client=_mock_client())
+    state = {
+        "user_api_key": None,
+        "job_input_data": {"detected_company": "Syndesus, Inc."},
+        "job_analysis": {
+            "job_title": "Senior Backend Engineer",
+            "company_name": None,
+            "employer_type": "staffing_agency",
+            "industry": "Technology",
+            "responsibilities": ["Build APIs"],
+        },
+    }
+    with patch("agents.company_research.get_cached_company_research", return_value=None), \
+         patch("agents.company_research.acquire_compute_lock", return_value=True), \
+         patch("agents.company_research.release_compute_lock", return_value=None), \
+         patch("agents.company_research.cache_company_research", return_value=None) as mock_set:
+        result = await agent.process(state)
+
+    mock_set.assert_called_once()
+    research = result["company_research"]
+    assert research.get("research_quality") == "uncertain"
+    assert research.get("employer_type") == "staffing_agency"
+    assert research.get("industry") == "Healthcare"

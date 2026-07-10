@@ -1256,9 +1256,14 @@ class TestAccountDataCoverage:
         uid, email = await _create_user_with_password()
         try:
             async with _NullSessionLocal() as db:
-                with patch("api.profile.check_rate_limit", AsyncMock(return_value=(False, 0))):
-                    with pytest.raises(Exception) as exc:
-                        await export_user_data(_current_user(uid, email), db)
+                with patch("api.profile.get_settings") as mock_settings:
+                    mock_settings.return_value.is_production = True
+                    with patch(
+                        "api.profile.get_rate_limit_remaining",
+                        AsyncMock(return_value=0),
+                    ):
+                        with pytest.raises(Exception) as exc:
+                            await export_user_data(_current_user(uid, email), db)
                 assert exc.value.status_code == 429
         finally:
             await _delete_user_data(uid)

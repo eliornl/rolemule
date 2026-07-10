@@ -19,23 +19,46 @@ function toggleFAQ(element: HTMLElement): void {
 
 function filterFAQ(): void {
   const searchInput = document.getElementById('helpSearch') as HTMLInputElement | null;
-  const searchTerm = searchInput?.value.toLowerCase() ?? '';
+  const searchTerm = searchInput?.value.trim().toLowerCase() ?? '';
+  const helpPage = document.querySelector('.help-page');
+  const quickLinks = document.querySelector('.quick-links') as HTMLElement | null;
   const items = document.querySelectorAll('.faq-item');
+  const visibleMatches: HTMLElement[] = [];
 
-  items.forEach((i) => {
-    const item = i as HTMLElement;
+  helpPage?.classList.toggle('is-searching', searchTerm.length > 0);
+  if (quickLinks) {
+    quickLinks.style.display = searchTerm.length > 0 ? 'none' : '';
+  }
+
+  items.forEach((node) => {
+    const item = node as HTMLElement;
     const question = (item.querySelector('.faq-question')?.textContent ?? '').toLowerCase();
     const answer = (item.querySelector('.faq-answer')?.textContent ?? '').toLowerCase();
+    const categoryTitle =
+      item.closest('.faq-category')?.querySelector('h2')?.textContent?.toLowerCase() ?? '';
+    const matches =
+      searchTerm.length === 0 ||
+      question.includes(searchTerm) ||
+      answer.includes(searchTerm) ||
+      categoryTitle.includes(searchTerm);
 
-    if (question.includes(searchTerm) || answer.includes(searchTerm)) {
-      item.style.display = 'block';
-      if (searchTerm.length > 2) {
-        item.classList.add('active');
-      }
-    } else {
-      item.style.display = searchTerm.length > 0 ? 'none' : 'block';
+    item.classList.toggle('is-search-hidden', !matches);
+    item.classList.toggle('active', matches && searchTerm.length > 0);
+
+    if (matches && searchTerm.length > 0) {
+      visibleMatches.push(item);
     }
   });
+
+  document.querySelectorAll('.faq-category').forEach((node) => {
+    const category = node as HTMLElement;
+    const hasVisibleItem = category.querySelector('.faq-item:not(.is-search-hidden)') !== null;
+    category.classList.toggle('is-search-hidden', searchTerm.length > 0 && !hasVisibleItem);
+  });
+
+  if (visibleMatches.length > 0) {
+    visibleMatches[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function initHelpPage(): void {
