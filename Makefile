@@ -62,7 +62,7 @@ start-local:
 	@echo " Stop with Ctrl+C, then: make stop-local"
 	@echo "=============================================="
 	@echo ""
-	$(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+	TESTING=true DISABLE_EMAIL_VERIFICATION=true $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Stop PostgreSQL and Redis Homebrew services.
 stop-local:
@@ -216,7 +216,7 @@ dev:
 	@$(MAKE) _macos_sign_venv
 	@$(MAKE) _macos_sign_node
 	@$(MAKE) build-frontend
-	$(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+	TESTING=true DISABLE_EMAIL_VERIFICATION=true $(PYTHON) -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Run Alembic migrations against the local DB (DATABASE_URL from .env).
 # Runs from /tmp to prevent the local alembic/ folder from shadowing the

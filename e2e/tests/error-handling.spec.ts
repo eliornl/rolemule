@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { RegisterPage, LoginPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
-import { setupAuth, setupAllMocks } from '../utils/api-mocks';
+import { setupAuth, setupAllMocks, buildMockGetProfileResponse, setupWebSocketMock, MOCK_JWT, setupCookieConsent, getE2EAuthToken, isMockedE2E } from '../utils/api-mocks';
 
 // Pre-accept cookie consent so the banner never intercepts pointer events
 test.beforeEach(async ({ page }) => {
@@ -21,10 +21,14 @@ test.describe('Error Handling', () => {
   test.describe('Network Errors', () => {
     
     test('should handle network timeout gracefully', async ({ page }) => {
-      // Simulate slow network
+      // Simulate slow network — fulfill after delay; never route.continue() to live server.
       await page.route('**/api/**', async route => {
         await new Promise(resolve => setTimeout(resolve, 10000));
-        await route.continue();
+        await route.fulfill({
+          status: 504,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'Gateway timeout (simulated)' }),
+        });
       });
       
       await page.goto('/auth/login', { timeout: 5000 }).catch(() => {});
@@ -86,19 +90,25 @@ test.describe('Error Handling', () => {
     });
     
     test('should handle 401 unauthorized gracefully', async ({ page }) => {
-      // Mock 401 response
-      await page.route('**/api/v1/profile/**', async route => {
-        await route.fulfill({
-          status: 401,
-          contentType: 'application/json',
-          body: JSON.stringify({ detail: 'Not authenticated' }),
-        });
+      await setupWebSocketMock(page);
+      await page.addInitScript(() => {
+        localStorage.setItem('access_token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1MiIsImV4cCI6OTk5OTk5OTk5OX0.fake');
+        localStorage.setItem('authToken', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1MiIsImV4cCI6OTk5OTk5OTk5OX0.fake');
+        localStorage.setItem('cookie_consent', JSON.stringify({
+          essential: true, functional: true, analytics: false,
+          version: '1.0', timestamp: new Date().toISOString(),
+        }));
       });
+      const unauthorized = {
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Not authenticated' }),
+      };
+      await page.route('**/api/v1/profile**', async route => route.fulfill(unauthorized));
+      await page.route('**/api/v1/applications**', async route => route.fulfill(unauthorized));
       
-      // Try to access protected route
-      await page.goto('/dashboard');
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
       
-      // Should redirect to login
       await expect(page).toHaveURL(/login/, { timeout: 10000 });
     });
     
@@ -251,106 +261,65 @@ test.describe('Error Handling', () => {
   
   test.describe('Session Handling', () => {
     
-    test('should handle expired session', async ({ page, context }) => {
-      // Register and login
-      const registerPage = new RegisterPage(page);
-      const email = generateTestEmail('expired_session_test');
-      
-      await registerPage.navigate();
-      await registerPage.register({
-        name: 'Expired Session Test',
-        email: email,
-        password: 'ExpiredSessionPassword123!',
-        acceptTerms: true,
-      });
-      
-      await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
-      
-      // Clear cookies to simulate expired session
-      await context.clearCookies();
-      
-      // Clear localStorage token
+    test('should handle expired session', async ({ page }) => {
+      await setupCookieConsent(page);
+      if (isMockedE2E) {
+        await setupWebSocketMock(page);
+        await page.route('**/api/v1/profile**', async route => route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(buildMockGetProfileResponse()),
+        }));
+        await page.route('**/api/v1/applications**', async route => route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ applications: [], total: 0 }),
+        }));
+      }
+      const token = isMockedE2E ? MOCK_JWT : getE2EAuthToken();
+      await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+      await page.evaluate((t: string) => {
+        localStorage.setItem('access_token', t);
+        localStorage.setItem('authToken', t);
+      }, token);
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       await page.evaluate(() => {
+        const cc = localStorage.getItem('cookie_consent');
         localStorage.removeItem('authToken');
         localStorage.removeItem('access_token');
+        if (cc) localStorage.setItem('cookie_consent', cc);
       });
-      
-      // Try to access protected page
-      await page.goto('/dashboard');
-      
-      // Should redirect to login
-      await expect(page).toHaveURL(/login/, { timeout: 10000 });
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+      await page.waitForURL(/auth\/login/, { timeout: 15000 });
     });
-    
+
     test('should handle concurrent sessions', async ({ browser }) => {
-      const email = generateTestEmail('concurrent_session_test');
-      const password = 'ConcurrentSessionPassword123!';
-      
-      // Create user in first context
       const context1 = await browser.newContext();
       const page1 = await context1.newPage();
-      
-      const registerPage = new RegisterPage(page1);
-      await registerPage.navigate();
-      await registerPage.register({
-        name: 'Concurrent Session Test',
-        email: email,
-        password: password,
-        acceptTerms: true,
-      });
-      
-      await page1.waitForURL(/profile|dashboard/, { timeout: 15000 });
-      
-      // Complete profile if needed in first context
-      if (page1.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page1);
-        await profilePage.quickSetup({
-          title: 'Engineer',
-          yearsExperience: 3,
-          skills: ['Python'],
-        });
-        await page1.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
-      // Login in second context
+      await setupAuth(page1);
+      await page1.goto('/dashboard');
+      await page1.waitForLoadState('domcontentloaded');
+
       const context2 = await browser.newContext();
       const page2 = await context2.newPage();
-      
-      const loginPage = new LoginPage(page2);
-      await loginPage.navigate();
-      await loginPage.login(email, password);
-      
-      await page2.waitForURL(/profile|dashboard/, { timeout: 15000 });
-      
-      // Both sessions should work (or first should be invalidated)
-      await page1.reload();
-      await page2.reload();
-      
-      // Clean up
+      await setupAuth(page2);
+      await page2.goto('/dashboard');
+      await page2.waitForLoadState('domcontentloaded');
+
+      await expect(page1).not.toHaveURL(/auth\/login/);
+      await expect(page2).not.toHaveURL(/auth\/login/);
       await context1.close();
       await context2.close();
     });
-    
+
     test('should refresh token before expiration', async ({ page }) => {
-      const registerPage = new RegisterPage(page);
-      const email = generateTestEmail('token_refresh_test');
-      
-      await registerPage.navigate();
-      await registerPage.register({
-        name: 'Token Refresh Test',
-        email: email,
-        password: 'TokenRefreshPassword123!',
-        acceptTerms: true,
-      });
-      
-      await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
-      
-      // Wait some time (token refresh happens before expiration)
-      await page.waitForTimeout(5000);
-      
-      // Should still be logged in
+      await setupAuth(page);
       await page.goto('/dashboard');
-      await expect(page).toHaveURL(/dashboard/);
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(1000);
+      await page.goto('/dashboard');
+      await expect(page).not.toHaveURL(/auth\/login/);
     });
   });
   
@@ -620,23 +589,25 @@ test.describe('Error Handling — Mocked', () => {
     });
 
     test('dashboard handles 401 from profile API by redirecting', async ({ page }) => {
-      await page.addInitScript(() => {
-        localStorage.setItem('cookie_consent', JSON.stringify({ essential: true, functional: true, analytics: false, version: '1.0', timestamp: new Date().toISOString() }));
-        localStorage.setItem('access_token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1MiIsImV4cCI6MX0.fake');
-      });
-      await page.route('**/api/v1/profile', route => route.fulfill({
+      await setupAuth(page);
+      await page.route('**/api/v1/profile**', route => route.fulfill({
+        status: 401, contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Not authenticated' }),
+      }));
+      await page.route('**/api/v1/applications**', route => route.fulfill({
         status: 401, contentType: 'application/json',
         body: JSON.stringify({ detail: 'Not authenticated' }),
       }));
       await page.goto('/dashboard');
-      await page.waitForURL(/auth\/login|\//, { timeout: 8000 });
-      const url = page.url();
-      expect(url).not.toContain('/dashboard');
+      await page.waitForFunction(
+        () => !localStorage.getItem('access_token') && !localStorage.getItem('authToken'),
+        { timeout: 10000 },
+      );
     });
 
     test('dashboard handles 500 from applications API gracefully', async ({ page }) => {
       await setupAuth(page);
-      await page.route('**/api/v1/profile', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: 'u1', full_name: 'Test' }) }));
+      await page.route('**/api/v1/profile**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(buildMockGetProfileResponse()) }));
       await page.route('**/api/v1/applications**', route => route.fulfill({
         status: 500, contentType: 'application/json',
         body: JSON.stringify({ detail: 'Server error' }),
@@ -644,7 +615,7 @@ test.describe('Error Handling — Mocked', () => {
       await page.goto('/dashboard');
       await page.waitForLoadState('domcontentloaded');
       // Should still render the page structure
-      await expect(page.locator('.welcome-card, body')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.welcome-card')).toBeVisible({ timeout: 5000 });
     });
   });
 
@@ -688,7 +659,7 @@ test.describe('Error Handling — Mocked', () => {
         headers: { 'Retry-After': '3600' },
         body: JSON.stringify({ error: { message: 'Rate limit exceeded' } }),
       }));
-      await page.route('**/api/v1/profile', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: 'u1' }) }));
+      await page.route('**/api/v1/profile**', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(buildMockGetProfileResponse()) }));
       await page.route('**/api/v1/tools/followup-stages', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ stages: [] }) }));
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('domcontentloaded');

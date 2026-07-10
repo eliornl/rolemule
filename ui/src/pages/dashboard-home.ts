@@ -1,256 +1,126 @@
 /**
- * Migrated from ui/static/js/dashboard-home.js
- * Behavior preserved 1:1. Typed gradually; @ts-nocheck until fully annotated.
+ * Dashboard home — application list, filters, stats, WebSocket updates.
  */
-// @ts-nocheck
-(function () {
-    'use strict';
+import {
+  getApiBase,
+  getLoginUrl,
+  isAuthenticated,
+  logout,
+} from '../shared/auth';
+import {
+  displayCompanyNameOrUnknown,
+  isPlaceholderCompanyName,
+  isPlaceholderJobTitle,
+} from '../shared/dashboard-display';
+import { escapeHtml } from '../shared/dom-security';
+import { notify } from '../shared/notify';
+import { formatWorkflowFailureDetail } from '../shared/workflow-errors';
+import type {
+  ApplicationStatsResponse,
+  ApplicationsListResponse,
+  DashboardApplication,
+  WorkflowStatusResponse,
+} from '../shared/types';
 
-    // =============================================================================
-    // CONSTANTS
-    // =============================================================================
+// =============================================================================
+// CONSTANTS
+// =============================================================================
 
-    const API_BASE        = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '/api/v1';
-    const PER_PAGE        = 10;
-    const SESSION_KEY     = 'dash_filter_state';
-    const FOLLOW_UP_DAYS  = 14;
+const API_BASE = getApiBase();
+const PER_PAGE = 10;
+const SESSION_KEY = 'dash_filter_state';
+const FOLLOW_UP_DAYS = 14;
+const POLL_INTERVAL_MS = 5000;
+const WS_MAX_RECONNECT = 8;
 
-    const STORAGE_KEYS = {
-        AUTH_TOKEN:        'access_token',
-        AUTH_TOKEN_LEGACY: 'authToken',
-    };
+const STORAGE_KEYS = {
+  AUTH_TOKEN: 'access_token',
+  AUTH_TOKEN_LEGACY: 'authToken',
+} as const;
 
-    // =============================================================================
-    // STATE
-    // =============================================================================
+// =============================================================================
+// STATE
+// =============================================================================
 
-    /** @type {Record<string,unknown>[]} */
-    let _loadedApps = [];
-    let _totalCount = 0;
-    let _nextPage   = 1;
-    let _isLoading  = false;
+let _loadedApps: DashboardApplication[] = [];
+let _totalCount = 0;
+let _nextPage = 1;
+let _isLoading = false;
+let _pendingLoadApplicationsReset = false;
+let _loadApplicationsInFlight: Promise<void> | null = null;
+const _selected = new Set<string>();
+let _search = '';
+let _status = '';
+let _days = '';
+let _sort = 'created_desc';
+let _searchTimer: number | null = null;
+let _firstLoad = true;
 
-    /** When true, run another full list refresh as soon as the current load finishes (WS races). */
-    let _pendingLoadApplicationsReset = false;
+interface ProcessingAppInfo {
+  detailId: string;
+  jobTitle: string;
+  companyName: string;
+}
 
-    /** Promise for the in-flight `loadApplications` run — lets concurrent callers await the same refresh. */
-    /** @type {Promise<void>|null} */
-    let _loadApplicationsInFlight = null;
+const _processingApps = new Map<string, ProcessingAppInfo>();
+let _pollTimer: number | null = null;
+let _ws: WebSocket | null = null;
+let _wsReconnectAttempts = 0;
+const _submittedToastShownForSession = new Set<string>();
 
-    /** @type {Set<string>} */
-    let _selected = new Set();
+function rememberSubmittedToast(sessionId: string): void {
+  if (!sessionId) return;
+  _submittedToastShownForSession.add(sessionId);
+}
 
-    let _search = '';
-    let _status = '';
-    let _days   = '';
-    let _sort   = 'created_desc';
+function hasSubmittedToastForSession(sessionId: string): boolean {
+  return Boolean(sessionId) && _submittedToastShownForSession.has(sessionId);
+}
 
-    /** @type {number|null} */
-    let _searchTimer = null;
+function getAuthToken(): string | null {
+  if (window.app && typeof window.app.getAuthToken === 'function') {
+    return window.app.getAuthToken();
+  }
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get('token') || urlParams.get('access_token');
+  if (urlToken) {
+    setAuthToken(urlToken);
+    return urlToken;
+  }
+  return (
+    localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) ||
+    localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY)
+  );
+}
 
-    let _firstLoad = true;
-
-    /** Apps currently being processed — id → {detailId, jobTitle, companyName} */
-    /** @type {Map<string, {detailId: string, jobTitle: string, companyName: string}>} */
-    let _processingApps = new Map();
-    /** @type {number|null} */
-    let _pollTimer = null;
-    const POLL_INTERVAL_MS = 5000;
-
-    /** User-level WebSocket for real-time workflow events */
-    /** @type {WebSocket|null} */
-    let _ws = null;
-    let _wsReconnectAttempts = 0;
-    const WS_MAX_RECONNECT = 8;
-
-    /**
-     * Prevents duplicate "Application submitted!" toasts: WebSocket sends many
-     * `agent_update` events before `loadApplications` adds the new card, so
-     * `!appBefore` was true for each — plus the sessionStorage toast on redirect.
-     * @type {Set<string>}
-     */
-    let _submittedToastShownForSession = new Set();
-
-    /** @param {string} sessionId */
-    function rememberSubmittedToast(sessionId) {
-        if (!sessionId) return;
-        _submittedToastShownForSession.add(sessionId);
-    }
-
-    /** @param {string} sessionId */
-    function hasSubmittedToastForSession(sessionId) {
-        return Boolean(sessionId) && _submittedToastShownForSession.has(sessionId);
-    }
-
-    // =============================================================================
-    // HELPERS — auth / notify / escape
-    // =============================================================================
-
-    /** @param {string|null|undefined} str */
-    function escapeHtml(str) {
-        return window.escapeHtml(str);
-    }
-
-    /**
-     * True when the applications list has no real employer string (LLM may store "—" or "-").
-     * Keep in sync with `isPlaceholderCompanyName` in `application-detail.js`.
-     * @param {unknown} raw
-     * @returns {boolean}
-     */
-    function isPlaceholderCompanyName(raw) {
-        if (raw == null) return true;
-        const s = String(raw).trim();
-        if (!s) return true;
-        const lower = s.toLowerCase();
-        /** @type {Set<string>} */
-        const literals = new Set([
-            '-', '–', '—', '−',
-            'n/a', 'na', 'unknown', 'null', 'none',
-            'not specified', 'not stated', 'tbd', 'confidential', 'undisclosed',
-            '...',
-        ]);
-        if (literals.has(lower)) return true;
-        if (/^[\s\-–—−]+$/u.test(s)) return true;
-        return false;
-    }
-
-    /**
-     * LinkedIn UI chrome and other non-title strings that must not render as job titles.
-     * @param {unknown} raw
-     * @returns {boolean}
-     */
-    function isPlaceholderJobTitle(raw) {
-        if (raw == null) return true;
-        const s = String(raw).trim();
-        if (!s) return true;
-        const lower = s.toLowerCase();
-        /** @type {Set<string>} */
-        const literals = new Set([
-            'show more', 'show less', 'see more', 'easy apply', 'apply now',
-            'show more options', 'share', 'save', 'hide', 'report', 'dismiss',
-        ]);
-        return literals.has(lower);
-    }
-
-    /**
-     * @param {unknown} raw
-     * @returns {string}
-     */
-    function displayCompanyNameOrUnknown(raw) {
-        if (isPlaceholderCompanyName(raw)) return 'Unknown';
-        return String(raw).trim();
-    }
-
-    /**
-     * Shorten noisy Gemini quota / rate-limit errors for dashboard toasts (legacy rows + WS).
-     * @param {string} raw
-     * @returns {string}
-     */
-    function formatWorkflowFailureDetail(raw) {
-        if (raw == null || typeof raw !== 'string') return '';
-        let s = raw.trim();
-        if (!s) return '';
-        // Legacy rows: "[job_analyzer] …" — users do not need agent names in toasts
-        s = s.replace(/^\[[^\]]+\]\s*/u, '').trim();
-        if (!s) return '';
-        const upper = s.toUpperCase();
-        const low = s.toLowerCase();
-        if (upper.includes('RESOURCE_EXHAUSTED')) {
-            return 'The AI quota or rate limit for the configured API key was reached. Try again later, or review your key under Settings → AI Setup.';
-        }
-        if (s.includes('429') && (low.includes('quota') || low.includes('exceeded your current quota'))) {
-            return 'The AI quota or rate limit for the configured API key was reached. Try again later, or review your key under Settings → AI Setup.';
-        }
-        if (low.includes('free_tier') && low.includes('quota')) {
-            return 'The AI quota or rate limit for the configured API key was reached. Try again later, or review your key under Settings → AI Setup.';
-        }
-        return s;
-    }
-
-    function getAuthToken() {
-        // @ts-ignore
-        if (window.app && typeof window.app.getAuthToken === 'function') return window.app.getAuthToken();
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlToken  = urlParams.get('token') || urlParams.get('access_token');
-        if (urlToken) { setAuthToken(urlToken); return urlToken; }
-        return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY);
-    }
-
-    /** @param {string|null} token */
-    function setAuthToken(token) {
-        if (!token) {
-            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY);
-            return;
-        }
-        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY, token);
-        try {
-            window.postMessage({
-                type: 'JAA_AUTH_SUCCESS', token,
-                user: JSON.parse(localStorage.getItem('user') || '{}'),
-                apiUrl: window.location.origin + API_BASE,
-            }, window.location.origin);
-        } catch (e) { /* extension not installed */ }
-    }
-
-    function logout() {
-        // @ts-ignore
-        if (window.app && typeof window.app.logout === 'function') { window.app.logout(); return; }
-        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY);
-        window.location.href = (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || '/auth/login';
-    }
-
-    /**
-     * @param {string} message
-     * @param {string} [type]
-     * @param {boolean} [scrollTop] - scroll to top so the alert is visible
-     */
-    function notify(message, type = 'info', scrollTop = false) {
-        const notifType = type === 'danger' ? 'error' : type;
-        // @ts-ignore
-        const bus = window.eventBus; const busEvents = window.BusEvents;
-        if (bus && busEvents) {
-            /** @type {Record<string,string>} */
-            const evtMap = { success: busEvents.NOTIFY_SUCCESS, error: busEvents.NOTIFY_ERROR, warning: busEvents.NOTIFY_WARNING, info: busEvents.NOTIFY_INFO };
-            bus.emit(evtMap[notifType] ?? busEvents.NOTIFY_INFO, { message });
-        }
-        // @ts-ignore
-        const app = window.app;
-        if (app && typeof app.showNotification === 'function') { app.showNotification(message, notifType); return; }
-        const container = document.getElementById('alertContainer');
-        if (!container) return;
-        /** @type {Record<string, string>} */
-        const alertClassByType = {
-            success: 'success',
-            error: 'danger',
-            warning: 'warning',
-            info: 'info',
-            danger: 'danger',
-        };
-        const alertClass = alertClassByType[notifType] ?? 'info';
-        const div = document.createElement('div');
-        div.className = `alert alert-${alertClass} alert-dismissible fade show`;
-        div.setAttribute('role', 'alert');
-        div.innerHTML = `${escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-        container.appendChild(div);
-        if (scrollTop) window.scrollTo({ top: 0, behavior: 'smooth' });
-        // Auto-dismiss success/info/warning after 6 seconds; errors stay until dismissed
-        if (type !== 'danger' && type !== 'error') {
-            setTimeout(() => {
-                div.classList.remove('show');
-                setTimeout(() => div.remove(), 300);
-            }, 6000);
-        }
-    }
+function setAuthToken(token: string | null): void {
+  if (!token) {
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY);
+    return;
+  }
+  localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+  localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN_LEGACY, token);
+  try {
+    window.postMessage(
+      {
+        type: 'JAA_AUTH_SUCCESS',
+        token,
+        user: JSON.parse(localStorage.getItem('user') || '{}') as Record<string, unknown>,
+        apiUrl: window.location.origin + API_BASE,
+      },
+      window.location.origin,
+    );
+  } catch {
+    /* extension not installed */
+  }
+}
 
     // =============================================================================
     // HELPERS — dates
     // =============================================================================
 
-    /** @param {string} dateStr */
-    function relativeTime(dateStr) {
+    function relativeTime(dateStr: string): string {
         const diff = new Date().getTime() - new Date(dateStr).getTime();
         const days = Math.floor(diff / 86400000);
         if (days === 0) return 'Today';
@@ -261,18 +131,13 @@
         return `${Math.floor(days / 365)} year${Math.floor(days / 365) > 1 ? 's' : ''} ago`;
     }
 
-    /** @param {string} dateStr */
-    function fullDate(dateStr) {
+    function fullDate(dateStr: string): string {
         return new Date(dateStr).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
-    /**
-     * Returns true when an application in "applied" status hasn't updated in FOLLOW_UP_DAYS+ days.
-     * @param {Record<string,unknown>} app
-     */
-    function needsFollowUp(app) {
-        if (String(app['status'] ?? '').toLowerCase() !== 'applied') return false;
-        const updated = new Date(/** @type {string} */ (app['updated_at']));
+    function needsFollowUp(app: DashboardApplication): boolean {
+        if (String(app.status ?? '').toLowerCase() !== 'applied') return false;
+        const updated = new Date(app.updated_at ?? '');
         return (new Date().getTime() - updated.getTime()) / 86400000 >= FOLLOW_UP_DAYS;
     }
 
@@ -280,10 +145,8 @@
     // HELPERS — status
     // =============================================================================
 
-    /** @param {string} status */
-    function formatStatus(status) {
-        /** @type {Record<string,string>} */
-        const map = {
+    function formatStatus(status: string): string {
+        const map: Record<string, string> = {
             draft: 'Draft', processing: 'Processing', ready: 'Ready',
             completed: 'Completed', applied: 'Applied', interview: 'Interview',
             rejected: 'Rejected', accepted: 'Accepted', failed: 'Failed',
@@ -294,12 +157,7 @@
         return map[status] ?? status;
     }
 
-    /**
-     * Read-only AI analysis status badge (always shown top-right).
-     * Shows: Analyzing (blue) → Ready (cyan) → Failed (red).
-     * @param {string} status
-     */
-    function aiStatusBadge(status) {
+    function aiStatusBadge(status: string): string {
         if (status === 'processing') {
             return `<span class="card-ai-badge ai-processing"><i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>Analyzing</span>`;
         }
@@ -313,13 +171,7 @@
         return `<span class="card-ai-badge ai-ready"><i class="fas fa-check me-1" aria-hidden="true"></i>Ready</span>`;
     }
 
-    /**
-     * Tracking stage buttons — shown below the status badge in the right column.
-     * Only rendered once analysis is complete.
-     * @param {string} status
-     * @param {string} appId
-     */
-    function trackingButtonsHtml(status, appId) {
+    function trackingButtonsHtml(status: string, appId: string): string {
         const systemStatuses = ['draft', 'processing', 'failed'];
         if (systemStatuses.includes(status)) return '';
 
@@ -350,25 +202,27 @@
         } catch (e) { /* storage unavailable */ }
     }
 
-    /**
-     * Restores filter state from sessionStorage and updates DOM inputs.
-     * @returns {number} saved scrollY (0 if none)
-     */
-    function restoreFilterState() {
+    function restoreFilterState(): number {
         try {
             const raw = sessionStorage.getItem(SESSION_KEY);
             if (!raw) return 0;
-            const state = JSON.parse(raw);
+            const state = JSON.parse(raw) as {
+                search?: string;
+                status?: string;
+                days?: string;
+                sort?: string;
+                scrollY?: number;
+            };
 
             _search = state.search || '';
             _status = state.status || '';
             _days   = state.days   || '';
             _sort   = state.sort   || 'created_desc';
 
-            const searchEl  = /** @type {HTMLInputElement|null}  */ (document.getElementById('searchInput'));
-            const statusEl  = /** @type {HTMLSelectElement|null} */ (document.getElementById('statusFilter'));
-            const dateEl    = /** @type {HTMLSelectElement|null} */ (document.getElementById('dateFilter'));
-            const sortEl    = /** @type {HTMLSelectElement|null} */ (document.getElementById('sortFilter'));
+            const searchEl = document.getElementById('searchInput') as HTMLInputElement | null;
+            const statusEl = document.getElementById('statusFilter') as HTMLSelectElement | null;
+            const dateEl = document.getElementById('dateFilter') as HTMLSelectElement | null;
+            const sortEl = document.getElementById('sortFilter') as HTMLSelectElement | null;
 
             if (searchEl) searchEl.value = _search;
             if (statusEl) statusEl.value = _status;
@@ -381,17 +235,11 @@
         }
     }
 
-    /**
-     * Stable unique list by application id (API page may rarely overlap across OFFSET pages).
-     * @param {Record<string,unknown>[]} apps
-     * @returns {Record<string,unknown>[]}
-     */
-    function dedupeApplicationsById(apps) {
-        const seen = new Set();
-        /** @type {Record<string,unknown>[]} */
-        const out = [];
+    function dedupeApplicationsById(apps: DashboardApplication[]): DashboardApplication[] {
+        const seen = new Set<string>();
+        const out: DashboardApplication[] = [];
         for (const a of apps) {
-            const id = String(a['id'] ?? '');
+            const id = String(a.id ?? '');
             if (!id || seen.has(id)) continue;
             seen.add(id);
             out.push(a);
@@ -399,18 +247,14 @@
         return out;
     }
 
-    /**
-     * Append only ids not already present — keeps DOM and `_loadedApps` aligned.
-     * @param {Record<string,unknown>[]} existing
-     * @param {Record<string,unknown>[]} incoming
-     * @returns {{ merged: Record<string,unknown>[], appended: Record<string,unknown>[] }}
-     */
-    function mergeApplicationsPage(existing, incoming) {
-        const seen = new Set(existing.map(a => String(a['id'] ?? '')));
-        /** @type {Record<string,unknown>[]} */
-        const appended = [];
+    function mergeApplicationsPage(
+        existing: DashboardApplication[],
+        incoming: DashboardApplication[],
+    ): { merged: DashboardApplication[]; appended: DashboardApplication[] } {
+        const seen = new Set(existing.map((a) => String(a.id ?? '')));
+        const appended: DashboardApplication[] = [];
         for (const a of incoming) {
-            const id = String(a['id'] ?? '');
+            const id = String(a.id ?? '');
             if (!id || seen.has(id)) continue;
             seen.add(id);
             appended.push(a);
@@ -425,20 +269,19 @@
     // RENDER — single application card
     // =============================================================================
 
-    /** @param {Record<string,unknown>} app */
-    function renderCard(app) {
-        const appId      = String(app['id'] ?? '');
-        const detailId   = String(app['workflow_session_id'] || app['id'] || '');
-        const status     = String(app['status'] ?? '').toLowerCase();
+    function renderCard(app: DashboardApplication): string {
+        const appId      = String(app.id ?? '');
+        const detailId   = String(app.workflow_session_id || app.id || '');
+        const status     = String(app.status ?? '').toLowerCase();
         const safeAppId  = escapeHtml(appId);
         const safeDetail = escapeHtml(detailId);
 
-        const createdAt = String(app['created_at'] ?? '');
+        const createdAt = String(app.created_at ?? '');
         const relTime   = createdAt ? relativeTime(createdAt) : '';
         const absTime   = createdAt ? fullDate(createdAt) : '';
 
-        const matchScore = app['match_score'] != null
-            ? `<span><i class="fas fa-chart-line me-1" aria-hidden="true"></i>${Math.round(/** @type {number} */ (app['match_score']) * 100)}% match</span>`
+        const matchScore = app.match_score != null
+            ? `<span><i class="fas fa-chart-line me-1" aria-hidden="true"></i>${Math.round(app.match_score * 100)}% match</span>`
             : '';
 
         const followUpIcon = needsFollowUp(app)
@@ -446,14 +289,14 @@
             : '';
 
         const isProcessing = status === 'processing';
-        const hasRealTitle = app['job_title'] && !isPlaceholderJobTitle(app['job_title']);
+        const hasRealTitle = app.job_title && !isPlaceholderJobTitle(app.job_title);
         const titleHtml = hasRealTitle
-            ? `<h6 class="application-title">${escapeHtml(String(app['job_title']))}</h6>`
+            ? `<h6 class="application-title">${escapeHtml(String(app.job_title))}</h6>`
             : isProcessing
                 ? `<div class="skeleton-line skeleton-title" aria-hidden="true"></div>`
                 : `<h6 class="application-title">Job Application</h6>`;
-        const companyHtml = app['company_name'] && !isPlaceholderCompanyName(app['company_name'])
-            ? `<div class="company-name">${escapeHtml(String(app['company_name']))}</div>`
+        const companyHtml = app.company_name && !isPlaceholderCompanyName(app.company_name)
+            ? `<div class="company-name">${escapeHtml(String(app.company_name))}</div>`
             : isProcessing
                 ? `<div class="skeleton-line skeleton-subtitle" aria-hidden="true"></div>`
                 : `<div class="company-name">Unknown</div>`;
@@ -489,11 +332,7 @@
     // RENDER — list
     // =============================================================================
 
-    /**
-     * @param {boolean} reset — true = replace list from `_loadedApps`, false = append only `pageChunk`
-     * @param {Record<string,unknown>[]} [pageChunk] — apps from this fetch (append path only)
-     */
-    function renderApplications(reset, pageChunk) {
+    function renderApplications(reset: boolean, pageChunk?: DashboardApplication[]): void {
         const list = document.getElementById('applicationsList');
         if (!list) return;
 
@@ -539,7 +378,7 @@
     function updateBulkBar() {
         const bar    = document.getElementById('bulkActionsBar');
         const count  = document.getElementById('selectedCount');
-        const selAll = /** @type {HTMLInputElement|null} */ (document.getElementById('selectAllCheckbox'));
+        const selAll = document.getElementById('selectAllCheckbox') as HTMLInputElement | null;
         if (!bar) return;
 
         const n = _selected.size;
@@ -547,7 +386,7 @@
         if (count) count.textContent = `${n} selected`;
 
         if (selAll) {
-            const visibleIds = _loadedApps.map(a => String(a['id'] ?? ''));
+            const visibleIds = _loadedApps.map((a) => String(a.id ?? ''));
             const allVisible = visibleIds.length > 0 && visibleIds.every(id => _selected.has(id));
             selAll.checked = allVisible;
             selAll.indeterminate = n > 0 && !allVisible;
@@ -593,11 +432,7 @@
         }
     }
 
-    /**
-     * Single fetch + render pass for the application list.
-     * @param {boolean} reset
-     */
-    async function _loadApplicationsSinglePass(reset) {
+    async function _loadApplicationsSinglePass(reset: boolean): Promise<void> {
         const list = document.getElementById('applicationsList');
         if (!list) return;
 
@@ -641,7 +476,7 @@
             });
 
             if (response.ok) {
-                const data = await response.json();
+                const data = (await response.json()) as ApplicationsListResponse;
                 _totalCount = data.total || 0;
                 const pageApps = dedupeApplicationsById(data.applications || []);
                 if (reset) {
@@ -699,25 +534,25 @@
     function syncProcessingApps() {
         const doneStatuses = ['completed', 'analysis_complete', 'awaiting_confirmation'];
         for (const app of _loadedApps) {
-            const status = String(app['status'] ?? '').toLowerCase();
-            const sessionId = String(app['workflow_session_id'] || app['id'] || '');
+            const status = String(app.status ?? '').toLowerCase();
+            const sessionId = String(app.workflow_session_id || app.id || '');
 
             if (status === 'processing') {
-                const id = String(app['id'] ?? '');
+                const id = String(app.id ?? '');
                 if (!_processingApps.has(id)) {
                     _processingApps.set(id, {
                         detailId:    sessionId,
-                        jobTitle:    String(app['job_title']    || 'Job Application'),
-                        companyName: displayCompanyNameOrUnknown(app['company_name']),
+                        jobTitle:    String(app.job_title    || 'Job Application'),
+                        companyName: displayCompanyNameOrUnknown(app.company_name),
                     });
                 }
             } else if (doneStatuses.includes(status) && sessionId && !_isAnalysisNotified(sessionId, false)) {
-                // User came back after navigating away — analysis finished without them seeing a notification
                 notifyReady(
-                    String(app['job_title']    || 'Job Application'),
-                    displayCompanyNameOrUnknown(app['company_name']),
+                    String(app.job_title    || 'Job Application'),
+                    displayCompanyNameOrUnknown(app.company_name),
                     sessionId,
-                    false
+                    false,
+                    '',
                 );
             }
         }
@@ -735,8 +570,14 @@
         const token = getAuthToken();
         if (!token) return;
 
-        /** @type {{id: string, detailId: string, jobTitle: string, companyName: string, failed: boolean, failureDetail: string}[]} */
-        const finished = [];
+        const finished: Array<{
+            id: string;
+            detailId: string;
+            jobTitle: string;
+            companyName: string;
+            failed: boolean;
+            failureDetail: string;
+        }> = [];
 
         for (const [id, info] of _processingApps) {
             try {
@@ -744,7 +585,7 @@
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!res.ok) continue;
-                const data = await res.json();
+                const data = (await res.json()) as WorkflowStatusResponse;
                 const wfStatus = String(data.status || '').toLowerCase();
                 const done  = ['completed', 'analysis_complete', 'awaiting_confirmation'].includes(wfStatus);
                 const failed = wfStatus === 'failed';
@@ -777,26 +618,17 @@
         }
     }
 
-    /**
-     * Dedupe WS vs poll for the *same* outcome. Legacy entries used bare `sessionId`
-     * for completion only — failures use `f:${sessionId}` so a duplicate-job error
-     * is never swallowed by an unrelated completion key.
-     * @param {string} sessionId
-     * @param {boolean} failed
-     */
-    function _terminalNotifyKey(sessionId, failed) {
+    function _terminalNotifyKey(sessionId: string, failed: boolean): string {
         return failed ? `f:${sessionId}` : `c:${sessionId}`;
     }
 
-    /**
-     * Shows a persistent completion toast. Success includes "View Results"; failures are message + close only (no link).
-     * @param {string} jobTitle
-     * @param {string} companyName
-     * @param {string} detailId
-     * @param {boolean} failed
-     * @param {string} [failureDetail] — server error (WS data.error or status error_messages[0])
-     */
-    function notifyReady(jobTitle, companyName, detailId, failed, failureDetail) {
+    function notifyReady(
+        jobTitle: string,
+        companyName: string,
+        detailId: string,
+        failed: boolean,
+        failureDetail = '',
+    ): void {
         // Guard: if already notified for this outcome (e.g. WS + poll race), bail out.
         if (detailId && _isAnalysisNotified(detailId, failed)) return;
 
@@ -863,11 +695,7 @@
         container.appendChild(div);
     }
 
-    /**
-     * @param {string} sessionId
-     * @param {boolean} failed
-     */
-    function _markAnalysisNotified(sessionId, failed) {
+    function _markAnalysisNotified(sessionId: string, failed: boolean): void {
         if (!sessionId) return;
         try {
             const raw = localStorage.getItem('applypilot_notified_analyses') || '[]';
@@ -882,11 +710,7 @@
         } catch (_e) {}
     }
 
-    /**
-     * @param {string} sessionId
-     * @param {boolean} failed
-     */
-    function _isAnalysisNotified(sessionId, failed) {
+    function _isAnalysisNotified(sessionId: string, failed: boolean): boolean {
         try {
             const raw = localStorage.getItem('applypilot_notified_analyses') || '[]';
             const set = /** @type {string[]} */ (JSON.parse(raw));
@@ -930,13 +754,14 @@
         _ws.onerror = () => {}; // onclose fires after onerror — handled there
     }
 
-    /** @param {Record<string,any>} msg */
-    async function handleUserWsMessage(msg) {
-        const type      = String(msg['type'] || '');
-        const sessionId = String(msg['session_id'] || '');
+    async function handleUserWsMessage(msg: Record<string, unknown>): Promise<void> {
+        const type      = String(msg.type || '');
+        const sessionId = String(msg.session_id || '');
         if (type !== 'workflow_complete' && type !== 'workflow_error' && type !== 'agent_update') return;
 
-        const appBefore = _loadedApps.find(a => String(a['workflow_session_id'] || a['id']) === sessionId);
+        const appBefore = _loadedApps.find(
+            (a) => String(a.workflow_session_id || a.id) === sessionId,
+        );
 
         // A new session started (e.g. submitted from the extension in another tab) —
         // show one submitted toast and refresh so the card appears immediately.
@@ -953,24 +778,24 @@
         if (type !== 'workflow_complete' && type !== 'workflow_error') return;
 
         // Remove from polling fallback map — WS beat the poll
-        if (appBefore) _processingApps.delete(String(appBefore['id'] ?? ''));
+        if (appBefore) _processingApps.delete(String(appBefore.id ?? ''));
 
-        // Reload to get the AI-extracted title/company for the completion toast.
-        // notifyReady() does its own _markAnalysisNotified internally, so we do NOT
-        // pre-mark here — pre-marking before this await was blocking notifyReady from
-        // ever showing the completion toast.
         await loadApplications(true);
         loadStats();
 
-        const appAfter    = _loadedApps.find(a => String(a['workflow_session_id'] || a['id']) === sessionId);
-        const jobTitle    = appAfter ? String(appAfter['job_title']    || 'Job Application') : 'Job Application';
-        const companyName = appAfter ? displayCompanyNameOrUnknown(appAfter['company_name'])         : 'Unknown';
+        const appAfter = _loadedApps.find(
+            (a) => String(a.workflow_session_id || a.id) === sessionId,
+        );
+        const jobTitle = appAfter ? String(appAfter.job_title || 'Job Application') : 'Job Application';
+        const companyName = appAfter
+            ? displayCompanyNameOrUnknown(appAfter.company_name)
+            : 'Unknown';
 
         let wsFailureDetail = '';
         if (type === 'workflow_error') {
-            const d = msg['data'];
-            if (d && typeof d === 'object' && d['error'] != null) {
-                wsFailureDetail = String(d['error']);
+            const d = msg.data;
+            if (d && typeof d === 'object' && d !== null && 'error' in d) {
+                wsFailureDetail = String((d as { error?: unknown }).error ?? '');
             }
         }
 
@@ -981,11 +806,11 @@
     // FILTER HELPERS
     // =============================================================================
 
-    function applyFilters() {
-        const searchEl  = /** @type {HTMLInputElement|null}  */ (document.getElementById('searchInput'));
-        const statusEl  = /** @type {HTMLSelectElement|null} */ (document.getElementById('statusFilter'));
-        const dateEl    = /** @type {HTMLSelectElement|null} */ (document.getElementById('dateFilter'));
-        const sortEl    = /** @type {HTMLSelectElement|null} */ (document.getElementById('sortFilter'));
+    function applyFilters(): void {
+        const searchEl = document.getElementById('searchInput') as HTMLInputElement | null;
+        const statusEl = document.getElementById('statusFilter') as HTMLSelectElement | null;
+        const dateEl = document.getElementById('dateFilter') as HTMLSelectElement | null;
+        const sortEl = document.getElementById('sortFilter') as HTMLSelectElement | null;
 
         _search = searchEl?.value.trim() ?? '';
         _status = statusEl?.value ?? '';
@@ -995,13 +820,13 @@
         loadApplications(true);
     }
 
-    function clearFilters() {
+    function clearFilters(): void {
         _search = ''; _status = ''; _days = ''; _sort = 'created_desc';
 
-        const searchEl = /** @type {HTMLInputElement|null}  */ (document.getElementById('searchInput'));
-        const statusEl = /** @type {HTMLSelectElement|null} */ (document.getElementById('statusFilter'));
-        const dateEl   = /** @type {HTMLSelectElement|null} */ (document.getElementById('dateFilter'));
-        const sortEl   = /** @type {HTMLSelectElement|null} */ (document.getElementById('sortFilter'));
+        const searchEl = document.getElementById('searchInput') as HTMLInputElement | null;
+        const statusEl = document.getElementById('statusFilter') as HTMLSelectElement | null;
+        const dateEl = document.getElementById('dateFilter') as HTMLSelectElement | null;
+        const sortEl = document.getElementById('sortFilter') as HTMLSelectElement | null;
 
         if (searchEl) searchEl.value = '';
         if (statusEl) statusEl.value = '';
@@ -1016,8 +841,8 @@
     // =============================================================================
 
     function toggleSelectAll() {
-        const selAll = /** @type {HTMLInputElement|null} */ (document.getElementById('selectAllCheckbox'));
-        const visibleIds = _loadedApps.map(a => String(a['id'] ?? ''));
+        const selAll = document.getElementById('selectAllCheckbox') as HTMLInputElement | null;
+        const visibleIds = _loadedApps.map((a) => String(a.id ?? ''));
 
         if (selAll?.checked) {
             visibleIds.forEach(id => _selected.add(id));
@@ -1026,9 +851,9 @@
         }
 
         // Sync checkboxes in the DOM
-        document.querySelectorAll('.app-checkbox').forEach(cb => {
-            const checkbox = /** @type {HTMLInputElement} */ (cb);
-            checkbox.checked = _selected.has(checkbox.dataset['id'] ?? '');
+        document.querySelectorAll('.app-checkbox').forEach((cb) => {
+            const checkbox = cb as HTMLInputElement;
+            checkbox.checked = _selected.has(checkbox.dataset.id ?? '');
         });
 
         updateBulkBar();
@@ -1038,10 +863,11 @@
     // APPLICATION ACTIONS
     // =============================================================================
 
-    /** @param {string} id */
-    function viewApplication(id) {
-        const app = _loadedApps.find(a => String(a['workflow_session_id'] || a['id']) === id);
-        if (app && String(app['status'] ?? '').toLowerCase() === 'processing') {
+    function viewApplication(id: string): void {
+        const app = _loadedApps.find(
+            (a) => String(a.workflow_session_id || a.id) === id,
+        );
+        if (app && String(app.status ?? '').toLowerCase() === 'processing') {
             notify('Still analyzing — we\'ll notify you here when it\'s ready.', 'info');
             return;
         }
@@ -1049,11 +875,7 @@
         window.location.href = `/dashboard/application/${encodeURIComponent(id)}`;
     }
 
-    /**
-     * @param {string} applicationId
-     * @param {string} newStatus
-     */
-    async function updateApplicationStatus(applicationId, newStatus) {
+    async function updateApplicationStatus(applicationId: string, newStatus: string): Promise<void> {
         const token = getAuthToken();
         try {
             const response = await fetch(`${API_BASE}/applications/${applicationId}/status`, {
@@ -1063,10 +885,10 @@
             });
             if (response.ok) {
                 // Update in-memory so badge + relative time refresh without a full reload
-                const app = _loadedApps.find(a => String(a['id']) === applicationId);
+                const app = _loadedApps.find((a) => String(a.id) === applicationId);
                 if (app) {
-                    app['status']     = newStatus;
-                    app['updated_at'] = new Date().toISOString();
+                    app.status = newStatus;
+                    app.updated_at = new Date().toISOString();
                 }
                 renderApplications(true);
                 updateResultsCount();
@@ -1083,7 +905,7 @@
                 throw new Error(errData.message || errData.detail || 'Failed to update status');
             }
         } catch (error) {
-            const err = /** @type {Error} */ (error);
+            const err = error instanceof Error ? error : new Error(String(error));
             console.error('Error updating status:', err);
             notify(err.message || 'Failed to update status. Please try again.', 'error');
             // Re-render to reset the dropdown to its previous value
@@ -1091,8 +913,8 @@
         }
     }
 
-    /** @param {string} applicationId */
-    async function deleteApplication(applicationId) {
+    async function deleteApplication(applicationId: string): Promise<void> {
+        if (!window.showConfirm) return;
         const confirmed = await window.showConfirm({
             title: 'Delete Application',
             message: 'Are you sure you want to delete this application? This action cannot be undone.',
@@ -1108,7 +930,7 @@
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (response.ok) {
-                _loadedApps = _loadedApps.filter(a => String(a['id']) !== applicationId);
+                _loadedApps = _loadedApps.filter((a) => String(a.id) !== applicationId);
                 _totalCount = Math.max(0, _totalCount - 1);
                 _selected.delete(applicationId);
                 renderApplications(true);
@@ -1123,7 +945,7 @@
                 throw new Error(errData.message || errData.detail || 'Failed to delete application');
             }
         } catch (error) {
-            const err = /** @type {Error} */ (error);
+            const err = error instanceof Error ? error : new Error(String(error));
             console.error('Error deleting application:', err);
             notify(err.message || 'Failed to delete application. Please try again.', 'error');
         }
@@ -1133,6 +955,7 @@
         const ids = Array.from(_selected);
         if (ids.length === 0) return;
 
+        if (!window.showConfirm) return;
         const confirmed = await window.showConfirm({
             title: 'Delete Applications',
             message: `Are you sure you want to delete ${ids.length} application${ids.length > 1 ? 's' : ''}? This action cannot be undone.`,
@@ -1142,7 +965,7 @@
         if (!confirmed) return;
 
         const token = getAuthToken();
-        const errors = [];
+        const errors: string[] = [];
         await Promise.all(ids.map(async id => {
             try {
                 const r = await fetch(`${API_BASE}/applications/${id}`, {
@@ -1176,8 +999,8 @@
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (response.ok) {
-                const stats = await response.json();
-                const set = /** @param {string} id @param {unknown} val */ (id, val) => {
+                const stats = (await response.json()) as ApplicationStatsResponse;
+                const set = (id: string, val: unknown): void => {
                     const el = document.getElementById(id);
                     if (el) el.textContent = String(val ?? 0);
                 };
@@ -1196,29 +1019,27 @@
     // AUTH CHECK + USER DATA
     // =============================================================================
 
-    function checkAuthentication() {
-        // @ts-ignore
-        if (window.app && typeof window.app.isAuthenticated === 'function') {
-            // @ts-ignore
-            if (!window.app.isAuthenticated()) { window.location.href = (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || '/auth/login'; return false; }
-        } else {
-            if (!getAuthToken()) { window.location.href = (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || '/auth/login'; return false; }
+    function checkAuthentication(): boolean {
+        if (!isAuthenticated()) {
+            window.location.href = getLoginUrl();
+            return false;
         }
         return true;
     }
 
-    /**
-     * Load profile from API (authoritative for completion). Syncs localStorage
-     * profile_completed from completion_status so it cannot drift after migrations.
-     * @returns {Promise<boolean>} false if redirected or error — caller should stop init
-     */
-    async function loadUserData() {
+    async function loadUserData(): Promise<boolean> {
         const token = getAuthToken();
-        if (!token) { window.location.href = (window.APP_CONFIG && window.APP_CONFIG.loginUrl) || '/auth/login'; return false; }
+        if (!token) {
+            window.location.href = getLoginUrl();
+            return false;
+        }
         try {
             const response = await fetch(`${API_BASE}/profile/`, { headers: { Authorization: `Bearer ${token}` } });
             if (response.ok) {
-                const data = await response.json();
+                const data = (await response.json()) as {
+                    completion_status?: { profile_completed?: boolean };
+                    user_info?: { full_name?: string };
+                };
                 const completed = Boolean(data.completion_status?.profile_completed);
                 localStorage.setItem('profile_completed', completed ? 'true' : 'false');
                 if (!completed) {
@@ -1253,7 +1074,7 @@
     // OAUTH EXCHANGE
     // =============================================================================
 
-    async function exchangeOAuthCodeIfPresent() {
+    async function exchangeOAuthCodeIfPresent(): Promise<void> {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         if (!code) return;
@@ -1269,11 +1090,11 @@
                 body: JSON.stringify({ code }),
             });
             if (!response.ok) return;
-            const data  = await response.json();
-            const token = /** @type {string|undefined} */ (data.access_token);
+            const data = (await response.json()) as { access_token?: string };
+            const token = data.access_token;
             if (token) setAuthToken(token);
         } catch (err) {
-            const error = /** @type {Error} */ (err);
+            const error = err instanceof Error ? err : new Error(String(err));
             console.error('OAuth code exchange failed:', error.message);
         }
     }
@@ -1329,20 +1150,19 @@
         });
 
         // Escape key clears search
-        document.getElementById('searchInput')?.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                const el = /** @type {HTMLInputElement} */ (e.target);
-                if (el.value !== '') {
-                    el.value = '';
+        document.getElementById('searchInput')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && e.target instanceof HTMLInputElement) {
+                if (e.target.value !== '') {
+                    e.target.value = '';
                     applyFilters();
                 }
             }
         });
 
-        // ── Delegated clicks on static elements ──────────────────────────────────
-        document.addEventListener('click', function (e) {
-            const el       = /** @type {HTMLElement} */ (e.target);
-            const actionEl = /** @type {HTMLElement|null} */ (el.closest('[data-action]'));
+        document.addEventListener('click', (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLElement)) return;
+            const actionEl = el.closest('[data-action]') as HTMLElement | null;
             if (!actionEl) return;
             switch (actionEl.dataset['action']) {
                 case 'clear-filters':  clearFilters();   break;
@@ -1355,45 +1175,47 @@
         // ── Delegated clicks on dynamically rendered cards ────────────────────────
         const list = document.getElementById('applicationsList');
         if (list) {
-            list.addEventListener('click', function (e) {
-                const el = /** @type {HTMLElement} */ (e.target);
+            list.addEventListener('click', (e) => {
+                const el = e.target;
+                if (!(el instanceof HTMLElement)) return;
 
-                // Never navigate when clicking on form controls
                 if (el.closest('input')) {
                     e.stopPropagation();
                     return;
                 }
 
-                const actionEl = /** @type {HTMLElement|null} */ (el.closest('[data-action]'));
+                const actionEl = el.closest('[data-action]') as HTMLElement | null;
                 if (actionEl) {
                     e.stopPropagation();
-                    const id     = actionEl.dataset['id'] ?? '';
-                    const action = actionEl.dataset['action'] ?? '';
-                    if (action === 'delete') deleteApplication(id);
+                    const id = actionEl.dataset.id ?? '';
+                    const action = actionEl.dataset.action ?? '';
+                    if (action === 'delete') void deleteApplication(id);
                     if (action === 'set-tracking') {
-                        const chosen = actionEl.dataset['value'] ?? '';
-                        const existingApp = _loadedApps.find(a => String(a['id']) === id);
-                        const currentStatus = existingApp ? String(existingApp['status'] || '').toLowerCase() : '';
-                        // Clicking the already-active button toggles it off (back to untracked)
-                        updateApplicationStatus(id, currentStatus === chosen ? 'completed' : chosen);
+                        const chosen = actionEl.dataset.value ?? '';
+                        const existingApp = _loadedApps.find((a) => String(a.id) === id);
+                        const currentStatus = existingApp
+                            ? String(existingApp.status || '').toLowerCase()
+                            : '';
+                        void updateApplicationStatus(
+                            id,
+                            currentStatus === chosen ? 'completed' : chosen,
+                        );
                     }
                     return;
                 }
 
-                // Click on card body → navigate
-                const card = /** @type {HTMLElement|null} */ (el.closest('[data-card-id]'));
-                if (card) viewApplication(card.dataset['cardId'] ?? '');
+                const card = el.closest('[data-card-id]') as HTMLElement | null;
+                if (card) viewApplication(card.dataset.cardId ?? '');
             });
 
-            // Change events for checkboxes
-            list.addEventListener('change', function (e) {
-                const el     = /** @type {HTMLElement} */ (e.target);
-                const action = el.dataset['action'];
+            list.addEventListener('change', (e) => {
+                const el = e.target;
+                if (!(el instanceof HTMLInputElement)) return;
+                const action = el.dataset.action;
 
                 if (action === 'toggle-select') {
-                    const checkbox = /** @type {HTMLInputElement} */ (el);
-                    if (checkbox.checked) _selected.add(checkbox.dataset['id'] ?? '');
-                    else                  _selected.delete(checkbox.dataset['id'] ?? '');
+                    if (el.checked) _selected.add(el.dataset.id ?? '');
+                    else _selected.delete(el.dataset.id ?? '');
                     updateBulkBar();
                 }
             });
@@ -1415,7 +1237,5 @@
     // =============================================================================
     // PUBLIC API
     // =============================================================================
-    // @ts-ignore
-    window.logout = logout;
+window.logout = logout;
 
-}());

@@ -48,3 +48,19 @@ export function logout(): void {
 export function getApiBase(): string {
   return (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '/api/v1';
 }
+
+export function isAuthenticated(): boolean {
+  if (window.app && typeof window.app.isAuthenticated === 'function') {
+    return window.app.isAuthenticated();
+  }
+  return Boolean(getAuthToken());
+}
+
+/** Redirect to login when unauthenticated. */
+export function requireLogin(): boolean {
+  if (!isAuthenticated()) {
+    window.location.href = getLoginUrl();
+    return false;
+  }
+  return true;
+}

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth, setupAllMocks, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuth, setupAllMocks, setupWebSocketMock, buildMockGetProfileResponse, isMockedE2E, getE2EAuthToken } from '../utils/api-mocks';
 
 /**
  * KEYBOARD NAVIGATION & FOCUS MANAGEMENT TESTS
@@ -205,7 +205,9 @@ test.describe('D. Dashboard Keyboard Navigation', () => {
   test('settings page tab navigation works', async ({ page }) => {
     await page.goto('/dashboard/settings');
     await page.waitForLoadState('domcontentloaded');
-    await page.keyboard.press('Tab');
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('Tab');
+    }
     const focused = await page.evaluate(() => document.activeElement?.tagName);
     expect(focused).not.toBe('BODY');
   });
@@ -231,36 +233,31 @@ test.describe('E. Form Keyboard Interactions', () => {
   test('new application job title input accepts keyboard input', async ({ page }) => {
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-    const titleInput = page.locator('#basicJobTitle, input[name="job_title"]').first();
-    if (await titleInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await titleInput.focus();
-      await page.keyboard.type('Software Engineer');
-      expect(await titleInput.inputValue()).toBe('Software Engineer');
-    }
+    const titleInput = page.locator('#jobTitleInput');
+    await expect(titleInput).toBeVisible({ timeout: 5000 });
+    await titleInput.focus();
+    await page.keyboard.type('Software Engineer');
+    expect(await titleInput.inputValue()).toBe('Software Engineer');
   });
 
   test('new application company name accepts keyboard input', async ({ page }) => {
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-    const companyInput = page.locator('#basicCompanyName, input[name="company_name"]').first();
-    if (await companyInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await companyInput.focus();
-      await page.keyboard.type('TechCorp Inc');
-      expect(await companyInput.inputValue()).toBe('TechCorp Inc');
-    }
+    const companyInput = page.locator('#companyNameInput');
+    await expect(companyInput).toBeVisible({ timeout: 5000 });
+    await companyInput.focus();
+    await page.keyboard.type('TechCorp Inc');
+    expect(await companyInput.inputValue()).toBe('TechCorp Inc');
   });
 
   test('Backspace clears typed text in input', async ({ page }) => {
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-    const titleInput = page.locator('#basicJobTitle, input[name="job_title"]').first();
-    if (await titleInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await titleInput.fill('Test');
-      await titleInput.focus();
-      await page.keyboard.press('Control+a');
-      await page.keyboard.press('Backspace');
-      expect(await titleInput.inputValue()).toBe('');
-    }
+    const titleInput = page.locator('#jobTitleInput');
+    await expect(titleInput).toBeVisible({ timeout: 5000 });
+    await titleInput.fill('Test');
+    await titleInput.clear();
+    expect(await titleInput.inputValue()).toBe('');
   });
 
   test('Escape key dismisses modals or cancels actions', async ({ page }) => {
@@ -289,28 +286,37 @@ test.describe('E. Form Keyboard Interactions', () => {
 // ---------------------------------------------------------------------------
 test.describe('F. Onboarding Keyboard Navigation', () => {
   test('onboarding Next button is reachable via Tab', async ({ page }) => {
-    await page.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
+    if (isMockedE2E) {
+      await setupWebSocketMock(page);
+    }
+    const token = getE2EAuthToken();
+    await page.addInitScript((t: string) => {
+      localStorage.setItem('access_token', t);
+      localStorage.setItem('authToken', t);
+      localStorage.removeItem('onboarding_completed');
       localStorage.setItem('cookie_consent', JSON.stringify({
         essential: true, functional: true, analytics: false,
         version: '1.0', timestamp: new Date().toISOString(),
       }));
-    }, MOCK_JWT);
-    await page.route('**/api/v1/profile', (route: any) => route.fulfill({
+    }, token);
+    await page.route('**/api/v1/profile**', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ name: 'User', email: 'u@example.com' }),
+      body: JSON.stringify(buildMockGetProfileResponse()),
     }));
     await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ applications: [], total: 0 }),
     }));
+    await page.route('**/api/v1/applications/stats/overview', (route: any) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ total: 0, applied: 0, interviews: 0, offers: 0, response_rate: 0 }),
+    }));
     await page.route('**/api/v1/profile/api-key/status', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ has_user_key: false, server_has_key: false }),
+      body: JSON.stringify({ has_user_key: false, server_has_key: false, use_vertex_ai: false }),
     }));
-    await page.goto('/dashboard');
-    await page.locator('#onboarding-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+    await page.locator('#onboarding-overlay').waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     if (await page.locator('#onboarding-overlay').isVisible().catch(() => false)) {
       const nextBtn = page.locator('[data-action="onboarding-next"]');
       await nextBtn.focus();
@@ -322,14 +328,15 @@ test.describe('F. Onboarding Keyboard Navigation', () => {
   });
 
   test('Enter key on onboarding Next button advances step', async ({ page }) => {
-    await page.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
+    const token = getE2EAuthToken();
+    await page.addInitScript((t: string) => {
+      localStorage.setItem('access_token', t);
+      localStorage.setItem('authToken', t);
       localStorage.setItem('cookie_consent', JSON.stringify({
         essential: true, functional: true, analytics: false,
         version: '1.0', timestamp: new Date().toISOString(),
       }));
-    }, MOCK_JWT);
+    }, token);
     await page.route('**/api/v1/profile', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ name: 'User', email: 'u@example.com' }),
@@ -376,12 +383,13 @@ test.describe('G. Focus Trap & Modal Behaviour', () => {
   test('settings page input is focusable via keyboard', async ({ page }) => {
     await page.goto('/dashboard/settings');
     await page.waitForLoadState('domcontentloaded');
-    const allInputs = await page.locator('input:not([type="hidden"])').count();
-    if (allInputs > 0) {
-      await page.locator('input:not([type="hidden"])').first().focus();
-      const tag = await page.evaluate(() => document.activeElement?.tagName);
-      expect(tag).toBe('INPUT');
-    }
+    await page.locator('[data-section="apiKeys"]').click();
+    await page.waitForTimeout(300);
+    const apiKeyInput = page.locator('#geminiApiKey');
+    await expect(apiKeyInput).toBeVisible({ timeout: 5000 });
+    await apiKeyInput.focus();
+    const tag = await page.evaluate(() => document.activeElement?.id);
+    expect(tag).toBe('geminiApiKey');
   });
 
   test('dashboard application list page is keyboard-navigable', async ({ page }) => {

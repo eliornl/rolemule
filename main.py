@@ -492,7 +492,11 @@ def configure_middleware(app: FastAPI):
         else:
             identifier = f"api:{client_ip}"
         
-        # Rate limit: 100 requests per minute per user/IP
+        # Rate limit: 100 requests per minute per user/IP (disabled in TESTING to keep E2E/CI clean)
+        from config.settings import get_settings
+        if get_settings().testing:
+            return await call_next(request)
+
         result = await check_rate_limit_with_headers(
             identifier=identifier,
             limit=100,
@@ -740,6 +744,7 @@ def add_custom_routes(app: FastAPI):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "services": services_status,
                 "version": settings.app_version,
+                "testing": settings.testing,
             }
 
             return JSONResponse(content=health_status, status_code=200)

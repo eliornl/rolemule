@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuthMocks, setupCookieConsent, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuthMocks, setupCookieConsent, MOCK_JWT, buildMockGetProfileResponse } from '../utils/api-mocks';
 
 
 /**
@@ -75,64 +75,89 @@ test.describe('Complete Authentication (Mocked)', () => {
   });
   
   test.describe('Email Verification', () => {
-    
-    test('should display email verification page', async ({ page }) => {
+
+    test('should display no-email fallback when email is unknown', async ({ page }) => {
       await page.goto('/auth/verify-email');
-      
-      // Without token, shows resend form
-      await expect(page.locator('#resendSection')).toBeVisible({ timeout: 5000 });
-      await expect(page.locator('#email')).toBeVisible();
+      await expect(page.locator('#noEmailSection')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#emailInput')).toBeVisible();
     });
-    
-    test('should handle valid verification token (mocked)', async ({ page }) => {
-      // Mock successful verification
-      await page.route('**/api/v1/auth/verify-email**', async (route) => {
+
+    test('should display code entry when pending email is stored', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('pendingVerificationEmail', 'test@example.com');
+      });
+      await page.goto('/auth/verify-email');
+      await expect(page.locator('#codeSection')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.code-input')).toHaveCount(6);
+    });
+
+    test('should show success after valid 6-digit code (mocked)', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('pendingVerificationEmail', 'test@example.com');
+      });
+
+      await page.route('**/api/v1/auth/verify-code', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ message: 'Email verified successfully' }),
+          body: JSON.stringify({
+            message: 'Email verified successfully',
+            access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSIsImV4cCI6OTk5OTk5OTk5OX0.fake_sig_for_testing',
+            profile_completed: false,
+            redirect: '/profile/setup',
+          }),
         });
       });
-      
-      await page.goto('/auth/verify-email?token=valid-mock-token');
-      
-      // Should show success section
+
+      await page.goto('/auth/verify-email');
+      const inputs = page.locator('.code-input');
+      for (let i = 0; i < 6; i++) {
+        await inputs.nth(i).fill(String(i + 1));
+      }
+      await page.locator('#verifyBtn').click();
+
       await expect(page.locator('#successSection')).toBeVisible({ timeout: 5000 });
     });
-    
-    test('should handle invalid verification token', async ({ page }) => {
-      await page.route('**/api/v1/auth/verify-email**', async (route) => {
+
+    test('should show error alert for invalid verification code', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('pendingVerificationEmail', 'test@example.com');
+      });
+
+      await page.route('**/api/v1/auth/verify-code', async (route) => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
-          body: JSON.stringify({ detail: 'Invalid or expired token' }),
+          body: JSON.stringify({ message: 'Invalid or expired code' }),
         });
       });
-      
-      await page.goto('/auth/verify-email?token=invalid-token');
-      
-      // Should show error section
-      await expect(page.locator('#errorSection')).toBeVisible({ timeout: 5000 });
+
+      await page.goto('/auth/verify-email');
+      const inputs = page.locator('.code-input');
+      for (let i = 0; i < 6; i++) {
+        await inputs.nth(i).fill('0');
+      }
+      await page.locator('#verifyBtn').click();
+
+      await expect(page.locator('#alertContainer .alert-danger')).toBeVisible({ timeout: 5000 });
     });
-    
-    test('should allow resending verification email', async ({ page }) => {
-      // Mock resend endpoint
+
+    test('should allow resending verification code', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('pendingVerificationEmail', 'test@example.com');
+      });
+
       await page.route('**/api/v1/auth/resend-verification', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ message: 'Verification email sent' }),
+          body: JSON.stringify({ message: 'Verification code sent' }),
         });
       });
-      
+
       await page.goto('/auth/verify-email');
-      
-      // Fill email and submit
-      await page.locator('#email').fill('test@example.com');
-      await page.locator('#resendBtn').click();
-      
-      // Should show success alert
-      await expect(page.locator('#resendAlert.alert-success')).toBeVisible({ timeout: 5000 });
+      await page.locator('[data-action="resendCode"]').click();
+      await expect(page.locator('#alertContainer .alert-success')).toBeVisible({ timeout: 5000 });
     });
   });
   
@@ -144,7 +169,7 @@ test.describe('Complete Authentication (Mocked)', () => {
       // Shows forgot password section without token
       await expect(page.locator('#forgotPasswordSection')).toBeVisible();
       await expect(page.locator('#email')).toBeVisible();
-      await expect(page.locator('#forgotPasswordBtn')).toBeVisible();
+      await expect(page.locator('#forgotBtn')).toBeVisible();
     });
     
     test('should submit password reset request (mocked)', async ({ page }) => {
@@ -160,10 +185,10 @@ test.describe('Complete Authentication (Mocked)', () => {
       await page.goto('/auth/reset-password');
       
       await page.locator('#email').fill('test@example.com');
-      await page.locator('#forgotPasswordBtn').click();
+      await page.locator('#forgotBtn').click();
       
       // Should show success alert
-      await expect(page.locator('#forgotPasswordAlert.alert-success')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#forgotAlert.alert-success')).toBeVisible({ timeout: 5000 });
     });
     
     test('should display password reset form with token', async ({ page }) => {
@@ -189,7 +214,7 @@ test.describe('Complete Authentication (Mocked)', () => {
       
       await page.locator('#newPassword').fill('NewPassword123!');
       await page.locator('#confirmPassword').fill('NewPassword123!');
-      await page.locator('#resetPasswordBtn').click();
+      await page.locator('#resetBtn').click();
       
       // Should show success section
       await expect(page.locator('#successSection')).toBeVisible({ timeout: 5000 });
@@ -208,10 +233,10 @@ test.describe('Complete Authentication (Mocked)', () => {
       
       await page.locator('#newPassword').fill('NewPassword123!');
       await page.locator('#confirmPassword').fill('NewPassword123!');
-      await page.locator('#resetPasswordBtn').click();
+      await page.locator('#resetBtn').click();
       
       // Should show error alert
-      await expect(page.locator('#resetPasswordAlert.alert-danger')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#resetAlert.alert-danger')).toBeVisible({ timeout: 5000 });
     });
   });
   
@@ -418,9 +443,9 @@ test.describe('Auth — Login Flows (Mocked)', () => {
     await ctx.close();
   });
 
-  test('login page navbar brand is visible', async ({ page }) => {
+  test('login page heading is visible', async ({ page }) => {
     await page.goto('/auth/login');
-    await expect(page.locator('.auth-logo, .brand, .navbar-brand').first()).toBeAttached();
+    await expect(page.locator('.auth-header h2')).toBeVisible();
   });
 });
 
@@ -434,9 +459,9 @@ test.describe('Auth — Token Management (Mocked)', () => {
       localStorage.setItem('access_token', jwt);
       localStorage.setItem('authToken', jwt);
     }, MOCK_JWT);
-    await page.route('**/api/v1/profile', r => r.fulfill({
+    await page.route('**/api/v1/profile**', r => r.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ user_id: 'u1', profile_completed: true, full_name: 'Test User' }),
+      body: JSON.stringify(buildMockGetProfileResponse()),
     }));
     await page.route('**/api/v1/applications**', r => r.fulfill({
       status: 200, contentType: 'application/json',

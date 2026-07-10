@@ -1,5 +1,18 @@
 import { test, expect, Page } from '@playwright/test';
-import { setupAuth, setupAllMocks } from '../utils/api-mocks';
+import { setupAuth, setupAllMocks, MOCK_JWT } from '../utils/api-mocks';
+
+async function seedAuthOnce(page: import('@playwright/test').Page): Promise<void> {
+  await setupAllMocks(page);
+  await page.addInitScript((token: string) => {
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('cookie_consent', JSON.stringify({
+      essential: true, functional: true, analytics: false,
+      version: '1.0', timestamp: new Date().toISOString(),
+    }));
+  }, MOCK_JWT);
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+}
 
 /**
  * WebSocket and real-time update tests (mocked — no live server needed)
@@ -28,12 +41,13 @@ test.describe('WebSocket Communication', () => {
       await expect(page).toHaveURL(/new-application/);
     });
 
-    test('should display step 1 form fields', async ({ page }) => {
+    test('should display new application form fields', async ({ page }) => {
       await page.goto('/dashboard/new-application');
       await page.waitForLoadState('networkidle');
 
-      await expect(page.locator('#basicJobTitle')).toBeVisible({ timeout: 10000 });
-      await expect(page.locator('#basicCompanyName')).toBeVisible();
+      await expect(page.locator('#jobTitleInput')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#companyNameInput')).toBeVisible();
+      await expect(page.locator('#jobDescription')).toBeVisible();
     });
 
     test('should handle offline mode gracefully', async ({ page }) => {
@@ -56,27 +70,22 @@ test.describe('WebSocket Communication', () => {
       await setupMockedAuth(page);
     });
 
-    test('should navigate to step 2 after filling step 1', async ({ page }) => {
+    test('should show analyze button after filling job description', async ({ page }) => {
       await page.goto('/dashboard/new-application');
       await page.waitForLoadState('networkidle');
 
-      await page.locator('#basicJobTitle').fill('Software Engineer');
-      await page.locator('#basicCompanyName').fill('Test Company');
-      await page.locator('button:has-text("Next")').click();
-
-      await expect(page.locator('.method-tab').first()).toBeVisible({ timeout: 5000 });
+      const jobText = 'Senior Software Engineer at Test Company. '.repeat(4);
+      await page.locator('#jobDescription').fill(jobText);
+      await expect(page.locator('[data-action="process-application"]')).toBeVisible({ timeout: 5000 });
     });
 
-    test('should show job URL input in step 2', async ({ page }) => {
+    test('manual tab shows optional title and company inputs', async ({ page }) => {
       await page.goto('/dashboard/new-application');
       await page.waitForLoadState('networkidle');
 
-      await page.locator('#basicJobTitle').fill('Software Engineer');
-      await page.locator('#basicCompanyName').fill('Test Company');
-      await page.locator('button:has-text("Next")').click();
-
-      await expect(page.locator('#jobUrl')).toBeVisible({ timeout: 5000 });
-      await expect(page.locator('button:has-text("Create Application")')).toBeVisible();
+      await page.locator('#jobTitleInput').fill('Software Engineer');
+      await page.locator('#companyNameInput').fill('Test Company');
+      expect(await page.locator('#jobTitleInput').inputValue()).toBe('Software Engineer');
     });
   });
 
@@ -110,8 +119,8 @@ test.describe('WebSocket Communication', () => {
       const page1 = await context.newPage();
       const page2 = await context.newPage();
 
-      await setupMockedAuth(page1);
-      await setupMockedAuth(page2);
+      await seedAuthOnce(page1);
+      await seedAuthOnce(page2);
 
       await page1.goto('/dashboard');
       await page1.waitForLoadState('domcontentloaded');
@@ -119,23 +128,24 @@ test.describe('WebSocket Communication', () => {
       await page2.goto('/dashboard');
       await page2.waitForLoadState('domcontentloaded');
 
-      // Clear localStorage in tab 1 (simulate logout)
       await page1.evaluate(() => {
+        const cc = localStorage.getItem('cookie_consent');
         localStorage.removeItem('access_token');
         localStorage.removeItem('authToken');
+        if (cc) localStorage.setItem('cookie_consent', cc);
       });
 
-      // Reload tab 1 — should redirect to login
-      await page1.reload();
-      await page1.waitForURL(/login/, { timeout: 10000 });
+      await page1.goto('/dashboard');
+      await page1.waitForURL(/login/, { timeout: 15000 });
 
-      // Tab 2 should also be logged out on refresh
       await page2.evaluate(() => {
+        const cc = localStorage.getItem('cookie_consent');
         localStorage.removeItem('access_token');
         localStorage.removeItem('authToken');
+        if (cc) localStorage.setItem('cookie_consent', cc);
       });
-      await page2.reload();
-      await page2.waitForURL(/login/, { timeout: 10000 });
+      await page2.goto('/dashboard');
+      await page2.waitForURL(/login/, { timeout: 15000 });
 
       await context.close();
     });
@@ -143,11 +153,13 @@ test.describe('WebSocket Communication', () => {
 
   test.describe('Notification System', () => {
 
-    test.beforeEach(async ({ page }) => {
-      await setupMockedAuth(page);
-    });
-
     test('should show error on failed login attempt', async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('cookie_consent', JSON.stringify({
+          essential: true, functional: true, analytics: false,
+          version: '1.0', timestamp: new Date().toISOString(),
+        }));
+      });
       // Override login mock to return 401
       await page.route('**/api/v1/auth/login', route => route.fulfill({
         status: 401,
@@ -166,8 +178,7 @@ test.describe('WebSocket Communication', () => {
       await page.locator('#password').fill('wrongpassword');
       await page.locator('#login-btn').click();
 
-      const errorIndicator = page.locator('.alert-danger, .error, .is-invalid, [class*="error"]');
-      await expect(errorIndicator.first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#alert-container .alert-danger, #alert-container .alert').first()).toBeVisible({ timeout: 10000 });
     });
   });
 });

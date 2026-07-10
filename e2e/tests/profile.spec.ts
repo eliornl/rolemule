@@ -4,6 +4,8 @@ import { generateTestEmail, testProfile } from '../fixtures/test-data';
 
 
 test.describe('Profile Setup', () => {
+  test.describe.configure({ mode: 'serial' });
+
   let profilePage: ProfileSetupPage;
   
   test.beforeEach(async ({ page }) => {
@@ -93,6 +95,13 @@ test.describe('Profile Setup', () => {
     }
     await profilePage.nextStep();
     await page.waitForTimeout(500);
+
+    // Skip education step
+    if (await profilePage.noEducationCheckbox.isVisible().catch(() => false)) {
+      await profilePage.noEducationCheckbox.check();
+    }
+    await profilePage.nextStep();
+    await page.waitForTimeout(500);
     
     // Add skills
     await profilePage.addSkills(['Python', 'JavaScript', 'TypeScript']);
@@ -147,46 +156,43 @@ test.describe('Profile Setup', () => {
 });
 
 test.describe('Profile Management', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  async function registerAndCompleteProfile(page: import('@playwright/test').Page, prefix: string) {
+    const registerPage = new RegisterPage(page);
+    const profilePage = new ProfileSetupPage(page);
+    const email = generateTestEmail(prefix);
+
+    await registerPage.navigate();
+    await registerPage.register({
+      name: 'Profile Management User',
+      email,
+      password: 'ProfileMgmtTest123!',
+      acceptTerms: true,
+    });
+
+    await page.waitForURL(/profile\/setup|dashboard/, { timeout: 20000 });
+    if (page.url().includes('profile/setup')) {
+      await profilePage.quickSetup({
+        title: 'Software Engineer',
+        yearsExperience: 5,
+        skills: ['Python', 'JavaScript'],
+      });
+      await page.waitForURL(/dashboard/, { timeout: 20000 });
+    }
+  }
   
   test.describe('Settings Page Profile', () => {
     
     test('should access settings page when logged in', async ({ page }) => {
-      // Register and complete setup
-      const registerPage = new RegisterPage(page);
-      const email = generateTestEmail('settings_test');
-      
-      await registerPage.navigate();
-      await registerPage.register({
-        name: 'Settings Test User',
-        email: email,
-        password: 'SettingsTestPassword123!',
-        acceptTerms: true,
-      });
-      
-      await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
-      
-      // Navigate to settings
+      await registerAndCompleteProfile(page, 'settings_test');
       await page.goto('/dashboard/settings');
       
       await expect(page).toHaveURL(/settings/);
     });
     
     test('should export user data', async ({ page }) => {
-      // Register
-      const registerPage = new RegisterPage(page);
-      const email = generateTestEmail('export_test');
-      
-      await registerPage.navigate();
-      await registerPage.register({
-        name: 'Export Test User',
-        email: email,
-        password: 'ExportTestPassword123!',
-        acceptTerms: true,
-      });
-      
-      await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
-      
-      // Navigate to settings
+      await registerAndCompleteProfile(page, 'export_test');
       const settingsPage = new SettingsPage(page);
       await settingsPage.navigate();
       
@@ -194,7 +200,7 @@ test.describe('Profile Management', () => {
       await settingsPage.handleCookieConsent();
       
       // Click on Privacy tab to find export button
-      const privacyTab = page.locator('a:has-text("Privacy")');
+      const privacyTab = page.locator('a[data-section="privacy"], .settings-nav a:has-text("Privacy")');
       await privacyTab.click();
       await page.waitForTimeout(500);
       
@@ -215,20 +221,7 @@ test.describe('Profile Management', () => {
     });
     
     test('should show API key configuration section', async ({ page }) => {
-      // Register
-      const registerPage = new RegisterPage(page);
-      const email = generateTestEmail('apikey_section_test');
-      
-      await registerPage.navigate();
-      await registerPage.register({
-        name: 'API Key Section Test User',
-        email: email,
-        password: 'APIKeyTestPassword123!',
-        acceptTerms: true,
-      });
-      
-      // Wait for registration to complete (may take longer)
-      await page.waitForURL(/profile|dashboard/, { timeout: 30000 });
+      await registerAndCompleteProfile(page, 'apikey_section_test');
       
       // Navigate to settings
       const settingsPage = new SettingsPage(page);
@@ -238,7 +231,7 @@ test.describe('Profile Management', () => {
       await settingsPage.handleCookieConsent();
       
       // Click on API Keys tab
-      const apiKeysTab = page.locator('a:has-text("API Keys")');
+      const apiKeysTab = page.locator('a[data-section="apiKeys"], .settings-nav a:has-text("AI Setup")');
       await apiKeysTab.click();
       await page.waitForTimeout(500);
       

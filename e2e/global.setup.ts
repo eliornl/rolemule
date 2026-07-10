@@ -12,7 +12,13 @@ const AUTH_FILE = path.join(__dirname, 'playwright/.auth/user.json');
  * Skips if valid auth state already exists (for faster runs)
  */
 setup('global setup', async ({ page }) => {
-  setup.setTimeout(60000);
+  setup.setTimeout(120000);
+
+  if (process.env.SKIP_SERVER) {
+    console.log('\n⚡ Skipping global setup (SKIP_SERVER=1)\n');
+    return;
+  }
+
   // Ensure auth directory exists
   const authDir = path.dirname(AUTH_FILE);
   if (!fs.existsSync(authDir)) {

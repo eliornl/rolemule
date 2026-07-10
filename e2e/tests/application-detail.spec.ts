@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupAuth as seedAuth, buildMockGetProfileResponse } from '../utils/api-mocks';
 
 /**
  * COMPREHENSIVE APPLICATION DETAIL PAGE TESTS  (/dashboard/application/:id)
@@ -71,14 +72,7 @@ const MOCK_RESULTS = {
 // ---------------------------------------------------------------------------
 
 async function setupAuth(page: any) {
-  await page.addInitScript((token: string) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('cookie_consent', JSON.stringify({
-      essential: true, functional: true, analytics: false,
-      version: '1.0', timestamp: new Date().toISOString()
-    }));
-  }, MOCK_TOKEN);
+  await seedAuth(page);
 }
 
 async function mockCompletedApp(page: any) {
@@ -227,7 +221,7 @@ test.describe('C. Processing State', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500);
     const loadingText = await page.locator('#loadingState').textContent({ timeout: 5000 });
-    expect(loadingText).toMatch(/processing|progress|refresh/i);
+    expect(loadingText).toMatch(/AI Agents|Working|loading|processing|progress|refresh|automatically/i);
   });
 
   test('shows processing message when status is pending', async ({ page }) => {
@@ -313,9 +307,9 @@ test.describe('E. Main Tab Navigation', () => {
     });
   }
 
-  test('company tab is active by default', async ({ page }) => {
-    await expect(page.locator('[data-tab="company"]')).toHaveClass(/active/);
-    await expect(page.locator('#pane-company')).toBeVisible();
+  test('job details tab is active by default', async ({ page }) => {
+    await expect(page.locator('[data-tab="jobdetails"]')).toHaveClass(/active/);
+    await expect(page.locator('#pane-jobdetails')).toBeVisible();
   });
 
   test('clicking "fit" tab shows pane-fit and hides pane-company', async ({ page }) => {
@@ -666,14 +660,9 @@ test.describe('L. Mobile Layout', () => {
   test('application detail page loads on 375px mobile', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const p = await ctx.newPage();
-    await p.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('cookie_consent', JSON.stringify({ essential: true, functional: true, analytics: false, version: '1.0', timestamp: new Date().toISOString() }));
-    }, MOCK_TOKEN);
+    await seedAuth(p);
     await p.route(`**/api/v1/workflow/status/${SESSION_ID}`, (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_STATUS_COMPLETE) }));
     await p.route(`**/api/v1/workflow/results/${SESSION_ID}`, (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_RESULTS) }));
-    await p.route('**/api/v1/profile', (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: 'u1', full_name: 'Test User' }) }));
     await p.goto(PAGE_URL);
     await expect(p.locator('body')).toBeVisible();
     await ctx.close();
@@ -682,18 +671,12 @@ test.describe('L. Mobile Layout', () => {
   test('tabs are scrollable on mobile viewport', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const p = await ctx.newPage();
-    await p.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('cookie_consent', JSON.stringify({ essential: true, functional: true, analytics: false, version: '1.0', timestamp: new Date().toISOString() }));
-    }, MOCK_TOKEN);
+    await seedAuth(p);
     await p.route(`**/api/v1/workflow/status/${SESSION_ID}`, (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_STATUS_COMPLETE) }));
     await p.route(`**/api/v1/workflow/results/${SESSION_ID}`, (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_RESULTS) }));
-    await p.route('**/api/v1/profile', (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_id: 'u1' }) }));
     await p.goto(PAGE_URL);
-    await p.waitForTimeout(3000);
-    // Nav should exist
-    const tabs = p.locator('.nav-tabs, .tab-nav, [role="tablist"]').first();
+    await p.waitForLoadState('domcontentloaded');
+    const tabs = p.locator('.page-tabs').first();
     await expect(tabs).toBeAttached();
     await ctx.close();
   });

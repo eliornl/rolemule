@@ -28,14 +28,14 @@ export class ResetPasswordPage extends BasePage {
     super(page);
     
     // Request reset form (first form on the page)
-    this.emailInput = page.locator('#forgotEmail, input[type="email"]').first();
-    this.requestResetButton = page.locator('#forgotPasswordBtn');
-    this.successMessage = page.locator('#forgotSuccess, .alert-success').first();
+    this.emailInput = page.locator('#email, input[type="email"]').first();
+    this.requestResetButton = page.locator('#forgotBtn');
+    this.successMessage = page.locator('#forgotAlert.alert-success, .alert-success').first();
     
     // Reset with token form (second form, only visible with token)
     this.newPasswordInput = page.locator('#newPassword');
     this.confirmPasswordInput = page.locator('#confirmPassword');
-    this.resetButton = page.locator('#resetPasswordBtn');
+    this.resetButton = page.locator('#resetBtn');
     
     // Navigation
     this.backToLoginLink = page.locator('a[href*="login"], a:has-text("Login"), a:has-text("Back")');

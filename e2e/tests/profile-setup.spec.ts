@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupWebSocketMock, setupCookieConsent, isMockedE2E, getE2EAuthToken } from '../utils/api-mocks';
 
 /**
  * COMPREHENSIVE PROFILE SETUP PAGE TESTS  (/profile/setup)
@@ -28,7 +29,6 @@ import { test, expect } from '@playwright/test';
  */
 
 // Must be a valid 3-part JWT format — profile-setup.js validates token.split('.').length === 3
-const MOCK_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSIsImV4cCI6OTk5OTk5OTk5OX0.fake_sig_for_testing';
 
 const MOCK_PROFILE = {
   id: 'u1',
@@ -39,15 +39,15 @@ const MOCK_PROFILE = {
 };
 
 async function setupAuth(page: any) {
-  await page.addInitScript((token: string) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('authToken', token);
-    // Pre-accept cookie consent — must include version: '1.0' or the banner still shows
-    localStorage.setItem('cookie_consent', JSON.stringify({
-      essential: true, functional: true, analytics: false,
-      version: '1.0', timestamp: new Date().toISOString()
-    }));
-  }, MOCK_TOKEN);
+  await setupCookieConsent(page);
+  if (isMockedE2E) {
+    await setupWebSocketMock(page);
+  }
+  const token = getE2EAuthToken();
+  await page.addInitScript((t: string) => {
+    localStorage.setItem('access_token', t);
+    localStorage.setItem('authToken', t);
+  }, token);
 
   // The profile setup JS calls /api/v1/profile/ (with trailing slash) to load existing data
   await page.route('**/api/v1/profile/**', (route: any) => route.fulfill({
@@ -199,7 +199,6 @@ test.describe('B. Step 0 — Resume Upload', () => {
 
 /** Fill all required fields on step 1 (Basic Info) */
 async function fillStep1Required(page: any) {
-  await page.locator('#full-name').fill('Test User').catch(() => {});
   await page.locator('#city').fill('Tel Aviv');
   await page.locator('#state').fill('Tel Aviv District');
   await page.locator('#country').fill('Israel');
@@ -720,11 +719,12 @@ test.describe('K. Step 1 — Validation & Mobile', () => {
   test('profile setup is visible on 375px mobile viewport', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const p = await ctx.newPage();
-    await p.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
+    const token = getE2EAuthToken();
+    await p.addInitScript((t: string) => {
+      localStorage.setItem('access_token', t);
+      localStorage.setItem('authToken', t);
       localStorage.setItem('cookie_consent', JSON.stringify({ essential: true, functional: true, analytics: false, version: '1.0', timestamp: new Date().toISOString() }));
-    }, MOCK_TOKEN);
+    }, token);
     await p.route('**/api/v1/profile/**', (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user_info: MOCK_PROFILE, profile_data: {} }) }));
     await p.route('**/api/v1/profile', (route: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_PROFILE) }));
     await p.goto('/profile/setup');
@@ -743,27 +743,16 @@ test.describe('L. Step 4 — Skills Extended', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.locator('#skip-resume-btn').click();
     await page.waitForTimeout(300);
-    // Fill step 1 minimally
-    const title = page.locator('#professional-title');
-    if (await title.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await title.fill('Engineer');
-    }
+    await fillStep1Required(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(400);
-    // Step 2 - check "no experience"
-    const noExp = page.locator('#no-experience');
-    if (await noExp.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await noExp.check();
-    }
+    await fillStep2Required(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(400);
-    const noEd = page.locator('#no-education');
-    if (await noEd.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await noEd.check();
-    }
+    await fillStep3Education(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(400);
-    await page.locator('#step-4').waitFor({ state: 'visible', timeout: 5000 });
+    await page.locator('#step-4.active, #step-4').waitFor({ state: 'visible', timeout: 5000 });
   }
 
   test('skill input element is present on step 4', async ({ page }) => {
@@ -794,26 +783,19 @@ test.describe('M. Completion Flow', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.locator('#skip-resume-btn').click();
     await page.waitForTimeout(300);
-    const title = page.locator('#professional-title');
-    if (await title.isVisible({ timeout: 2000 }).catch(() => false)) await title.fill('Engineer');
+    await fillStep1Required(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(400);
-    const noExp = page.locator('#no-experience');
-    if (await noExp.isVisible({ timeout: 2000 }).catch(() => false)) await noExp.check();
+    await fillStep2Required(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(400);
-    const noEd = page.locator('#no-education');
-    if (await noEd.isVisible({ timeout: 2000 }).catch(() => false)) await noEd.check();
+    await fillStep3Education(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(400);
-    const skillInput = page.locator('#skills-input');
-    if (await skillInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skillInput.fill('Python');
-      await skillInput.press('Enter');
-    }
+    await fillStep4Skills(page);
     await page.locator('#next-btn').click();
     await page.waitForTimeout(500);
-    await page.locator('#step-5').waitFor({ state: 'visible', timeout: 5000 });
+    await page.locator('#step-5.active, #step-5').waitFor({ state: 'visible', timeout: 5000 });
     await expect(page.locator('#complete-btn')).toBeAttached();
   });
 });

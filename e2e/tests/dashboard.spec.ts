@@ -4,87 +4,70 @@ import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 
 test.describe('Dashboard', () => {
-  let email: string;
-  let password = 'DashboardTestPassword123!';
+  const email = 'dashboard-mock@example.com';
+  const password = 'DashboardTestPassword123!';
   
-  test.beforeAll(async ({ browser }) => {
-    // Create a user with completed profile for dashboard tests
-    const page = await browser.newPage();
-    const registerPage = new RegisterPage(page);
-    const profilePage = new ProfileSetupPage(page);
+  test.describe('Navigation (Mocked)', () => {
     
-    email = generateTestEmail('dashboard_test');
-    
-    await registerPage.navigate();
-    await registerPage.register({
-      name: 'Dashboard Test User',
-      email: email,
-      password: password,
-      acceptTerms: true,
+    test.beforeEach(async ({ page }) => {
+      await setupAuth(page);
+      await setupAllMocks(page);
+    });
+
+    test('should display dashboard after login', async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('domcontentloaded');
+      const dashboardPage = new DashboardPage(page);
+      await dashboardPage.skipOnboarding();
+      await dashboardPage.verifyLoaded();
+    });
+
+    test('should navigate to new application page', async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('domcontentloaded');
+      const dashboardPage = new DashboardPage(page);
+      await dashboardPage.skipOnboarding();
+      await dashboardPage.goToNewApplication();
+      await expect(page).toHaveURL(/new-application/);
+    });
+
+    test('should navigate to settings page', async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('domcontentloaded');
+      const dashboardPage = new DashboardPage(page);
+      await dashboardPage.skipOnboarding();
+      await dashboardPage.goToSettings();
+      await expect(page).toHaveURL(/settings/);
+    });
+
+    test('should navigate to career tools page', async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('domcontentloaded');
+      const dashboardPage = new DashboardPage(page);
+      await dashboardPage.skipOnboarding();
+      await dashboardPage.goToTools();
+      await expect(page).toHaveURL(/tools/);
+    });
+  });
+
+  test.describe('Navigation (Live Server)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    test.beforeEach(async ({ page }) => {
+      await setupAuth(page);
     });
     
-    await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
-    
-    // Complete profile if needed
-    if (page.url().includes('profile/setup')) {
-      await profilePage.quickSetup({
-        title: 'Software Engineer',
-        yearsExperience: 5,
-        skills: ['Python', 'JavaScript'],
-      });
-    }
-    
-    await page.close();
-  });
-  
-  test.describe('Navigation', () => {
-    
     test('should display dashboard after login', async ({ page }) => {
-      // Login
-      await page.goto('/auth/login');
-      await page.locator('#email').fill(email);
-      await page.locator('#password').fill(password);
-      await page.locator('#login-btn').click();
-      
-      // After login, user may go to profile/setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // If on profile setup, complete it
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       await dashboardPage.verifyLoaded();
     });
     
     test('should navigate to new application page', async ({ page }) => {
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      // Wait for either profile setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // Complete profile setup if needed
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       
@@ -94,25 +77,8 @@ test.describe('Dashboard', () => {
     });
     
     test('should navigate to settings page', async ({ page }) => {
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      // Wait for either profile setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // Complete profile setup if needed
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       
@@ -122,25 +88,8 @@ test.describe('Dashboard', () => {
     });
     
     test('should navigate to career tools page', async ({ page }) => {
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      // Wait for either profile setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // Complete profile setup if needed
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       
@@ -150,25 +99,8 @@ test.describe('Dashboard', () => {
     });
     
     test('should navigate to help page', async ({ page }) => {
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      // Wait for either profile setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // Complete profile setup if needed
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       
@@ -178,7 +110,7 @@ test.describe('Dashboard', () => {
     });
   });
   
-  test.describe('Onboarding', () => {
+  test.describe('Onboarding (Live Server)', () => {
     
     test('should show onboarding for new users', async ({ page, context }) => {
       // Clear localStorage to simulate new user
@@ -305,28 +237,14 @@ test.describe('Dashboard', () => {
     });
   });
   
-  test.describe('Content', () => {
+  test.describe('Content (Live Server)', () => {
+    test.beforeEach(async ({ page }) => {
+      await setupAuth(page);
+    });
     
     test('should display welcome message', async ({ page }) => {
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      // Wait for either profile setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // Complete profile setup if needed
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       
@@ -336,25 +254,8 @@ test.describe('Dashboard', () => {
     });
     
     test('should display stats or summary section', async ({ page }) => {
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      // Wait for either profile setup or dashboard
-      await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-      
-      // Complete profile setup if needed
-      if (page.url().includes('profile/setup')) {
-        const profilePage = new ProfileSetupPage(page);
-        await profilePage.quickSetup({
-          title: 'Software Engineer',
-          yearsExperience: 5,
-          skills: ['Python', 'JavaScript'],
-        });
-        await page.waitForURL(/dashboard/, { timeout: 15000 });
-      }
-      
+      await page.goto('/dashboard');
+      await page.waitForURL(/dashboard/, { timeout: 15000 });
       const dashboardPage = new DashboardPage(page);
       await dashboardPage.skipOnboarding();
       
@@ -458,7 +359,7 @@ test.describe('Mocked Dashboard — Structure', () => {
   test('main content area is present', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
-    const main = page.locator('main, #main-content, .main-content, #dashboardContent').first();
+    const main = page.locator('.dashboard-container, .page-container, #mainContent').first();
     await expect(main).toBeAttached();
   });
 
@@ -545,10 +446,8 @@ test.describe('Mocked Dashboard — Application List', () => {
   });
 
   test('/dashboard/history returns 404 (route removed)', async ({ page }) => {
-    await page.goto('/dashboard/history');
-    await page.waitForLoadState('domcontentloaded');
-    // Route is gone — body still renders (404 page) but URL is no longer /dashboard/history
-    expect(page.url()).not.toMatch(/\/dashboard\/history$/);
+    const response = await page.goto('/dashboard/history');
+    expect(response?.status()).toBe(404);
   });
 
   test('authenticated user stays on dashboard (not redirected to login)', async ({ page }) => {

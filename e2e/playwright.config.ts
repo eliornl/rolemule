@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+
+const AUTH_FILE = path.join(__dirname, 'playwright/.auth/user.json');
 
 /**
  * Playwright configuration for ApplyPilot E2E tests.
@@ -18,6 +21,7 @@ import { defineConfig, devices } from '@playwright/test';
 // Determine if running smoke tests only
 const isSmoke = !!process.env.SMOKE;
 const isCI = !!process.env.CI;
+const isMockedE2E = !!process.env.SKIP_SERVER;
 
 export default defineConfig({
   // Test directory
@@ -38,7 +42,7 @@ export default defineConfig({
   // Workers: Playwright tests are I/O bound, so we can use more workers than CPUs
   // GitHub Actions: use 10 workers (tests wait on network/DB, not CPU)
   // Local: use 6 workers (balance between speed and resource usage)
-  workers: isSmoke ? 4 : (isCI ? 10 : 6),
+  workers: isSmoke ? 4 : (isMockedE2E ? (isCI ? 10 : 6) : (isCI ? 4 : 3)),
   
   // Reporter configuration - minimal in CI smoke for speed
   reporter: isSmoke 
@@ -154,7 +158,9 @@ export default defineConfig({
   webServer: process.env.SKIP_SERVER ? undefined : {
     command: 'cd .. && uvicorn main:app --host 0.0.0.0 --port 8000',
     url: 'http://localhost:8000/health',
-    reuseExistingServer: !isCI,
+    // Default: start a dedicated server with TESTING=true. Reuse only when explicitly
+    // requested (dev server must also be started with TESTING=true / make start-local).
+    reuseExistingServer: !!process.env.REUSE_DEV_SERVER,
     timeout: 120000,
     env: {
       DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql+asyncpg://applypilot:applypilot@localhost:5432/applypilot',

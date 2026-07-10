@@ -31,10 +31,6 @@ export async function apiCall(
   path: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  if (window.app && typeof window.app.apiCall === 'function') {
-    return window.app.apiCall(path, options);
-  }
-
   const token = getAuthToken();
   const headers = new Headers(options.headers || {});
   if (token) headers.set('Authorization', `Bearer ${token}`);

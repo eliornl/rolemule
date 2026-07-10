@@ -33,3 +33,35 @@ export interface PaginatedResponse {
   has_prev: boolean;
   has_next: boolean;
 }
+
+export interface DashboardApplication {
+  id: string;
+  workflow_session_id?: string;
+  status?: string;
+  job_title?: string;
+  company_name?: string;
+  created_at?: string;
+  updated_at?: string;
+  match_score?: number;
+}
+
+export interface ApplicationsListResponse {
+  total: number;
+  applications: DashboardApplication[];
+}
+
+export interface ApplicationStatsResponse {
+  total: number;
+  applied: number;
+  interviews: number;
+  response_rate: number;
+}
+
+export interface WorkflowStartResponse {
+  session_id?: string;
+}
+
+export interface WorkflowStatusResponse {
+  status?: string;
+  error_messages?: string[];
+}

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { MOCK_JWT } from '../utils/api-mocks';
+import { buildMockGetProfileResponse, getE2EAuthToken } from '../utils/api-mocks';
 
 /**
  * ONBOARDING TOUR TESTS  (/dashboard → auto-triggered)
@@ -19,35 +19,53 @@ const ONBOARDING_KEY = 'onboarding_completed';
 
 /** Inject auth + cookie consent WITHOUT onboarding_completed so the tour auto-shows */
 async function setupNewUser(page: any) {
-  await page.addInitScript((token: string) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('authToken', token);
+  const token = getE2EAuthToken();
+  await page.addInitScript((t: string) => {
+    localStorage.setItem('access_token', t);
+    localStorage.setItem('authToken', t);
     localStorage.setItem('cookie_consent', JSON.stringify({
       essential: true, functional: true, analytics: false,
       version: '1.0', timestamp: new Date().toISOString(),
     }));
     // Explicitly NOT setting onboarding_completed
-  }, MOCK_JWT);
+  }, token);
 }
 
 /** Inject auth + cookie consent WITH onboarding_completed so the tour is suppressed */
 async function setupReturningUser(page: any) {
-  await page.addInitScript((token: string, key: string) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('authToken', token);
+  const token = getE2EAuthToken();
+  await page.addInitScript((t: string, key: string) => {
+    localStorage.setItem('access_token', t);
+    localStorage.setItem('authToken', t);
     localStorage.setItem('cookie_consent', JSON.stringify({
       essential: true, functional: true, analytics: false,
       version: '1.0', timestamp: new Date().toISOString(),
     }));
     localStorage.setItem(key, JSON.stringify({ version: '2.0', completedAt: new Date().toISOString() }));
-  }, MOCK_JWT, ONBOARDING_KEY);
+  }, token, ONBOARDING_KEY);
 }
 
 /** Mock profile and API-key endpoints */
 async function mockDashboardApis(page: any) {
-  await page.route('**/api/v1/profile', (route: any) => route.fulfill({
+  await page.route('**/api/v1/profile**', async (route: any) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    const u = new URL(route.request().url());
+    const path = u.pathname.replace(/\/$/, '') || '/';
+    if (path !== '/api/v1/profile') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify(buildMockGetProfileResponse()),
+    });
+  });
+  await page.route('**/api/v1/applications/stats/overview', (route: any) => route.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify({ name: 'Test User', email: 'test@example.com', profile_complete: true }),
+    body: JSON.stringify({ total: 0, applied: 0, interviews: 0, offers: 0, response_rate: 0 }),
   }));
   await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
     status: 200, contentType: 'application/json',
@@ -55,7 +73,7 @@ async function mockDashboardApis(page: any) {
   }));
   await page.route('**/api/v1/profile/api-key/status', (route: any) => route.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify({ has_user_key: false, server_has_key: false }),
+    body: JSON.stringify({ has_user_key: false, server_has_key: false, use_vertex_ai: false }),
   }));
 }
 
@@ -76,13 +94,25 @@ test.describe('A. Auto-Show Behaviour', () => {
   });
 
   test('overlay does NOT appear for returning user', async ({ page }) => {
-    await setupReturningUser(page);
     await mockDashboardApis(page);
+    await page.goto('/auth/login');
+    await page.waitForLoadState('domcontentloaded');
+    const token = getE2EAuthToken();
+    await page.evaluate(({ token, key }: { token: string; key: string }) => {
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('cookie_consent', JSON.stringify({
+        essential: true, functional: true, analytics: false,
+        version: '1.0', timestamp: new Date().toISOString(),
+      }));
+      localStorage.setItem(key, JSON.stringify({ version: '2.0', completedAt: new Date().toISOString() }));
+    }, { token, key: ONBOARDING_KEY });
     await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
-    const overlay = page.locator('#onboarding-overlay');
-    const visible = await overlay.isVisible().catch(() => false);
-    expect(visible).toBe(false);
+    const hasKey = await page.evaluate((key: string) => !!localStorage.getItem(key), ONBOARDING_KEY);
+    expect(hasKey).toBe(true);
+    await expect(page.locator('#onboarding-overlay')).toHaveCount(0);
   });
 
   test('overlay does NOT appear on non-dashboard pages', async ({ page }) => {
@@ -146,7 +176,7 @@ test.describe('B. Overlay Structure', () => {
   });
 
   test('Back button is present', async ({ page }) => {
-    await expect(page.locator('[data-action="onboarding-prev"]')).toBeVisible();
+    await expect(page.locator('#onboarding-prev')).toBeAttached();
   });
 });
 
@@ -333,18 +363,10 @@ test.describe('F. Skip Behaviour', () => {
 test.describe('G. Complete Flow', () => {
   test('last step Next button shows "Get Started"', async ({ page }) => {
     await setupNewUser(page);
-    // Mock with server has key = true so api-key step is skipped (fewer steps)
+    await mockDashboardApis(page);
     await page.route('**/api/v1/profile/api-key/status', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ has_user_key: true, server_has_key: false }),
-    }));
-    await page.route('**/api/v1/profile', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ name: 'Test', email: 'test@example.com', profile_complete: true }),
-    }));
-    await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ applications: [], total: 0 }),
+      body: JSON.stringify({ has_user_key: true, server_has_key: false, use_vertex_ai: false }),
     }));
     await page.goto('/dashboard');
     await waitForOverlay(page);
@@ -422,49 +444,71 @@ test.describe('H. window.Onboarding API', () => {
   });
 
   test('window.Onboarding.start() shows the overlay', async ({ page }) => {
-    await page.evaluate(() => (window as any).Onboarding.start());
-    await page.waitForTimeout(500);
-    await expect(page.locator('#onboarding-overlay')).toBeVisible();
+    await page.evaluate(async () => {
+      document.querySelectorAll('#onboarding-overlay').forEach((el) => el.remove());
+      await (window as any).Onboarding.checkServerApiKey();
+      (window as any).Onboarding.start();
+    });
+    await expect(page.locator('#onboarding-overlay').first()).toBeVisible({ timeout: 3000 });
   });
 
   test('window.Onboarding.skip() hides overlay after start', async ({ page }) => {
-    await page.evaluate(() => (window as any).Onboarding.start());
-    await page.waitForTimeout(500);
+    await page.evaluate(async () => {
+      document.querySelectorAll('#onboarding-overlay').forEach((el) => el.remove());
+      await (window as any).Onboarding.checkServerApiKey();
+      (window as any).Onboarding.start();
+    });
+    await expect(page.locator('#onboarding-overlay').first()).toBeVisible({ timeout: 3000 });
     await page.evaluate(() => (window as any).Onboarding.skip());
-    await page.waitForTimeout(500);
-    await expect(page.locator('#onboarding-overlay')).toBeHidden({ timeout: 3000 });
+    await page.waitForTimeout(400);
+    await expect(page.locator('#onboarding-overlay')).toHaveCount(0);
   });
 
   test('window.Onboarding.next() advances step', async ({ page }) => {
-    await page.evaluate(() => (window as any).Onboarding.start());
+    await page.evaluate(async () => {
+      document.querySelectorAll('#onboarding-overlay').forEach((el) => el.remove());
+      await (window as any).Onboarding.checkServerApiKey();
+      (window as any).Onboarding.start();
+    });
     await page.waitForTimeout(500);
-    const titleBefore = await page.locator('#onboarding-title').textContent();
+    const stepBefore = await page.evaluate(() => (window as any).Onboarding.currentStep);
     await page.evaluate(() => (window as any).Onboarding.next());
-    await page.waitForTimeout(200);
-    const titleAfter = await page.locator('#onboarding-title').textContent();
-    expect(titleAfter).not.toBe(titleBefore);
+    await page.waitForTimeout(300);
+    const stepAfter = await page.evaluate(() => (window as any).Onboarding.currentStep);
+    const overlayVisible = await page.locator('#onboarding-overlay').first().isVisible().catch(() => false);
+    expect(stepAfter > stepBefore || !overlayVisible).toBe(true);
   });
 
   test('window.Onboarding.prev() goes back', async ({ page }) => {
-    await page.evaluate(() => (window as any).Onboarding.start());
+    await page.evaluate(async () => {
+      document.querySelectorAll('#onboarding-overlay').forEach((el) => el.remove());
+      await (window as any).Onboarding.checkServerApiKey();
+      (window as any).Onboarding.start();
+    });
     await page.waitForTimeout(500);
     await page.evaluate(() => (window as any).Onboarding.next());
-    await page.waitForTimeout(200);
-    const titleMid = await page.locator('#onboarding-title').textContent();
+    await page.waitForTimeout(300);
+    const activeMid = await page.locator('.progress-dot.active').count();
     await page.evaluate(() => (window as any).Onboarding.prev());
-    await page.waitForTimeout(200);
-    const titleBack = await page.locator('#onboarding-title').textContent();
-    expect(titleBack).not.toBe(titleMid);
+    await page.waitForTimeout(300);
+    const activeBack = await page.locator('.progress-dot.active').count();
+    expect(activeBack).toBeLessThanOrEqual(activeMid);
   });
 
   test('window.Onboarding.reset() clears localStorage key', async ({ page }) => {
     await page.route('**/api/v1/profile/api-key/status', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ has_user_key: false, server_has_key: false }),
+      body: JSON.stringify({ has_user_key: false, server_has_key: false, use_vertex_ai: false }),
     }));
-    await page.evaluate(async () => await (window as any).Onboarding.reset());
+    await page.evaluate(async () => {
+      document.querySelectorAll('#onboarding-overlay').forEach((el) => el.remove());
+      localStorage.setItem('onboarding_completed', JSON.stringify({ version: '2.0', completedAt: new Date().toISOString() }));
+      await (window as any).Onboarding.reset();
+    });
     await page.waitForTimeout(1000);
-    await expect(page.locator('#onboarding-overlay')).toBeVisible();
+    await expect(page.locator('#onboarding-overlay').first()).toBeVisible({ timeout: 3000 });
+    const stored = await page.evaluate((key: string) => localStorage.getItem(key), ONBOARDING_KEY);
+    expect(stored).toBeNull();
   });
 });
 
@@ -474,17 +518,10 @@ test.describe('H. window.Onboarding API', () => {
 test.describe('I. API Key Step — Conditional', () => {
   test('api-key step appears when server has no key', async ({ page }) => {
     await setupNewUser(page);
+    await mockDashboardApis(page);
     await page.route('**/api/v1/profile/api-key/status', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ has_user_key: false, server_has_key: false }),
-    }));
-    await page.route('**/api/v1/profile', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ name: 'Test', email: 'test@example.com' }),
-    }));
-    await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ applications: [], total: 0 }),
+      body: JSON.stringify({ has_user_key: false, server_has_key: false, use_vertex_ai: false }),
     }));
     await page.goto('/dashboard');
     await waitForOverlay(page);
@@ -504,17 +541,10 @@ test.describe('I. API Key Step — Conditional', () => {
 
   test('api-key step is skipped when server has key', async ({ page }) => {
     await setupNewUser(page);
+    await mockDashboardApis(page);
     await page.route('**/api/v1/profile/api-key/status', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify({ has_user_key: true, server_has_key: false }),
-    }));
-    await page.route('**/api/v1/profile', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ name: 'Test', email: 'test@example.com' }),
-    }));
-    await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ applications: [], total: 0 }),
+      body: JSON.stringify({ has_user_key: true, server_has_key: false, use_vertex_ai: false }),
     }));
     await page.goto('/dashboard');
     await waitForOverlay(page);

@@ -34,8 +34,8 @@ export class DashboardPage extends BasePage {
     this.navbar = page.locator('nav.navbar').first();
     this.helpLink = page.locator('a[href*="help"], a:has-text("Help")');
     this.settingsLink = page.locator('a[href*="settings"], a:has-text("Settings")');
-    this.logoutButton = page.locator('a:has-text("Logout"), button:has-text("Sign Out")');
-    this.newApplicationButton = page.locator('a[href*="new-application"], button:has-text("New Application"), button:has-text("Analyze Job")');
+    this.logoutButton = page.locator('[data-action="logout"]');
+    this.newApplicationButton = page.locator('a[href*="new-application"], button:has-text("New Application"), a:has-text("New Application"), a:has-text("Analyze Job")');
     this.historyLink = page.locator('a[href*="history"], a:has-text("History")');
     this.toolsLink = page.locator('a[href*="tools"], a:has-text("Tools"), a:has-text("Career Tools")');
     
