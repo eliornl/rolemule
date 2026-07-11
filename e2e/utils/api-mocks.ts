@@ -29,11 +29,13 @@ export function readLiveAuthToken(): string | null {
  * API Mocking utilities for comprehensive E2E testing
  * Allows testing full workflows without real backend/API keys
  *
- * When SKIP_SERVER=1 (mocked Tier 1): inject fake JWT + intercept all API/WS traffic.
- * When the live server is used (default): rely on playwright storageState from
+ * When SKIP_SERVER=1 or SMOKE=1 (mocked Tier 1 / PR smoke gate): inject fake JWT +
+ * intercept API/WS traffic. SMOKE still starts uvicorn for HTML/assets; only API auth
+ * is mocked.
+ * When the live server is used without SMOKE: rely on playwright storageState from
  * global.setup.ts — never inject MOCK_JWT or WebSocket mocks (that causes server warnings).
  */
-export const isMockedE2E = !!process.env.SKIP_SERVER;
+export const isMockedE2E = !!(process.env.SKIP_SERVER || process.env.SMOKE);
 
 // ============================================================================
 // MOCK DATA

@@ -18,7 +18,7 @@ import { defineConfig, devices } from '@playwright/test';
 // Determine if running smoke tests only
 const isSmoke = !!process.env.SMOKE;
 const isCI = !!process.env.CI;
-const isMockedE2E = !!process.env.SKIP_SERVER;
+const isMockedE2E = !!(process.env.SKIP_SERVER || process.env.SMOKE);
 
 export default defineConfig({
   // Test directory
