@@ -588,15 +588,16 @@ export async function setupAuthMocks(page: Page): Promise<void> {
     });
   });
   
-  // Verify token
+  // Verify token — must match GET /api/v1/auth/verify (job-application-assistant checks success)
   await page.route('**/api/v1/auth/verify', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        valid: true,
+        success: true,
         user_id: mockUser.id,
         email: mockUser.email,
+        profile_completed: mockUser.profile_completed,
       }),
     });
   });

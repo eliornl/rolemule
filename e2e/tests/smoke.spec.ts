@@ -74,7 +74,7 @@ async function mockInterviewPrepGenerateState(page: Page): Promise<void> {
 }
 
 async function expectPageDistScriptsLoad(page: Page, path: string): Promise<void> {
-  await page.goto(path);
+  await page.goto(path, { waitUntil: 'load' });
   await page.waitForLoadState('domcontentloaded');
   const scriptSrcs = await page.locator('script[src*="/static/dist/js/"]').evaluateAll((nodes) =>
     nodes
