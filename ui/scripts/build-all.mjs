@@ -5,7 +5,7 @@
  * 3) Merge vite-manifest.json over legacy manifest (TS wins on same key)
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,13 +32,17 @@ run(process.execPath, ['build.mjs']);
 // 2) Vite TS entries
 run(process.execPath, ['scripts/build-vite.mjs']);
 
+function readJsonOrEmpty(filePath) {
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
 // 3) Merge manifests — Vite overrides legacy for the same key
-const legacy = existsSync(MANIFEST)
-  ? JSON.parse(readFileSync(MANIFEST, 'utf8'))
-  : {};
-const vite = existsSync(VITE_MANIFEST)
-  ? JSON.parse(readFileSync(VITE_MANIFEST, 'utf8'))
-  : {};
+const legacy = readJsonOrEmpty(MANIFEST);
+const vite = readJsonOrEmpty(VITE_MANIFEST);
 
 const viteKeys = new Set(Object.keys(vite));
 const merged = { ...legacy, ...vite };

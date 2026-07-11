@@ -14,8 +14,8 @@ const AUTH_FILE = path.join(__dirname, 'playwright/.auth/user.json');
 setup('global setup', async ({ page }) => {
   setup.setTimeout(120000);
 
-  if (process.env.SKIP_SERVER) {
-    console.log('\n⚡ Skipping global setup (SKIP_SERVER=1)\n');
+  if (process.env.SKIP_SERVER || process.env.SMOKE) {
+    console.log('\n⚡ Skipping global setup (mocked/smoke mode)\n');
     return;
   }
 

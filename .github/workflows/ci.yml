@@ -298,7 +298,6 @@ jobs:
         working-directory: e2e
         env:
           CI: "1"
-          SKIP_SERVER: "1"
           SMOKE: "1"
         run: npx playwright test tests/smoke.spec.ts --grep @smoke --project=chromium --workers=4
       - uses: actions/upload-artifact@v4

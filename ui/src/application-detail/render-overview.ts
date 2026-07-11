@@ -666,7 +666,7 @@ export function renderMainContent(
 
     if (hasGlance) {
         const educLabel = (() => {
-            if (!educationReqs) return '';
+            if (educationReqs == null) return '';
             if (typeof educationReqs === 'object') {
                 const edu = asResumeRecord(educationReqs);
                 if (edu['required'] === false) return '';

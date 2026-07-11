@@ -24,25 +24,22 @@ export function decodeEntities(str: string | null | undefined): string {
     .replace(/&gt;/g, '>');
 }
 
+/** Encode decoded text for safe insertion into HTML (no DOM round-trip). */
+function encodeHtmlText(decoded: string): string {
+  return decoded
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /**
  * Decode entities then escape for safe insertion into HTML.
- * Uses textContent → innerHTML so the browser handles encoding.
  */
 export function escapeHtml(str: string | null | undefined): string {
   if (str == null) return '';
-  const decoded = decodeEntities(str);
-  if (typeof document === 'undefined') {
-    // Node/Vitest fallback (no DOM)
-    return decoded
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-  const div = document.createElement('div');
-  div.textContent = decoded;
-  return div.innerHTML;
+  return encodeHtmlText(decodeEntities(str));
 }
 
 export function stripHtmlForAlert(text: string | null | undefined): string {
