@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth as seedAuth, buildMockGetProfileResponse } from '../utils/api-mocks';
+import { setupAuth as seedAuth } from '../utils/api-mocks';
 
 /**
  * COMPREHENSIVE APPLICATION DETAIL PAGE TESTS  (/dashboard/application/:id)

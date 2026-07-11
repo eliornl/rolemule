@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth as seedBaseAuth, setupWebSocketMock, buildMockGetProfileResponse, isMockedE2E, MOCK_JWT } from '../utils/api-mocks';
+import { setupAuth as seedBaseAuth, setupWebSocketMock, buildMockGetProfileResponse, isMockedE2E } from '../utils/api-mocks';
 
 /**
  * COMPREHENSIVE DASHBOARD PAGES TESTS

@@ -5,7 +5,6 @@ import { generateTestEmail } from '../fixtures/test-data';
 /**
  * Accessibility tests following WCAG 2.1 guidelines
  */
-const tier1MockedOnly = !!process.env.SKIP_SERVER;
 
 test.describe('Accessibility', () => {
   

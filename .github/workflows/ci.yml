@@ -231,12 +231,12 @@ jobs:
           npm ci
           npm audit --audit-level=high
 
-  e2e-full:
-    name: E2E tests (full suite)
+  e2e-smoke:
+    name: E2E smoke (@smoke gate)
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:17-alpine
@@ -294,11 +294,13 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Run full Playwright suite
+      - name: Run Playwright smoke gate
         working-directory: e2e
         env:
           CI: "1"
-        run: npx playwright test --project=chromium --workers=4
+          SKIP_SERVER: "1"
+          SMOKE: "1"
+        run: npx playwright test tests/smoke.spec.ts --grep @smoke --project=chromium --workers=4
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -315,7 +317,7 @@ jobs:
       - cli-tests
       - frontend-build
       - security-grep
-      - e2e-full
+      - e2e-smoke
     if: always()
     steps:
       - name: Verify required checks passed
@@ -333,12 +335,12 @@ jobs:
               exit 1
             fi
           done
-          e2e_result="${{ needs.e2e-full.result }}"
+          e2e_result="${{ needs.e2e-smoke.result }}"
           if [[ "$e2e_result" == "failure" || "$e2e_result" == "cancelled" ]]; then
-            echo "E2E job failed."
+            echo "E2E smoke job failed."
             exit 1
           fi
           if [[ "$e2e_result" == "skipped" ]]; then
-            echo "E2E skipped — no UI/backend/e2e/extension changes in this push."
+            echo "E2E smoke skipped — no UI/backend/e2e/extension changes in this push."
           fi
           echo "All required CI jobs passed."

@@ -11,7 +11,6 @@ import {
 } from '../shared/auth-session';
 import { stripHtmlForAlert } from '../shared/dom-security';
 import { validateRegisterEmail } from '../shared/auth-validation';
-import { validateStrongPassword } from '../shared/auth-ui';
 
 const REDIRECT_DELAY = 2000;
 

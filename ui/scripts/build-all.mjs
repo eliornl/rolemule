@@ -50,9 +50,7 @@ for (const key of viteKeys) {
   const legacyRel = legacy[key];
   if (legacyRel && legacyRel !== vite[key]) {
     const legacyPath = join(OUT_DIR, legacyRel);
-    if (existsSync(legacyPath)) {
-      try { unlinkSync(legacyPath); } catch { /* ignore */ }
-    }
+    try { unlinkSync(legacyPath); } catch { /* ignore missing */ }
   }
 }
 

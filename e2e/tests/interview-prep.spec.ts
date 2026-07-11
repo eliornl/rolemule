@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth as seedAuth, buildMockGetProfileResponse, isMockedE2E, getE2EAuthToken } from '../utils/api-mocks';
+import { setupAuth as seedAuth, buildMockGetProfileResponse, getE2EAuthToken } from '../utils/api-mocks';
 
 /**
  * COMPREHENSIVE INTERVIEW PREP PAGE TESTS  (/dashboard/interview-prep/:session_id)

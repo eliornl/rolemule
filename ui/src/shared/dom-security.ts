@@ -47,11 +47,7 @@ export function escapeHtml(str: string | null | undefined): string {
 
 export function stripHtmlForAlert(text: string | null | undefined): string {
   if (text == null) return '';
-  if (typeof DOMParser === 'undefined') {
-    return String(text).replace(/<[^>]*>/g, '');
-  }
-  const doc = new DOMParser().parseFromString(String(text), 'text/html');
-  return doc.body.textContent || '';
+  return String(text).replace(/<[^>]*>/g, '');
 }
 
 /** Allow only same-origin relative paths for post-auth redirects. */

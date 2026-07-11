@@ -5,7 +5,6 @@ export function injectPostHogStub(): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (function (t: Document, e: any) {
     let o: number;
-    let n: number;
     let p: HTMLScriptElement;
     let r: HTMLScriptElement;
     if (!e.__SV) {

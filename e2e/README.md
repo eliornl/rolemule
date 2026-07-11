@@ -47,7 +47,7 @@ All routes intercepted via `page.route()`. No live server, no database, no LLM n
 | `security.spec.ts` | 40 | XSS prevention, JWT format, CSP headers, API security |
 | `extension.spec.ts` | 39 | Manifest V3, content script, service worker, popup JS |
 | `error-handling.spec.ts` | 39 | 401/403/429/500 responses, network errors, form validation |
-| `smoke.spec.ts` | 38 | Critical path — first CI gate |
+| `smoke.spec.ts` | 46 | Critical path — `@smoke` PR gate + optional `@live` registration |
 | `workflow-mocked.spec.ts` | 31 | Workflow processing/complete/error/access-control (mocked) |
 | `form-edge-cases.spec.ts` | 29 | Unicode, boundary values, special chars, XSS injection |
 | `auth-complete.spec.ts` | 29 | Google OAuth (mocked), email verification, account lockout |
@@ -90,8 +90,11 @@ npx playwright test \
   journey form-edge-cases performance accessibility websocket file-upload \
   --project=chromium --workers=4
 
-# Smoke gate only (~3 min)
-SMOKE=1 npx playwright test tests/smoke.spec.ts --project=chromium
+# Smoke gate only (~3 min, mocked — use in PR CI)
+SMOKE=1 SKIP_SERVER=1 npx playwright test tests/smoke.spec.ts --grep @smoke --project=chromium
+
+# Live registration smoke (local / nightly)
+SMOKE=1 npx playwright test tests/smoke.spec.ts --grep @live --project=chromium
 
 # Sharded (4 parallel jobs, ~4 min total)
 npx playwright test --project=chromium --shard=1/4
@@ -126,8 +129,9 @@ npx playwright test tests/auth.spec.ts tests/tools.spec.ts --project=chromium
 | Command | Description |
 |---------|-------------|
 | `npm test` | Run all tests |
-| `npm run test:smoke` | Smoke tests only (~3 min) |
-| `npm run test:smoke:ci` | Smoke tests for CI |
+| `npm run test:smoke` | All smoke tests (`@smoke` + `@live`) |
+| `npm run test:smoke:ci` | Mocked PR gate only (`@smoke`, ~3 min) |
+| `npm run test:smoke:live` | Live registration smoke only (`@live`) |
 | `npm run test:ci` | Full Tier 1 suite for CI |
 | `npm run test:headed` | Visible browser window |
 | `npm run test:ui` | Interactive Playwright UI |

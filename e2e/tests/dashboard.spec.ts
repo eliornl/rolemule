@@ -4,9 +4,6 @@ import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 
 test.describe('Dashboard', () => {
-  const email = 'dashboard-mock@example.com';
-  const password = 'DashboardTestPassword123!';
-  
   test.describe('Navigation (Mocked)', () => {
     
     test.beforeEach(async ({ page }) => {

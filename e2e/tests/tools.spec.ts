@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { RegisterPage, ProfileSetupPage, DashboardPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
-import { setupCookieConsent, getE2EAuthToken } from '../utils/api-mocks';
+import { setupCookieConsent } from '../utils/api-mocks';
 
 let toolsAuthToken = '';
 

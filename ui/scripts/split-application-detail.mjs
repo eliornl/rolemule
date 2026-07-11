@@ -10,7 +10,6 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const srcPath = path.join(root, 'src/pages/application-detail.ts');
-const outDir = path.join(root, 'src/application-detail');
 const src = fs.readFileSync(srcPath, 'utf8');
 
 /** Extract function body starting at `function name` or `async function name`. */
@@ -52,7 +51,6 @@ function transformBody(body, extraReplacements = []) {
     .replace(/^(\s*)async function /m, '$1export async function ')
     .replace(/\bapplicationData\b/g, 'getApplicationData()')
     .replace(/getApplicationData\(\)\s*=\s*/g, 'setApplicationData(')
-    .replace(/if \(getApplicationData\(\)\) \(/g, 'if (getApplicationData()) (')
     .replace(/\(getApplicationData\(\)\)\['([^']+)'\]\s*=/g, "patchApplicationData({ $1:")
     .replace(/getApplicationData\(\)\)\['([^']+)'\]/g, "getApplicationData()?.$1");
 
@@ -66,47 +64,5 @@ function transformBody(body, extraReplacements = []) {
   }
   return s;
 }
-
-const modules = {
-  'render-header.ts': {
-    imports: `import { decodeEntities } from '../shared/dom-security';
-import { isPlaceholderCompanyName } from '../shared/dashboard-display';
-import { formatPostedDate, toTitleCase } from './utils';
-import type { JobAnalysis, ProfileMatching } from './types';
-`,
-    fns: ['renderHeader'],
-    transform: (body) =>
-      transformBody(body)
-        .replace(/renderHeader\(job, match\)/, 'renderHeader(job: JobAnalysis, match: ProfileMatching)')
-        .replace(/function renderHeader\(job, match\)/, 'export function renderHeader(job: JobAnalysis, match: ProfileMatching)'),
-  },
-};
-
-// For large modules, extract multiple functions into one file
-const filePlan = [
-  {
-    file: 'render-header.ts',
-    header: `import { decodeEntities } from '../shared/dom-security';
-import { isPlaceholderCompanyName } from '../shared/dashboard-display';
-import { formatPostedDate, toTitleCase } from './utils';
-import type { JobAnalysis, ProfileMatching } from './types';
-`,
-    names: ['renderHeader'],
-  },
-  {
-    file: 'render-cover-letter.ts',
-    header: `import { decodeEntities, escapeHtml } from '../shared/dom-security';
-import { getCurrentSessionId } from './state';
-import type { CoverLetter, JobAnalysis } from './types';
-
-/** Wired at runtime — avoids circular import with actions. */
-let generateSingleCover: ((btn: HTMLButtonElement) => void) | null = null;
-export function wireCoverLetterGenerate(fn: (btn: HTMLButtonElement) => void): void {
-  generateSingleCover = fn;
-}
-`,
-    names: ['renderCoverLetter'],
-  },
-];
 
 console.log('Extract test renderHeader length:', extractFn('renderHeader').length);

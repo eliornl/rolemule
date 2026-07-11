@@ -5,7 +5,6 @@ import { generateTestEmail } from '../fixtures/test-data';
 /**
  * Performance tests - Page load times, response times, resource usage
  */
-const tier1MockedOnly = !!process.env.SKIP_SERVER;
 
 test.describe('Performance', () => {
   
