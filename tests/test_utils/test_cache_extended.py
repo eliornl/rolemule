@@ -18,6 +18,7 @@ from utils.cache import (
     get_cached_interview_prep,
     get_login_attempts,
     get_rate_limit_remaining,
+    increment_rate_limit,
     invalidate_all_user_profile_caches_sync,
     invalidate_cv_optimization,
     invalidate_interview_prep,
@@ -206,6 +207,52 @@ async def test_get_rate_limit_remaining_error() -> None:
     redis.get = AsyncMock(side_effect=RuntimeError("fail"))
     with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=redis)):
         assert await get_rate_limit_remaining("id", limit=10) == 10
+
+
+@pytest.mark.asyncio
+async def test_increment_rate_limit_redis_new_key(mock_redis) -> None:
+    mock_redis.get = AsyncMock(return_value=None)
+    pipe = MagicMock()
+    pipe.incr = MagicMock(return_value=pipe)
+    pipe.expire = MagicMock(return_value=pipe)
+    pipe.execute = AsyncMock(return_value=[1, True])
+    mock_redis.pipeline = MagicMock(return_value=pipe)
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
+        await increment_rate_limit("export:user:1", window_seconds=3600)
+    pipe.incr.assert_called_once()
+    pipe.expire.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_increment_rate_limit_redis_existing_key(mock_redis) -> None:
+    mock_redis.get = AsyncMock(return_value="2")
+    pipe = MagicMock()
+    pipe.incr = MagicMock(return_value=pipe)
+    pipe.expire = MagicMock(return_value=pipe)
+    pipe.execute = AsyncMock(return_value=[3])
+    mock_redis.pipeline = MagicMock(return_value=pipe)
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
+        await increment_rate_limit("export:user:2", window_seconds=3600)
+    pipe.incr.assert_called_once()
+    pipe.expire.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_increment_rate_limit_no_redis_fallback() -> None:
+    _fallback_limiter._store.clear()
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=None)):
+        await increment_rate_limit("export:fallback", window_seconds=60)
+    assert "export:fallback" in _fallback_limiter._store
+
+
+@pytest.mark.asyncio
+async def test_increment_rate_limit_redis_error_fallback() -> None:
+    _fallback_limiter._store.clear()
+    redis = AsyncMock()
+    redis.get = AsyncMock(side_effect=RuntimeError("redis down"))
+    with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=redis)):
+        await increment_rate_limit("export:err", window_seconds=60)
+    assert "export:err" in _fallback_limiter._store
 
 
 @pytest.mark.asyncio

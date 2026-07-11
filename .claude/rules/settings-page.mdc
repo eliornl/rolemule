@@ -1,6 +1,6 @@
 ---
 description: Settings page layout, tabs, Preferences section, AI Setup section, auto-save pattern, custom UI components
-globs: ui/dashboard/settings.html,ui/static/js/dashboard-settings.js
+globs: ui/dashboard/settings.html,ui/src/pages/dashboard-settings.ts,ui/src/dashboard-settings/**/*.ts
 alwaysApply: false
 ---
 

@@ -1,110 +1,82 @@
 ---
-description: Frontend asset build pipeline — esbuild, asset_url(), adding new JS/CSS files
-globs: ui/**/*.html,ui/static/js/**/*.js,ui/static/css/**/*.css,ui/build.mjs,ui/package.json
+description: Frontend asset build pipeline — Vite+TS page entries, esbuild CSS, asset_url()
+globs: ui/**/*.html,ui/src/**/*.ts,ui/static/css/**/*.css,ui/build.mjs,ui/scripts/**/*.mjs,ui/package.json,ui/vite.entries.json
 alwaysApply: false
 ---
 
 # Frontend Build Pipeline
 
-ApplyPilot uses **esbuild** (not Vite/Webpack) to minify and content-hash all JS and CSS files.
-The JS files use vanilla global scope — no ES modules, no bundling across files.
+ApplyPilot uses a **dual pipeline** unified by `ui/scripts/build-all.mjs`:
 
-## How It Works
+1. **Legacy esbuild** (`ui/build.mjs`) — minifies and content-hashes **CSS** only.
+2. **Vite** (`ui/scripts/build-vite.mjs`) — bundles each TypeScript page entry from `ui/vite.entries.json` as an IIFE, emits **hidden source maps** (`.js.map` on disk, no `sourceMappingURL` in the bundle), content-hashes JS, and writes `vite-manifest.json`.
+3. **Merge** — Vite keys override legacy keys in `ui/static/dist/manifest.json`.
 
-1. `ui/build.mjs` minifies every file in `ui/static/js/` and `ui/static/css/` independently
-2. Each output file gets an 8-char content hash: `app.js` → `app.e40b2f1a.js`
-3. A manifest is written to `ui/static/dist/manifest.json`
-4. `asset_url()` in `main.py` reads the manifest at startup and resolves hashed paths
-5. Templates use `{{ asset_url('js/app.js') }}` — never a raw `/static/` path
+Jinja templates still use `{{ asset_url('js/...') }}` / `{{ asset_url('css/...') }}`. FastAPI resolves hashed paths via `asset_url()` in `main.py`.
+
+## Source of truth
+
+| Kind | Location |
+|------|----------|
+| Page / global scripts | `ui/src/pages/*.ts` (registered in `ui/vite.entries.json`) |
+| Shared TS modules | `ui/src/shared/*.ts` |
+| CSS | `ui/static/css/` (still esbuild-minified) |
+| Build output | `ui/static/dist/` (gitignored) |
 
 ## Running the Build
 
 ```bash
 cd ui
-npm install          # first time only
-npm run build        # production build → ui/static/dist/
-npm run build:watch  # rebuilds every 2s on file change (dev)
+npm install
+npm run build          # unified: legacy + vite + merge
+npm run typecheck      # tsc --noEmit
+npm run test           # vitest
 ```
 
-**macOS** — use the Makefile targets which automatically strip the macOS Gatekeeper quarantine flag from `node_modules` binaries before running esbuild (otherwise macOS blocks esbuild with "cannot be opened because the developer cannot be verified"):
+**macOS** — use Make targets (quarantine strip for `node_modules` binaries):
 
 ```bash
-make build-frontend   # strips quarantine → npm run build
-make setup            # full setup: venv + npm install + quarantine strip for both
+make build-frontend
+make setup
 ```
 
-**Windows** — use `just` (`winget install Casey.Just`) which works natively in PowerShell without WSL2:
+**Windows** — `just build-frontend` / `just setup`.
 
-```powershell
-just build-frontend   # runs npm run build inside ui/
-just setup            # full setup: venv + npm install + build + .env
+In development, `asset_url()` re-reads `manifest.json` every request when not in production — hard-refresh after `npm run build`.
+
+## Adding a New Page Script
+
+1. Create `ui/src/pages/my-page.ts`
+2. Add to `ui/vite.entries.json`: `"js/my-page.js": "src/pages/my-page.ts"`
+3. Reference in the template: `{{ asset_url('js/my-page.js') }}`
+4. Run `npm run build` / `make build-frontend`
+
+## Migrating a leftover legacy file
+
+```bash
+cd ui
+node scripts/migrate-js-to-ts.mjs js/some-file.js
+npm run build
 ```
 
-**In development** (no build run): `asset_url()` falls back to `/static/<path>` — nothing breaks.
+## asset_url()
 
-## Adding a New JS File
+Unchanged: production uses `/static/dist/<hashed>`; missing manifest falls back to `/static/<path>`.
 
-1. Create `ui/static/js/my-page.js`
-2. Reference it in the template with `{{ asset_url('js/my-page.js') }}` — never hardcode `/static/js/`
-3. Run `npm run build` to generate the hashed output
-4. The manifest and dist/ are gitignored — the Dockerfile builds them at image build time
+## Source maps (production)
 
-```html
-<!-- ✅ Correct -->
-<script src="{{ asset_url('js/my-page.js') }}"></script>
+Vite builds use `sourcemap: 'hidden'`: hashed `*.js.map` files are written next to bundles under `ui/static/dist/js/` for server-side debugging, but browsers do not auto-load them (no comment in the bundle). Do not expose `/static/dist/js/*.map` publicly unless you accept revealing TS source structure.
 
-<!-- ❌ Wrong — bypasses hashing, breaks cache busting -->
-<script src="/static/js/my-page.js"></script>
-```
+## Source maps (production)
 
-## Adding a New CSS File
-
-Same as JS — place in `ui/static/css/`, reference with `{{ asset_url('css/my-styles.css') }}`.
-Subdirectories are supported: `{{ asset_url('css/base/variables.css') }}`.
-
-## asset_url() — How It Resolves
-
-```python
-# In main.py
-def asset_url(path: str) -> str:
-    manifest = _load_asset_manifest()       # reads ui/static/dist/manifest.json
-    hashed = manifest.get(path)
-    if hashed:
-        return f"/static/dist/{hashed}"     # production: hashed path
-    return f"/static/{path}"               # dev fallback: original path
-```
-
-**Manifest caching behaviour differs by environment:**
-
-| Environment | Behaviour |
-|---|---|
-| Production (`is_production=True`) | Manifest loaded once at startup, cached in memory for the process lifetime |
-| Development | Manifest re-read from disk on **every request** — `npm run build` takes effect immediately without a server restart |
-
-This means in development you can run `npm run build` (or `npm run build:watch`) and hard-refresh the browser — no server restart needed. In production the startup log line `Loaded asset manifest with N entries` is the single point of truth.
-
-## Make / Just Targets
-
-| `make` (macOS/Linux) | `just` (Windows) | What it does |
-|---|---|---|
-| `make setup` | `just setup` | Creates venv, `pip install`, `npm install`, strips quarantine (macOS), **builds frontend** |
-| `make dev` | `just dev` | Strips quarantine (macOS), **builds frontend**, starts uvicorn |
-| `make build-frontend` | `just build-frontend` | Strips quarantine (macOS), runs `npm run build` |
-| `make start-local` | — (macOS only) | Installs Postgres + Redis via Homebrew, migrates, starts app |
-| `make clean-frontend` | — | Removes `ui/static/dist/` (keeps `node_modules`) |
-
-**`make setup` and `make dev` both run `build-frontend` automatically** — the dist files are always fresh before the server starts. This prevents stale compiled CSS/JS from causing issues (e.g. missing utility classes like `.is-hidden` that are defined in `app.css` source but not yet compiled).
-
-**`_macos_sign_node`** — internal Make target that runs `xattr -r -d com.apple.quarantine ui/node_modules`. Called automatically by `setup`, `dev`, and `build-frontend`. Needed because macOS Gatekeeper blocks downloaded Node binaries (esbuild, etc.) until their quarantine flag is stripped.
-
-**`just build-frontend`** uses `[working-directory: 'ui']` to run `npm run build` directly — no `&&` shell chaining, works in PowerShell 5.x and cmd.exe.
+Vite builds use `sourcemap: 'hidden'`: hashed `*.js.map` files are written next to bundles under `ui/static/dist/js/` for server-side debugging, but browsers do not auto-load them (no comment in the bundle). Do not expose `/static/dist/js/*.map` publicly unless you accept revealing TS source structure.
 
 ## CI / Docker
 
-- **Dockerfile** Stage 0: `node:20-slim` runs `node build.mjs` before the Python builder
-- `ui/node_modules/` and `ui/static/dist/` are gitignored — the Dockerfile builds them
+- CI `frontend-build` job: `npm ci` → `typecheck` → `test` → `build`
+- Dockerfile Stage 0 copies `ui/src`, Vite/TS configs, and runs `npm run build`
 
 ## Non-Negotiable
 
-Never write `src="/static/js/..."` or `href="/static/css/..."` directly in any template.
-Always use `{{ asset_url('js/...') }}` or `{{ asset_url('css/...') }}`.
+Never write `src="/static/js/..."` or `href="/static/css/..."` in templates.
+Always use `{{ asset_url('js/...') }}` / `{{ asset_url('css/...') }}`.

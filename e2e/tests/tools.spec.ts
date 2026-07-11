@@ -1,27 +1,19 @@
 import { test, expect, Page } from '@playwright/test';
 import { RegisterPage, ProfileSetupPage, DashboardPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
+import { setupCookieConsent } from '../utils/api-mocks';
 
-// Helper function to login and complete profile setup if needed
-async function loginAndSetup(page: Page, email: string, password: string) {
-  await page.goto('/auth/login');
-  await page.locator('#email').fill(email);
-  await page.locator('#password').fill(password);
-  await page.locator('#login-btn').click();
-  
-  await page.waitForURL(/profile|dashboard/, { timeout: 15000 });
-  
-  // Complete profile setup if needed
-  if (page.url().includes('profile/setup')) {
-    const profilePage = new ProfileSetupPage(page);
-    await profilePage.quickSetup({
-      title: 'Software Engineer',
-      yearsExperience: 5,
-      skills: ['Python', 'JavaScript'],
-    });
-    await page.waitForURL(/dashboard/, { timeout: 15000 });
-  }
-  
+let toolsAuthToken = '';
+
+// Helper — inject pre-registered user token (avoids login form + rate limits)
+async function loginAndSetup(page: Page) {
+  await setupCookieConsent(page);
+  await page.addInitScript((token: string) => {
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('authToken', token);
+  }, toolsAuthToken);
+  await page.goto('/dashboard');
+  await page.waitForURL(/dashboard/, { timeout: 20000 });
   const dashboardPage = new DashboardPage(page);
   await dashboardPage.skipOnboarding();
 }
@@ -55,7 +47,13 @@ test.describe('Career Tools', () => {
         yearsExperience: 5,
         skills: ['Python', 'JavaScript'],
       });
+      await page.waitForURL(/dashboard/, { timeout: 20000 });
     }
+
+    toolsAuthToken = await page.evaluate(() =>
+      localStorage.getItem('access_token') || localStorage.getItem('authToken') || '',
+    );
+    expect(toolsAuthToken.length).toBeGreaterThan(0);
     
     await page.close();
   });
@@ -63,7 +61,7 @@ test.describe('Career Tools', () => {
   test.describe('Tools Page Navigation', () => {
     
     test('should display career tools page', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       // Navigate to tools
       await page.goto('/dashboard/tools');
@@ -75,7 +73,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should have multiple tool tabs', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -89,7 +87,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should switch between tool tabs', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -110,7 +108,7 @@ test.describe('Career Tools', () => {
   test.describe('Thank You Note Generator', () => {
     
     test('should display thank you note form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -126,7 +124,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should validate required fields', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -140,7 +138,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should fill and submit thank you note form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -161,7 +159,7 @@ test.describe('Career Tools', () => {
   test.describe('Rejection Analysis', () => {
     
     test('should display rejection analysis form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -175,7 +173,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should accept rejection email text', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -195,7 +193,7 @@ test.describe('Career Tools', () => {
   test.describe('Salary Negotiation Coach', () => {
     
     test('should display salary coach form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -211,7 +209,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should have job title and company inputs', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -222,14 +220,14 @@ test.describe('Career Tools', () => {
       // Check for inputs
       await expect(page.locator('#salaryJobTitle')).toBeVisible();
       await expect(page.locator('#salaryCompany')).toBeVisible();
-      await expect(page.locator('#yearsExperience')).toBeVisible();
+      await expect(page.locator('#offeredSalary')).toBeVisible();
     });
   });
   
   test.describe('Reference Request', () => {
     
     test('should display reference request form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -244,7 +242,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should have relationship dropdown', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -266,7 +264,7 @@ test.describe('Career Tools', () => {
   test.describe('Follow-up Generator', () => {
     
     test('should display follow-up form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -282,7 +280,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should have stage selector', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -304,7 +302,7 @@ test.describe('Career Tools', () => {
   test.describe('Job Comparison', () => {
     
     test('should display job comparison form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');
@@ -321,7 +319,7 @@ test.describe('Career Tools', () => {
     });
     
     test('should allow adding multiple jobs', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       await page.goto('/dashboard/tools');
       await page.waitForLoadState('networkidle');

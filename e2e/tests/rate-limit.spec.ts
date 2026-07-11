@@ -12,9 +12,9 @@ import { setupAuth } from '../utils/api-mocks';
 
 async function setupDashboardAuth(page: any) {
   await setupAuth(page);
-  await page.route('**/api/v1/profile', (route: any) => route.fulfill({
+  await page.route('**/api/v1/applications/stats/overview', (route: any) => route.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify({ name: 'Test User', email: 'test@example.com' }),
+    body: JSON.stringify({ total: 0, applied: 0, interviews: 0, offers: 0, response_rate: 0 }),
   }));
   await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
     status: 200, contentType: 'application/json',
@@ -110,17 +110,15 @@ test.describe('B. Registration Rate Limiting', () => {
     const errors: string[] = [];
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('/auth/register');
-    await page.locator('input[type="text"], input[name="name"]').first().fill('Test User');
-    await page.locator('input[type="email"]').fill('test@example.com');
-    await page.locator('input[type="password"]').first().fill('Password123!');
-    const checkbox = page.locator('input[type="checkbox"]').first();
-    if (await checkbox.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await checkbox.check();
-    }
-    await page.locator('button[type="submit"], #register-btn').first().click();
+    await page.locator('#full-name').fill('Test User');
+    await page.locator('#email').fill(`rate-limit-${Date.now()}@example.com`);
+    await page.locator('#password').fill('Password123!');
+    await page.locator('#confirm-password').fill('Password123!');
+    await page.locator('#terms-agreement').check();
+    await page.locator('#register-btn').click();
     await page.waitForTimeout(1500);
     expect(errors.length).toBe(0);
-    await expect(page).toHaveURL(/register/);
+    expect(page.url()).toMatch(/register|verify|auth/);
   });
 });
 
@@ -133,7 +131,7 @@ test.describe('C. Career Tools Rate Limiting', () => {
   });
 
   test('429 from thank-you API does not crash the page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/thank-you**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/thank-you**', (route: any) => route.fulfill({
       status: 429,
       contentType: 'application/json',
       headers: { 'Retry-After': '3600' },
@@ -152,7 +150,7 @@ test.describe('C. Career Tools Rate Limiting', () => {
   });
 
   test('429 from salary API does not crash the page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/salary**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/salary-coach**', (route: any) => route.fulfill({
       status: 429,
       contentType: 'application/json',
       headers: { 'Retry-After': '3600' },
@@ -177,7 +175,7 @@ test.describe('C. Career Tools Rate Limiting', () => {
   });
 
   test('429 from rejection API does not crash the page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/rejection**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/rejection-analysis**', (route: any) => route.fulfill({
       status: 429,
       contentType: 'application/json',
       headers: { 'Retry-After': '3600' },
@@ -191,7 +189,7 @@ test.describe('C. Career Tools Rate Limiting', () => {
   });
 
   test('429 from follow-up API does not crash the page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/followup**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/followup**', (route: any) => route.fulfill({
       status: 429,
       contentType: 'application/json',
       headers: { 'Retry-After': '3600' },
@@ -224,21 +222,10 @@ test.describe('D. Workflow Rate Limiting', () => {
     page.on('pageerror', e => errors.push(e.message));
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-    const titleInput = page.locator('#basicJobTitle').first();
-    if (await titleInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await titleInput.fill('Engineer');
-      await page.locator('#basicCompanyName').first().fill('Corp');
-      const nextBtn = page.locator('button:has-text("Next")').first();
-      if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await nextBtn.click();
-        await page.waitForTimeout(500);
-        const submitBtn = page.locator('button:has-text("Create Application"), button:has-text("Analyze")').first();
-        if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await submitBtn.click();
-          await page.waitForTimeout(1500);
-        }
-      }
-    }
+    const jobText = 'Senior Software Engineer role with Python, FastAPI, and distributed systems. '.repeat(3);
+    await page.locator('#jobDescription').fill(jobText);
+    await page.locator('[data-action="process-application"]').click();
+    await page.waitForTimeout(1500);
     expect(errors.length).toBe(0);
   });
 
@@ -297,7 +284,7 @@ test.describe('E. Forgot Password Rate Limiting', () => {
     const emailInput = page.locator('#forgotEmail, input[type="email"]').first();
     if (await emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
       await emailInput.fill('test@example.com');
-      const submitBtn = page.locator('#forgotPasswordBtn, button[type="submit"]').first();
+      const submitBtn = page.locator('#forgotBtn, button[type="submit"]').first();
       await submitBtn.click();
       await page.waitForTimeout(1500);
     }

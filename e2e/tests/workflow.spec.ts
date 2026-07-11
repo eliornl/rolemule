@@ -1,29 +1,21 @@
 import { test, expect, Page } from '@playwright/test';
 import { RegisterPage, ProfileSetupPage, NewApplicationPage, DashboardPage, SettingsPage } from '../pages';
 import { generateTestEmail, testJobPostings, testApiKey } from '../fixtures/test-data';
+import { setupCookieConsent, setupAuth, setupAllMocks, mockWorkflowSession } from '../utils/api-mocks';
+
+let workflowAuthToken = '';
 
 /**
- * Helper to login and complete profile setup if needed
+ * Inject pre-registered workflow user token (set in beforeAll).
  */
-async function loginAndSetup(page: Page, email: string, password: string) {
-  await page.goto('/auth/login');
-  await page.locator('#email').fill(email);
-  await page.locator('#password').fill(password);
-  await page.locator('#login-btn').click();
-  
-  await page.waitForURL(/profile\/setup|dashboard/, { timeout: 15000 });
-  
-  // Complete profile if needed
-  if (page.url().includes('profile/setup')) {
-    const profilePage = new ProfileSetupPage(page);
-    await profilePage.quickSetup({
-      title: 'Software Engineer',
-      yearsExperience: 5,
-      skills: ['Python', 'JavaScript'],
-    });
-    await page.waitForURL(/dashboard/, { timeout: 15000 });
-  }
-  
+async function loginAndSetup(page: Page) {
+  await setupCookieConsent(page);
+  await page.addInitScript((token: string) => {
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('authToken', token);
+  }, workflowAuthToken);
+  await page.goto('/dashboard');
+  await page.waitForURL(/dashboard/, { timeout: 20000 });
   const dashboardPage = new DashboardPage(page);
   await dashboardPage.skipOnboarding();
 }
@@ -57,7 +49,13 @@ test.describe('Job Analysis Workflow', () => {
         yearsExperience: 5,
         skills: ['Python', 'JavaScript', 'React', 'Node.js'],
       });
+      await page.waitForURL(/dashboard/, { timeout: 20000 });
     }
+
+    workflowAuthToken = await page.evaluate(() =>
+      localStorage.getItem('access_token') || localStorage.getItem('authToken') || '',
+    );
+    expect(workflowAuthToken.length).toBeGreaterThan(0);
     
     await page.close();
   });
@@ -65,7 +63,7 @@ test.describe('Job Analysis Workflow', () => {
   test.describe('New Application Page', () => {
     
     test('should display new application form', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       // Navigate to new application
       const newAppPage = new NewApplicationPage(page);
@@ -76,7 +74,7 @@ test.describe('Job Analysis Workflow', () => {
     });
     
     test('should have multiple input method tabs', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       const newAppPage = new NewApplicationPage(page);
       await newAppPage.navigate();
@@ -93,7 +91,7 @@ test.describe('Job Analysis Workflow', () => {
     });
     
     test('should switch between input methods', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       const newAppPage = new NewApplicationPage(page);
       await newAppPage.navigate();
@@ -115,7 +113,7 @@ test.describe('Job Analysis Workflow', () => {
     });
     
     test('should validate empty job input', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       const newAppPage = new NewApplicationPage(page);
       await newAppPage.navigate();
@@ -134,7 +132,7 @@ test.describe('Job Analysis Workflow', () => {
   test.describe('Workflow Execution', () => {
     
     test('should start workflow with text input', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       const newAppPage = new NewApplicationPage(page);
       await newAppPage.navigate();
@@ -157,7 +155,7 @@ test.describe('Job Analysis Workflow', () => {
     });
     
     test('should show agent progress during workflow', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       const newAppPage = new NewApplicationPage(page);
       await newAppPage.navigate();
@@ -181,44 +179,33 @@ test.describe('Job Analysis Workflow', () => {
       // May or may not have indicators depending on UI
     });
     
-    test.skip('should complete workflow and show results', async ({ page }) => {
-      // This test requires actual API key to work
-      // Skip by default, enable when API key is configured
-      
-      // Login and set up API key
-      await page.goto('/auth/login');
-      await page.locator('input[type="email"]').fill(email);
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"]').click();
-      
-      await expect(page).toHaveURL(/dashboard/, { timeout: 15000 });
-      
-      const dashboardPage = new DashboardPage(page);
-      await dashboardPage.skipOnboarding();
-      
-      // Set API key
-      const settingsPage = new SettingsPage(page);
-      await settingsPage.navigate();
-      await settingsPage.setApiKey(testApiKey);
-      
-      // Start workflow
+    test('should complete workflow and show results', async ({ page }) => {
+      await setupAuth(page);
+      await setupAllMocks(page);
+
       const newAppPage = new NewApplicationPage(page);
       await newAppPage.navigate();
-      
-      const { matchScore, completed } = await newAppPage.analyzeJobAndWait(
-        testJobPostings.simple,
-        120000 // 2 minute timeout for full workflow
-      );
-      
-      expect(completed).toBe(true);
-      expect(matchScore).toBeGreaterThan(0);
+      await newAppPage.selectTextInput();
+      await newAppPage.textInput.fill(testJobPostings.simple);
+
+      await Promise.all([
+        page.waitForURL(/\/dashboard\/?$/, { timeout: 15000 }),
+        newAppPage.analyzeButton.first().click(),
+      ]);
+
+      await page.goto(`/dashboard/application/${mockWorkflowSession.session_id}`);
+      await page.waitForLoadState('domcontentloaded');
+
+      await expect(page.locator('body')).toContainText(/Software Engineer|TechCorp|85/i, {
+        timeout: 15000,
+      });
     });
   });
   
   test.describe('Application List (formerly History)', () => {
     
     test('should display dashboard application list', async ({ page }) => {
-      await loginAndSetup(page, email, password);
+      await loginAndSetup(page);
       
       const dashboardPage = new DashboardPage(page);
       
@@ -356,7 +343,7 @@ test.describe('API Key Configuration', () => {
     await settingsPage.handleCookieConsent();
     
     // Click on API Keys tab
-    const apiKeysTab = page.locator('a:has-text("API Keys")');
+    const apiKeysTab = page.locator('a[data-section="apiKeys"], .settings-nav a:has-text("AI Setup")');
     await apiKeysTab.click();
     await page.waitForTimeout(500);
     

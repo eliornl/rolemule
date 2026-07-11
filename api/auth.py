@@ -572,15 +572,16 @@ async def login_user(
         if not user_data.email or not user_data.password:
             raise validation_error("Email and password are required")
 
-        # Rate limit: 20 login attempts per hour per IP (defense-in-depth; account lockout is per-email)
-        client_ip = request.client.host if request.client else "unknown"
-        is_allowed, _remaining = await check_rate_limit(
-            identifier=f"login:{client_ip}",
-            limit=20,
-            window_seconds=3600,
-        )
-        if not is_allowed:
-            raise rate_limit_error("Too many login attempts. Please try again later.", retry_after=3600)
+        # Rate limit: 20 login attempts per hour per IP (skipped in TESTING for E2E/CI)
+        if not settings.testing:
+            client_ip = request.client.host if request.client else "unknown"
+            is_allowed, _remaining = await check_rate_limit(
+                identifier=f"login:{client_ip}",
+                limit=20,
+                window_seconds=3600,
+            )
+            if not is_allowed:
+                raise rate_limit_error("Too many login attempts. Please try again later.", retry_after=3600)
 
         # Check for account lockout before processing
         is_locked, remaining_seconds = await check_account_lockout(user_data.email)

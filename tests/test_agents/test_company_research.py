@@ -415,12 +415,17 @@ class TestCompanyResearchHelpersAndEdges:
 
     def test_has_usable_company_name_rejects_dashes_and_placeholders(self):
         from agents.company_research import (
+            _extract_posting_agency_name,
             _format_job_context_for_research,
             _has_usable_company_name,
         )
 
         assert _has_usable_company_name("---") is False
         assert _has_usable_company_name("unknown") is False
+        assert _extract_posting_agency_name(None) is None
+        assert _extract_posting_agency_name({}) is None
+        assert _extract_posting_agency_name({"detected_company": "  "}) is None
+        assert _extract_posting_agency_name({"detected_company": "Syndesus, Inc."}) == "Syndesus, Inc."
         ctx = _format_job_context_for_research(
             {
                 "job_title": "Founding Engineer",

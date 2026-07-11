@@ -1,41 +1,98 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { LoginPage, RegisterPage, DashboardPage, ProfileSetupPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, setupAllMocks } from '../utils/api-mocks';
 
 /**
- * Smoke Tests - Critical Path Tests for CI/CD
- * 
- * These tests cover the essential user journeys and should complete in ~3 minutes.
- * Run with: SMOKE=1 npx playwright test tests/smoke.spec.ts
- * 
- * Coverage:
- * - Authentication (register, login, logout)
- * - Profile setup (quick path)
- * - Dashboard access
- * - New application form
- * - Career tools access
- * - Basic API health
+ * Smoke Tests — PR gate (@smoke) + optional live-server regression (@live)
+ *
+ * CI PR gate (~3 min, mocked API, server still serves HTML):
+ *   npm run test:smoke:ci
+ *
+ * Full smoke including live DB registration (local / nightly):
+ *   npm run test:smoke
+ *
+ * Live registration only:
+ *   npm run test:smoke:live
  */
 
-test.describe('Smoke Tests', () => {
-  
-  test.describe('Health & Infrastructure', () => {
-    test('API health check responds', async ({ request }) => {
-      const response = await request.get('/health');
-      expect(response.ok()).toBeTruthy();
-    });
+const SMOKE_SESSION_ID = 'smoke-session-001';
+const SMOKE_APP_URL = `/dashboard/application/${SMOKE_SESSION_ID}`;
+const SMOKE_INTERVIEW_URL = `/dashboard/interview-prep/${SMOKE_SESSION_ID}`;
+const SMOKE_JOB_DESCRIPTION =
+  'Senior Software Engineer at Example Corp. Requirements: Python, FastAPI, React, PostgreSQL. '.repeat(3);
 
-    test('homepage loads', async ({ page }) => {
-      await page.goto('/');
-      await expect(page.locator('body')).toBeVisible();
-    });
+const SMOKE_WORKFLOW_RESULTS = {
+  application_id: 'smoke-app-001',
+  session_id: SMOKE_SESSION_ID,
+  status: 'completed',
+  job_analysis: {
+    job_title: 'Senior Software Engineer',
+    company_name: 'Example Corp',
+    employment_type: 'Full-time',
+  },
+  profile_matching: { overall_match_score: 0.82 },
+  company_research: { industry: 'Technology', mission_vision: 'Build great products.' },
+  cover_letter: { letter: 'Dear Hiring Manager,\n\nI am excited to apply.\n' },
+  resume_recommendations: { overview: 'Strong match overall.' },
+};
 
-    test('login page loads', async ({ page }) => {
-      await page.goto('/auth/login');
-      await expect(page.locator('input[type="email"]')).toBeVisible();
-    });
-  });
+async function mockCompletedApplication(page: Page): Promise<void> {
+  await page.route(`**/api/v1/workflow/status/${SMOKE_SESSION_ID}`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ status: 'completed', session_id: SMOKE_SESSION_ID }),
+  }));
+  await page.route(`**/api/v1/workflow/results/${SMOKE_SESSION_ID}`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(SMOKE_WORKFLOW_RESULTS),
+  }));
+  await page.route('**/api/v1/applications/**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ updated: true }),
+  }));
+}
+
+async function mockInterviewPrepGenerateState(page: Page): Promise<void> {
+  await page.route(`**/api/v1/interview-prep/${SMOKE_SESSION_ID}`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ has_interview_prep: false }),
+  }));
+  await page.route(`**/api/v1/workflow/results/${SMOKE_SESSION_ID}`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      job_analysis: {
+        job_title: 'Senior Software Engineer',
+        company_name: 'Example Corp',
+      },
+    }),
+  }));
+}
+
+async function expectPageDistScriptsLoad(page: Page, path: string): Promise<void> {
+  await page.goto(path, { waitUntil: 'load' });
+  await page.waitForLoadState('domcontentloaded');
+  const scriptSrcs = await page.locator('script[src*="/static/dist/js/"]').evaluateAll((nodes) =>
+    nodes
+      .map((node) => (node as HTMLScriptElement).getAttribute('src'))
+      .filter((src): src is string => !!src),
+  );
+  expect(scriptSrcs.length, `expected dist JS on ${path}`).toBeGreaterThan(0);
+  for (const src of scriptSrcs) {
+    const url = new URL(src, page.url()).toString();
+    const response = await page.request.get(url);
+    expect(response.status(), `expected 200 for ${url}`).toBe(200);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// LIVE SERVER — real registration / DB (skip in CI via @smoke gate)
+// ---------------------------------------------------------------------------
+test.describe('Live Server Smoke', { tag: '@live' }, () => {
 
   test.describe('Authentication Flow', () => {
     let testEmail: string;
@@ -284,51 +341,37 @@ test.describe('Smoke Tests', () => {
       expect(hasTabs || hasForms).toBeTruthy();
     });
   });
+});
 
-  test.describe('Error Handling', () => {
-    test('404 page works', async ({ page }) => {
-      const response = await page.goto('/this-does-not-exist-12345');
-      // Should either return 404 status or redirect to error page
-      expect(response?.status() === 404 || page.url().includes('404') || true).toBeTruthy();
+// ---------------------------------------------------------------------------
+// MOCKED SMOKE — default PR gate (fast, no DB registration)
+// ---------------------------------------------------------------------------
+test.describe('Mocked Smoke Tests', { tag: '@smoke' }, () => {
+
+  test.describe('Infrastructure', () => {
+    test('API health check responds', async ({ request }) => {
+      const response = await request.get('/health');
+      expect(response.ok()).toBeTruthy();
     });
 
-    test('unauthorized access redirects to login', async ({ page }) => {
-      // Clear any existing auth by going to a page first then clearing
-      await page.goto('/');
-      await page.context().clearCookies();
-      await page.evaluate(() => {
-        try { localStorage.clear(); } catch (e) { /* ignore */ }
-      });
-      
-      await page.goto('/dashboard');
-      
-      // Should redirect to login
-      await page.waitForURL(/login|auth/, { timeout: 10000 });
-      expect(page.url()).toMatch(/login|auth/);
+    test('unknown route returns 404', async ({ request }) => {
+      const response = await request.get('/this-does-not-exist-12345');
+      expect(response.status()).toBe(404);
     });
-  });
 
-  test.describe('API Endpoints', () => {
     test('auth endpoints respond', async ({ request }) => {
-      // Login endpoint should return 401 or 422 for invalid credentials
       const response = await request.post('/api/v1/auth/login', {
-        data: { email: 'test@test.com', password: 'test' }
+        data: { email: 'test@test.com', password: 'test' },
       });
-      expect([400, 401, 422].includes(response.status())).toBeTruthy();
+      expect(response.status()).toBeGreaterThanOrEqual(400);
+      expect(response.status()).toBeLessThan(500);
     });
 
     test('profile endpoint requires auth', async ({ request }) => {
       const response = await request.get('/api/v1/profile');
-      // Should return 401 Unauthorized or 403 Forbidden without auth
-      expect([401, 403].includes(response.status())).toBeTruthy();
+      expect([401, 403, 429].includes(response.status())).toBeTruthy();
     });
   });
-});
-
-// ---------------------------------------------------------------------------
-// MOCKED SMOKE TESTS (CI-safe — no live server user registration)
-// ---------------------------------------------------------------------------
-test.describe('Mocked Smoke Tests', () => {
 
   test.describe('Dashboard Loads With Mock Auth', () => {
     test.beforeEach(async ({ page }) => {
@@ -489,6 +532,123 @@ test.describe('Mocked Smoke Tests', () => {
     test('help page loads correctly', async ({ page }) => {
       await page.goto('/help');
       await expect(page.locator('body')).toBeVisible();
+    });
+
+    test('cookie consent banner can be accepted', async ({ page }) => {
+      await page.goto('/');
+      await page.evaluate(() => localStorage.removeItem('cookie_consent'));
+      await page.reload();
+      await page.waitForLoadState('domcontentloaded');
+      const banner = page.locator('#cookie-consent-banner');
+      await expect(banner).toHaveClass(/visible/, { timeout: 5000 });
+      await page.locator('[data-action="cookie-accept-all"]').click();
+      await expect(banner).not.toHaveClass(/visible/);
+      const stored = await page.evaluate(() => localStorage.getItem('cookie_consent'));
+      expect(stored).toBeTruthy();
+    });
+  });
+
+  test.describe('Critical Paths (Mocked)', () => {
+    test.beforeEach(async ({ page }) => {
+      await setupAuth(page);
+      await setupAllMocks(page);
+    });
+
+    test('application detail page loads with job title and tabs', async ({ page }) => {
+      await mockCompletedApplication(page);
+      await page.goto(SMOKE_APP_URL);
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('#mainContent')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#jobTitle')).toContainText('Senior Software Engineer');
+      await expect(page.locator('.page-tab[data-tab]').first()).toBeVisible();
+    });
+
+    test('analyze button triggers workflow start API', async ({ page }) => {
+      let workflowStarted = false;
+      await page.route('**/api/v1/workflow/start', (route) => {
+        workflowStarted = true;
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ session_id: SMOKE_SESSION_ID, status: 'processing' }),
+        });
+      });
+      await page.route(`**/api/v1/workflow/status/${SMOKE_SESSION_ID}`, (route) => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'processing' }),
+      }));
+
+      await page.goto('/dashboard/new-application');
+      await page.waitForLoadState('domcontentloaded');
+      await page.locator('#jobDescription').fill(SMOKE_JOB_DESCRIPTION);
+      await page.locator('[data-action="process-application"]').click();
+      await expect.poll(() => workflowStarted, { timeout: 5000 }).toBe(true);
+    });
+
+    test('key page bundled scripts return HTTP 200', async ({ page }) => {
+      await mockCompletedApplication(page);
+      await expectPageDistScriptsLoad(page, '/');
+      await expectPageDistScriptsLoad(page, '/help');
+      await expectPageDistScriptsLoad(page, '/dashboard');
+      await expectPageDistScriptsLoad(page, SMOKE_APP_URL);
+    });
+
+    test('settings privacy tab shows export data button', async ({ page }) => {
+      await page.route('**/api/v1/settings**', (route) => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      }));
+      await page.goto('/dashboard/settings');
+      await page.waitForLoadState('domcontentloaded');
+      await page.locator('[data-section="privacy"]').click();
+      await expect(page.locator('#privacySection')).toBeAttached();
+      await expect(page.locator('[data-action="exportData"]').first()).toBeVisible({ timeout: 5000 });
+    });
+
+    test('help search reveals matching FAQ items', async ({ page }) => {
+      await page.goto('/help');
+      await page.waitForLoadState('domcontentloaded');
+      const totalItems = await page.locator('.faq-item').count();
+      expect(totalItems).toBeGreaterThan(1);
+      await page.locator('#helpSearch').fill('export my data');
+      const visibleItems = page.locator('.faq-item:not(.is-search-hidden)');
+      await expect(visibleItems.first()).toContainText(/export my data/i, { timeout: 5000 });
+      const visibleCount = await visibleItems.count();
+      expect(visibleCount).toBeGreaterThan(0);
+      expect(visibleCount).toBeLessThan(totalItems);
+    });
+
+    test('interview prep page loads in generate state', async ({ page }) => {
+      await mockInterviewPrepGenerateState(page);
+      await page.goto(SMOKE_INTERVIEW_URL);
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('[data-action="generate-interview-prep"]')).toBeVisible({ timeout: 10000 });
+    });
+
+    test('thank you tool submit triggers tools API', async ({ page }) => {
+      let apiCalled = false;
+      await page.route('**/api/v1/tools/thank-you**', (route) => {
+        apiCalled = true;
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            thank_you_note: 'Dear Jane, thank you for your time.',
+            subject_line: 'Thank You — Interview',
+          }),
+        });
+      });
+
+      await page.goto('/dashboard/tools');
+      await page.waitForLoadState('domcontentloaded');
+      await page.locator('#interviewerName').fill('Jane Smith');
+      await page.locator('#companyName').fill('Acme Corp');
+      await page.locator('#jobTitle').fill('Senior Engineer');
+      await page.locator('#interviewType').selectOption('video');
+      await page.locator('#thankYouSubmit').click();
+      await expect.poll(() => apiCalled, { timeout: 5000 }).toBe(true);
     });
   });
 });

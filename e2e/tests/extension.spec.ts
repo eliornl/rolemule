@@ -1,6 +1,8 @@
 import { test, expect, chromium } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
 
 /**
  * Chrome Extension tests
@@ -499,27 +501,26 @@ test.describe('Chrome Extension', () => {
   });
 
   test.describe('Extension Loading (Chromium only)', () => {
-    
-    test.skip('should load extension in browser', async () => {
-      // This test requires a full Chromium browser with extension support
-      // Skip by default as it requires special setup
-      
-      const browser = await chromium.launchPersistentContext('', {
-        headless: false,
+
+    test('should load extension in browser', async () => {
+      const userDataDir = mkdtempSync(path.join(tmpdir(), 'pw-ext-'));
+      const context = await chromium.launchPersistentContext(userDataDir, {
+        channel: 'chromium',
+        headless: true,
         args: [
           `--disable-extensions-except=${extensionPath}`,
           `--load-extension=${extensionPath}`,
         ],
       });
-      
-      // Get the extension ID
-      const extensionPage = browser.pages().find(p => 
-        p.url().includes('chrome-extension://')
-      );
-      
-      expect(extensionPage).toBeTruthy();
-      
-      await browser.close();
+
+      try {
+        const serviceWorker = context.serviceWorkers()[0]
+          ?? await context.waitForEvent('serviceworker', { timeout: 15000 });
+        expect(serviceWorker.url()).toMatch(/^chrome-extension:\/\//);
+        expect(serviceWorker.url()).toContain('service-worker');
+      } finally {
+        await context.close();
+      }
     });
   });
 });

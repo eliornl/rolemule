@@ -5,6 +5,7 @@ import { generateTestEmail } from '../fixtures/test-data';
 /**
  * Accessibility tests following WCAG 2.1 guidelines
  */
+
 test.describe('Accessibility', () => {
   
   test.describe('Keyboard Navigation', () => {

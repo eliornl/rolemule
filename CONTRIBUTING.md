@@ -306,69 +306,62 @@ Use `@field_validator` with module-level functions — not `@validator("field") 
 
 ---
 
-### JavaScript / Frontend
+### TypeScript / Frontend
 
-The frontend is **vanilla JavaScript with JSDoc** type-checked by TypeScript in strict mode (`jsconfig.json`). All files in `ui/static/js/` must compile with `checkJs: true`, `noImplicitAny: true`, and `strictNullChecks: true` — zero errors.
+The web frontend is **TypeScript** under `ui/src/`, bundled per page by **Vite** into hashed IIFE files in `ui/static/dist/`. Jinja templates still reference logical keys like `{{ asset_url('js/dashboard-home.js') }}`.
 
-#### Required helpers in every page-level file
+**Source layout:**
 
-```javascript
-/** @param {string} str @returns {string} */
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    // Decode &amp; FIRST (bleach double-encodes &), then other named entities, then re-encode.
-    return String(str)
-        .replace(/&amp;/g, '&')
-        .replace(/&#x27;/g, "'").replace(/&#039;/g, "'")
-        .replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
+| Kind | Location |
+|------|----------|
+| Page entries | `ui/src/pages/*.ts` (registered in `ui/vite.entries.json`) |
+| Shared modules | `ui/src/shared/*.ts` |
+| Feature modules | `ui/src/<feature>/` (e.g. `application-detail/`, `profile-setup/`) |
+| CSS (unchanged) | `ui/static/css/` |
 
-/** @returns {string|null} */
-function getAuthToken() {
-    // @ts-ignore
-    return (window.app && typeof window.app.getAuthToken === 'function')
-        ? window.app.getAuthToken()
-        : (localStorage.getItem('access_token') || localStorage.getItem('authToken'));
-}
+**Checks before committing UI changes:**
 
-/** @param {string} msg @param {'success'|'error'|'warning'|'info'} [type] */
-function notify(msg, type = 'info') {
-    // @ts-ignore
-    if (window.app && window.app.showNotification) { window.app.showNotification(msg, type); return; }
-    const c = document.getElementById('alertContainer');
-    if (!c) return;
-    const d = document.createElement('div');
-    d.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
-    d.innerHTML = `${escapeHtml(msg)}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-    c.appendChild(d); setTimeout(() => d.remove(), 5000);
-}
+```bash
+cd ui && npm run typecheck   # strict TS via tsconfig.ci.json
+cd ui && npm run test        # Vitest (shared helpers)
+make build-frontend          # Vite + CSS hash → ui/static/dist/
 ```
+
+See [`.cursor/rules/frontend-js-strict.mdc`](.cursor/rules/frontend-js-strict.mdc) and [`.cursor/rules/frontend-build-pipeline.mdc`](.cursor/rules/frontend-build-pipeline.mdc) for full patterns.
+
+#### Shared helpers — import, don't duplicate
+
+Prefer importing from `ui/src/shared/`:
+
+```typescript
+import { escapeHtml, decodeEntities } from '@/shared/dom-security';
+import { getAuthToken } from '@/shared/auth';
+```
+
+Globals (`window.escapeHtml`, `window.showConfirm`, etc.) are still set by entries loaded in `base.html` for load-order compatibility.
 
 #### Key rules at a glance
 
 | Rule | ✅ Correct | ❌ Wrong |
 |------|-----------|---------|
-| API calls | raw `fetch()` with `Authorization: Bearer ${token}` header | `window.app.apiCall()` (only exists on landing page) |
+| API calls (dashboard) | raw `fetch()` with `Authorization: Bearer ${token}` header | `window.app.apiCall()` (only exists on landing page) |
 | FastAPI errors | `errData.message \|\| errData.detail` | `errData.message` only |
-| Error casting | `const err = /** @type {Error} */ (error)` | `error.message` directly |
+| `.textContent` | `decodeEntities(serverString)` | raw server string or `escapeHtml()` |
+| `.innerHTML` | `escapeHtml(value)` on every dynamic fragment | unescaped interpolation |
 | Confirmations | `await window.showConfirm({...})` | `confirm('Are you sure?')` |
 | Event handlers | `data-action` + event delegation | `onclick=` attributes |
 | Style toggling | `.is-hidden` CSS class | `style="display:none"` attribute |
 | Inline styles | Never — CSP blocks them | `<div style="...">` |
 | New tab links | `rel="noopener noreferrer"` | missing `rel` |
-| User messages | `notify(msg, 'error')` | `alert(msg)` |
+| Asset URLs in templates | `{{ asset_url('js/...') }}` | hardcoded `/static/js/...` |
 
-#### Adding a new JS file
+#### Adding a new page script
 
-1. Annotate all functions with JSDoc `@param` / `@returns`
-2. Null-check all `getElementById` / `querySelector` results before use
-3. Cast `error` in catch blocks: `const err = /** @type {Error} */ (error)`
-4. Use `// @ts-ignore` for `window.*` assignments and third-party globals
-5. Register a `beforeunload` cleanup for any `setInterval` / `setTimeout`
-6. Register the file in `ui/build.mjs`
-7. Load it in the template with `{{ asset_url('js/filename.js') }}`
+1. Create `ui/src/pages/my-page.ts` (or split helpers under `ui/src/my-feature/`)
+2. Add to `ui/vite.entries.json`: `"js/my-page.js": "src/pages/my-page.ts"`
+3. Load in the template: `{{ asset_url('js/my-page.js') }}`
+4. Add the entry to `ui/tsconfig.ci.json` `include` if it is new strict code
+5. Run `make build-frontend` and hard-refresh the browser in dev
 
 ---
 

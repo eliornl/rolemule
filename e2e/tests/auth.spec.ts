@@ -20,7 +20,7 @@ test.describe('Authentication', () => {
       });
       
       // Wait for success message (page shows success then redirects after 2s delay)
-      await expect(page.getByText('Account created successfully')).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(/Account created/i)).toBeVisible({ timeout: 15000 });
       
       // Should redirect to profile setup or dashboard (wait longer for redirect)
       await expect(page).toHaveURL(/profile\/setup|dashboard/, { timeout: 15000 });
@@ -236,14 +236,10 @@ test.describe('Authentication', () => {
       }
       
       await dashboardPage.skipOnboarding();
-      
-      // Find and click logout button
-      const logoutBtn = page.locator('a:has-text("Logout"), button:has-text("Logout"), a:has-text("Sign Out"), button:has-text("Sign Out")').first();
-      if (await logoutBtn.isVisible({ timeout: 5000 })) {
-        await logoutBtn.click();
-        // Should be on login page
-        await expect(page).toHaveURL(/login/, { timeout: 10000 });
-      }
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('.welcome-card, #applicationsList, nav.navbar').first()).toBeVisible({ timeout: 15000 });
+
+      await dashboardPage.logout();
     });
     
     test('should not be able to access dashboard after logout', async ({ page }) => {
@@ -274,19 +270,16 @@ test.describe('Authentication', () => {
       }
       
       await dashboardPage.skipOnboarding();
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('.welcome-card, #applicationsList, nav.navbar').first()).toBeVisible({ timeout: 15000 });
+
+      await dashboardPage.logout();
       
-      // Find and click logout button
-      const logoutBtn = page.locator('a:has-text("Logout"), button:has-text("Logout"), a:has-text("Sign Out"), button:has-text("Sign Out")').first();
-      if (await logoutBtn.isVisible({ timeout: 5000 })) {
-        await logoutBtn.click();
-        await page.waitForURL(/login/, { timeout: 10000 });
-        
-        // Try to access dashboard
-        await page.goto('/dashboard');
-        
-        // Should redirect to login
-        await expect(page).toHaveURL(/login/);
-      }
+      // Try to access dashboard
+      await page.goto('/dashboard');
+      
+      // Should redirect to login
+      await expect(page).toHaveURL(/auth\/login/, { timeout: 15000 });
     });
   });
   
@@ -296,8 +289,8 @@ test.describe('Authentication', () => {
       await page.goto('/auth/reset-password');
       
       // Should show email input and submit button
-      const emailInput = page.locator('#forgotEmail, input[type="email"]').first();
-      const submitButton = page.locator('#forgotPasswordBtn');
+      const emailInput = page.locator('#email, input[type="email"]').first();
+      const submitButton = page.locator('#forgotBtn, #forgotPasswordBtn');
       
       await expect(emailInput).toBeVisible();
       await expect(submitButton).toBeVisible();
@@ -306,8 +299,8 @@ test.describe('Authentication', () => {
     test('should submit password reset request', async ({ page }) => {
       await page.goto('/auth/reset-password');
       
-      const emailInput = page.locator('#forgotEmail, input[type="email"]').first();
-      const submitButton = page.locator('#forgotPasswordBtn');
+      const emailInput = page.locator('#email, input[type="email"]').first();
+      const submitButton = page.locator('#forgotBtn, #forgotPasswordBtn');
       
       await emailInput.fill('test@example.com');
       await submitButton.click();

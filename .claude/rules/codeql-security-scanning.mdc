@@ -1,6 +1,6 @@
 ---
 description: CodeQL, secret scanning, log sanitization, and CI security gate patterns
-globs: **/*.{py,js,yml}
+globs: **/*.{py,js,ts,yml}
 alwaysApply: false
 ---
 
@@ -13,7 +13,7 @@ alwaysApply: false
 | `ci.yml` | **Lint (ruff)** | `ruff check .` — must pass before push |
 | `ci.yml` | Python tests | `pytest tests/test_agents/ tests/test_api/ …` with 97% coverage |
 | `codeql.yml` | Analyze (python) | `security-and-quality` query pack + `.github/codeql/codeql-config.yml` |
-| `codeql.yml` | Analyze (javascript-typescript) | Same; scans `ui/static/js/` and `extension/` |
+| `codeql.yml` | Analyze (javascript-typescript) | Same; scans `ui/src/` and `extension/` |
 
 Secret scanning and push protection are enabled on the repo. Dependabot alerts + security updates are on.
 
@@ -72,7 +72,7 @@ class StatusUpdateRequest(BaseModel):
 
 ## JavaScript — dashboard vs extension
 
-**Dashboard** (`ui/static/js/`): shared helpers live in `ui/static/js/dom-security.js` (loaded globally via `base.html`):
+**Dashboard** (`ui/src/`): shared helpers live in `ui/src/shared/dom-security.ts` (global entry `ui/src/pages/dom-security.ts`, loaded via `base.html`):
 
 - `window.escapeHtml`, `window.decodeEntities`, `window.sanitizeLogValue`, `window.stripHtmlForAlert`
 - Page scripts may delegate: `return window.decodeEntities(str);`

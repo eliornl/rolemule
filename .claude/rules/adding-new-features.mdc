@@ -82,7 +82,7 @@ When adding a new field to an agent (e.g. `CompanyResearchResult`, `ProfileMatch
 1. Add the field to the dataclass in `workflows/state_schema.py` with an appropriate default
 2. Update the agent prompt in `agents/*.py` to instruct the LLM to populate it
 3. Map it in the agent's `_map_to_result()` method (if one exists)
-4. Render it in `ui/static/js/application-detail.js` inside the appropriate render function
+4. Render it in `ui/src/application-detail/` (e.g. `render-*.ts`) inside the appropriate render function
 5. Add CSS for any new UI components in `ui/dashboard/application.html`
 6. Update `ui-application-detail.mdc` to document the new field and its CSS classes
 
@@ -122,7 +122,7 @@ See `landing-page.mdc` for the full showcase structure and CSS/JS reference.
 
 ## Adding a New Static JS or CSS File
 
-1. Create the file in `ui/static/js/` or `ui/static/css/`
+1. Create the page entry in `ui/src/pages/` (or `ui/static/css/` for styles) and register in `ui/vite.entries.json`
 2. Reference it in the template with `{{ asset_url('js/my-file.js') }}` — **never** a raw `/static/` path
 3. Run `make build-frontend` (macOS/Linux) or `just build-frontend` (Windows) to regenerate the manifest with the new file
 4. The Dockerfile and CI handle the build automatically on deploy
@@ -139,7 +139,7 @@ See `frontend-build-pipeline.mdc` for full details.
 6. **PATCH handler** — Apply the new field only when it is explicitly set (use `if request.field is not None:` pattern)
 7. **GET handler** — Return the new field in `ApplicationPreferencesResponse(...)`
 8. **UI** — Add a card to `preferencesSection` in `ui/dashboard/settings.html`. Use `.pref-select.pref-select-inline` for dropdowns (right-aligned inline) or `.pref-toggle` for booleans
-9. **JS** — Update `_applyPreferencesToUI()` and `_readPrefsFromUI()` in `ui/static/js/dashboard-settings.js`; the debounced auto-save (`_schedulePreferencesSave`) and event listener wiring happen in `DOMContentLoaded`
+9. **TS** — Update `_applyPreferencesToUI()` and `_readPrefsFromUI()` in `ui/src/dashboard-settings/`; the debounced auto-save (`_schedulePreferencesSave`) and event listener wiring happen in `DOMContentLoaded`
 10. **Agent wiring** — If the preference affects LLM output, read it from `state.get("workflow_preferences") or {}` inside the relevant agent's `process()` and inject it into the prompt or pass it as a `generate()` parameter
 
 See `settings-page.mdc` for settings UI patterns and `database-patterns.mdc` for the upsert pattern.

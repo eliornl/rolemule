@@ -406,8 +406,9 @@ class TestMiddleware:
     @pytest.mark.asyncio
     async def test_global_rate_limit_returns_429(self, api_client):
         blocked = RateLimitResult(allowed=False, limit=100, remaining=0, reset_seconds=60)
-        with patch("utils.cache.check_rate_limit_with_headers", AsyncMock(return_value=blocked)):
-            resp = await api_client.get("/api/v1/profile/")
+        with patch.object(main.settings, "testing", False):
+            with patch("utils.cache.check_rate_limit_with_headers", AsyncMock(return_value=blocked)):
+                resp = await api_client.get("/api/v1/profile/")
         assert resp.status_code == 429
         assert resp.headers.get("Retry-After") == "60"
 
@@ -421,11 +422,12 @@ class TestMiddleware:
             algorithm=sec.jwt_config["algorithm"],
         )
         mock_check = AsyncMock(return_value=RateLimitResult(allowed=True, limit=100, remaining=99, reset_seconds=60))
-        with patch("utils.cache.check_rate_limit_with_headers", mock_check):
-            await api_client.get(
-                "/api/v1/profile/",
-                headers={"Authorization": f"Bearer {token}"},
-            )
+        with patch.object(main.settings, "testing", False):
+            with patch("utils.cache.check_rate_limit_with_headers", mock_check):
+                await api_client.get(
+                    "/api/v1/profile/",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
         identifier = mock_check.call_args.kwargs.get("identifier") or mock_check.call_args[1].get("identifier")
         if identifier is None and mock_check.call_args[0]:
             identifier = mock_check.call_args[0][0]

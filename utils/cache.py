@@ -1399,6 +1399,34 @@ async def get_rate_limit_remaining(
         return limit
 
 
+async def increment_rate_limit(
+    identifier: str,
+    window_seconds: int = 60,
+) -> None:
+    """Record one rate-limit consumption event after a successful action."""
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            await _fallback_limiter.check(identifier, 1, window_seconds)
+            return
+
+        key = f"{CACHE_PREFIX_RATE_LIMIT}:{identifier}"
+        current = await redis.get(key)
+        current_count = int(current) if current else 0
+        pipe = redis.pipeline()
+        pipe.incr(key)
+        if current_count == 0:
+            pipe.expire(key, window_seconds)
+        await pipe.execute()
+
+    except Exception as e:
+        logger.warning(
+            "Rate limit increment error: %s — using in-memory fallback",
+            sanitize_log_value(str(e)),
+        )
+        await _fallback_limiter.check(identifier, 1, window_seconds)
+
+
 # =============================================================================
 # ACCOUNT LOCKOUT
 # =============================================================================

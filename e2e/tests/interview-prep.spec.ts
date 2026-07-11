@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupAuth as seedAuth, buildMockGetProfileResponse, getE2EAuthToken } from '../utils/api-mocks';
 
 /**
  * COMPREHENSIVE INTERVIEW PREP PAGE TESTS  (/dashboard/interview-prep/:session_id)
@@ -34,7 +35,6 @@ import { test, expect } from '@playwright/test';
  *   K. Access control
  */
 
-const MOCK_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSIsImV4cCI6OTk5OTk5OTk5OX0.fake_sig_for_testing';
 const SESSION_ID = 'interview-session-xyz';
 const PAGE_URL = `/dashboard/interview-prep/${SESSION_ID}`;
 
@@ -83,14 +83,7 @@ const MOCK_PREP = {
 // ---------------------------------------------------------------------------
 
 async function setupAuth(page: any) {
-  await page.addInitScript((token: string) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('cookie_consent', JSON.stringify({
-      essential: true, functional: true, analytics: false,
-      version: '1.0', timestamp: new Date().toISOString()
-    }));
-  }, MOCK_TOKEN);
+  await seedAuth(page);
 }
 
 /** Minimal prep payload — matches the exact shape the JS renderInterviewPrep expects */
@@ -602,21 +595,16 @@ test.describe('J. Regenerate Action', () => {
     expect(text).toMatch(/regenerate/i);
   });
 
-  test('clicking regenerate shows confirm dialog', async ({ page }) => {
-    let dialogShown = false;
-    page.on('dialog', dialog => {
-      dialogShown = true;
-      dialog.dismiss();
-    });
+  test('clicking regenerate shows confirm modal', async ({ page }) => {
     await page.locator('[data-action="regenerate-interview-prep"]').click();
-    await page.waitForTimeout(500);
-    expect(dialogShown).toBe(true);
+    await expect(page.locator('#sharedConfirmModal')).toBeVisible({ timeout: 5000 });
   });
 
   test('dismissing regenerate confirm keeps mainContent visible', async ({ page }) => {
-    page.on('dialog', dialog => dialog.dismiss());
     await page.locator('[data-action="regenerate-interview-prep"]').click();
-    await page.waitForTimeout(500);
+    await expect(page.locator('#sharedConfirmModal')).toBeVisible({ timeout: 5000 });
+    await page.locator('#sharedConfirmCancel, [data-action="confirm-cancel"]').first().click();
+    await page.waitForTimeout(300);
     await expect(page.locator('#mainContent')).toBeVisible();
   });
 });
@@ -725,11 +713,27 @@ test.describe('M. Mobile Layout', () => {
   test('interview prep page loads on 375px mobile', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const p = await ctx.newPage();
-    await p.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
+    const token = getE2EAuthToken();
+    await p.addInitScript((t: string) => {
+      localStorage.setItem('access_token', t);
+      localStorage.setItem('authToken', t);
       localStorage.setItem('cookie_consent', JSON.stringify({ essential: true, functional: true, analytics: false, version: '1.0', timestamp: new Date().toISOString() }));
-    }, MOCK_TOKEN);
+    }, token);
+    await p.route('**/api/v1/profile**', async (route: any) => {
+      if (route.request().method() !== 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'ok' }) });
+        return;
+      }
+      const u = new URL(route.request().url());
+      if (u.pathname.replace(/\/$/, '') !== '/api/v1/profile') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'ok' }) });
+        return;
+      }
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify(buildMockGetProfileResponse()),
+      });
+    });
     await p.route(`**/api/v1/interview-prep/${SESSION_ID}`, (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ has_interview_prep: true, interview_prep: MINIMAL_PREP }),
@@ -748,11 +752,27 @@ test.describe('M. Mobile Layout', () => {
   test('tabs scroll horizontally on narrow viewport', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 667 } });
     const p = await ctx.newPage();
-    await p.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('authToken', token);
+    const token = getE2EAuthToken();
+    await p.addInitScript((t: string) => {
+      localStorage.setItem('access_token', t);
+      localStorage.setItem('authToken', t);
       localStorage.setItem('cookie_consent', JSON.stringify({ essential: true, functional: true, analytics: false, version: '1.0', timestamp: new Date().toISOString() }));
-    }, MOCK_TOKEN);
+    }, token);
+    await p.route('**/api/v1/profile**', async (route: any) => {
+      if (route.request().method() !== 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'ok' }) });
+        return;
+      }
+      const u = new URL(route.request().url());
+      if (u.pathname.replace(/\/$/, '') !== '/api/v1/profile') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'ok' }) });
+        return;
+      }
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify(buildMockGetProfileResponse()),
+      });
+    });
     await p.route(`**/api/v1/interview-prep/${SESSION_ID}`, (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ has_interview_prep: true, interview_prep: MINIMAL_PREP }),
@@ -898,12 +918,12 @@ test.describe('P. Tab Switching Validation', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
-  test('switching back to process tab shows process content', async ({ page }) => {
+  test('switching back to questions tab shows process content', async ({ page }) => {
     await page.locator('#concerns-tab').click();
     await page.locator('#concerns').waitFor({ state: 'visible', timeout: 5000 });
-    await page.locator('#process-tab').click();
-    await page.locator('#process').waitFor({ state: 'visible', timeout: 5000 });
-    await expect(page.locator('#process')).toBeVisible();
+    await page.locator('#questions-tab').click();
+    await page.locator('#questions').waitFor({ state: 'visible', timeout: 5000 });
+    await expect(page.locator('#processContent')).toBeAttached();
   });
 
   test('logistics tab content renders checklist items', async ({ page }) => {

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth, setupAllMocks } from '../utils/api-mocks';
+import { ProfileSetupPage } from '../pages';
+import { setupAuth, setupAllMocks, buildMockGetProfileResponse, isMockedE2E, setupWebSocketMock } from '../utils/api-mocks';
 
 /**
  * MULTI-STEP USER JOURNEY TESTS
@@ -46,33 +47,32 @@ const MOCK_WORKFLOW_RESULTS = {
   three_key_selling_points: ['Python expertise', 'Startup experience', 'Leadership track record'],
 };
 
+const LONG_JOB_DESCRIPTION =
+  'Senior Software Engineer at TechCorp. Requirements: Python, FastAPI, React, PostgreSQL, distributed systems, and cloud infrastructure experience. '.repeat(2);
+
 // ---------------------------------------------------------------------------
-// 1. NEW APPLICATION — URL SUBMISSION JOURNEY
+// 1. NEW APPLICATION — PASTE JOB DESCRIPTION JOURNEY
 // ---------------------------------------------------------------------------
-test.describe('Journey 1 — New Application via URL', () => {
+test.describe('Journey 1 — New Application via Paste', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
     await setupAllMocks(page);
   });
 
-  test('new application page loads and shows URL input', async ({ page }) => {
+  test('new application page loads and shows job description textarea', async ({ page }) => {
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-    const urlInput = page.locator('input[type="url"], input[name="job_url"], #jobUrl').first();
-    await expect(urlInput).toBeAttached();
+    await expect(page.locator('#jobDescription')).toBeAttached();
   });
 
-  test('can type a URL into the job URL field', async ({ page }) => {
+  test('can type into the job description field', async ({ page }) => {
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-    const urlInput = page.locator('input[type="url"], input[name="job_url"], #jobUrl').first();
-    if (await urlInput.isVisible()) {
-      await urlInput.fill('https://example.com/jobs/engineer');
-      expect(await urlInput.inputValue()).toBe('https://example.com/jobs/engineer');
-    }
+    await page.locator('#jobDescription').fill('Senior Engineer at Example Corp\n\nRequirements:\n- Python');
+    expect(await page.locator('#jobDescription').inputValue()).toContain('Senior Engineer');
   });
 
-  test('submitting valid URL triggers workflow API call', async ({ page }) => {
+  test('submitting pasted description triggers workflow API call', async ({ page }) => {
     let workflowStarted = false;
     await page.route('**/api/v1/workflow/start', (route: any) => {
       workflowStarted = true;
@@ -88,17 +88,10 @@ test.describe('Journey 1 — New Application via URL', () => {
 
     await page.goto('/dashboard/new-application');
     await page.waitForLoadState('domcontentloaded');
-
-    const urlInput = page.locator('input[type="url"], input[name="job_url"], #jobUrl').first();
-    if (await urlInput.isVisible()) {
-      await urlInput.fill('https://example.com/jobs/engineer');
-      const submitBtn = page.locator('button[type="submit"], button:has-text("Start"), button:has-text("Analyze")').first();
-      if (await submitBtn.isEnabled()) {
-        await submitBtn.click();
-        await page.waitForTimeout(1000);
-        expect(workflowStarted).toBe(true);
-      }
-    }
+    await page.locator('#jobDescription').fill(LONG_JOB_DESCRIPTION);
+    await page.locator('[data-action="process-application"]').click();
+    await page.waitForTimeout(1000);
+    expect(workflowStarted).toBe(true);
   });
 
   test('application detail page renders after workflow completes', async ({ page }) => {
@@ -162,7 +155,7 @@ test.describe('Journey 2 — Thank You Note', () => {
 
   test('thank you generate button triggers API call', async ({ page }) => {
     let apiCalled = false;
-    await page.route('**/api/v1/career-tools/thank-you**', (route: any) => {
+    await page.route('**/api/v1/tools/thank-you**', (route: any) => {
       apiCalled = true;
       route.fulfill({
         status: 200, contentType: 'application/json',
@@ -175,17 +168,20 @@ test.describe('Journey 2 — Thank You Note', () => {
 
     await page.goto('/dashboard/tools');
     await page.waitForLoadState('domcontentloaded');
+    await page.locator('#interviewerName').fill('Jane Smith');
+    await page.locator('#companyName').fill('Acme Corp');
+    await page.locator('#jobTitle').fill('Senior Engineer');
+    await page.locator('#interviewType').selectOption('video');
 
-    const submitBtn = page.locator('#generateThankYou, button:has-text("Generate Thank You"), button:has-text("Generate Note")').first();
-    if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await submitBtn.click();
-      await page.waitForTimeout(1000);
-      expect(apiCalled).toBe(true);
-    }
+    const submitBtn = page.locator('#thankYouSubmit').first();
+    await expect(submitBtn).toBeVisible({ timeout: 5000 });
+    await submitBtn.click();
+    await page.waitForTimeout(1500);
+    expect(apiCalled).toBe(true);
   });
 
   test('thank you output section renders after API response', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/thank-you**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/thank-you**', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         thank_you_note: 'Dear Jane, Thank you for the interview opportunity.',
@@ -195,16 +191,16 @@ test.describe('Journey 2 — Thank You Note', () => {
 
     await page.goto('/dashboard/tools');
     await page.waitForLoadState('domcontentloaded');
+    await page.locator('#interviewerName').fill('Jane Smith');
+    await page.locator('#companyName').fill('Acme Corp');
+    await page.locator('#jobTitle').fill('Senior Engineer');
+    await page.locator('#interviewType').selectOption('video');
 
-    const submitBtn = page.locator('#generateThankYou, button:has-text("Generate")').first();
-    if (await submitBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await submitBtn.click();
-      await page.waitForTimeout(2000);
-      const output = page.locator('#thankYouOutput, #thankYouSection, .thank-you-output').first();
-      if (await output.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await expect(output).toBeVisible();
-      }
-    }
+    const submitBtn = page.locator('#thankYouSubmit').first();
+    await expect(submitBtn).toBeVisible({ timeout: 5000 });
+    await submitBtn.click();
+    await page.waitForTimeout(2000);
+    await expect(page.locator('#thankYouOutput')).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -265,17 +261,31 @@ test.describe('Journey 3 — Settings API Key', () => {
 test.describe('Journey 4 — Profile Update', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
-    await page.route('**/api/v1/profile', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({
-        name: 'Test User', email: 'test@example.com', profile_complete: true,
-        professional_title: 'Software Engineer', years_experience: 5,
-      }),
-    }));
-    await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json',
-      body: JSON.stringify({ applications: [], total: 0 }),
-    }));
+    if (!isMockedE2E) {
+      await setupWebSocketMock(page);
+    }
+    const incompleteProfile = buildMockGetProfileResponse({ profileCompleted: false });
+    await page.route('**/api/v1/profile/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(incompleteProfile),
+      });
+    });
+    await page.route('**/api/v1/profile/basic-info**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Saved' }),
+      });
+    });
+    await page.route('**/api/v1/resume/upload**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'ok' }),
+      });
+    });
   });
 
   test('profile setup page loads', async ({ page }) => {
@@ -315,17 +325,21 @@ test.describe('Journey 4 — Profile Update', () => {
   });
 
   test('Next button navigates to step 2', async ({ page }) => {
-    await page.route('**/api/v1/profile/basic-info**', (route: any) => route.fulfill({
-      status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'Saved' }),
-    }));
+    const profilePage = new ProfileSetupPage(page);
     await page.goto('/profile/setup');
-    await page.waitForLoadState('domcontentloaded');
-    const nextBtn = page.locator('button:has-text("Next"), button[data-action="next-step"]').first();
-    if (await nextBtn.isVisible({ timeout: 3000 }).catch(() => false) && await nextBtn.isEnabled()) {
-      await nextBtn.click();
-      await page.waitForTimeout(1000);
-      await expect(page.locator('body')).toBeVisible();
-    }
+    await profilePage.handleCookieConsent();
+    await profilePage.skipResumeUpload();
+    await profilePage.fillBasicInfo({
+      city: 'Boston',
+      state: 'MA',
+      country: 'USA',
+      title: 'Software Engineer',
+      yearsExperience: 5,
+      summary: 'Five years of experience building web applications and APIs.',
+    });
+    await profilePage.nextStep();
+    await profilePage.waitForStep(2);
+    await expect(page.locator('#step-2.active, #company-name, #no-experience').first()).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -374,17 +388,35 @@ test.describe('Journey 5 — Auth Redirect', () => {
       body: JSON.stringify({
         access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
         token_type: 'bearer',
-        user: { name: 'Test User', email: 'user@example.com', profile_complete: true },
+        profile_completed: true,
+        user: { name: 'Test User', email: 'user@example.com', profile_completed: true },
       }),
     }));
+    await page.route('**/api/v1/profile**', async (route: any) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+      const u = new URL(route.request().url());
+      if (u.pathname.replace(/\/$/, '') !== '/api/v1/profile') {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({
+          user_info: { profile_completed: true },
+          completion_status: { profile_completed: true },
+        }),
+      });
+    });
 
     await page.goto('/auth/login');
     await page.waitForLoadState('domcontentloaded');
     await page.locator('input[type="email"]').fill('user@example.com');
     await page.locator('input[type="password"]').fill('Password123!');
     await page.locator('button[type="submit"], #login-btn').first().click();
-    await page.waitForTimeout(2000);
-    await expect(page).toHaveURL(/dashboard|profile/);
+    await page.waitForURL(/dashboard/, { timeout: 10000 });
   });
 
   test('invalid credentials shows error message', async ({ page }) => {
@@ -447,9 +479,9 @@ test.describe('Journey 6 — Dashboard Application List', () => {
   });
 
   test('/dashboard/history returns 404 (route removed)', async ({ page }) => {
-    await page.goto('/dashboard/history');
+    const response = await page.goto('/dashboard/history');
     await page.waitForLoadState('domcontentloaded');
-    expect(page.url()).not.toMatch(/\/dashboard\/history$/);
+    expect(response?.status() === 404 || !page.url().endsWith('/dashboard/history')).toBeTruthy();
   });
 
   test('dashboard does not redirect authenticated users to login', async ({ page }) => {

@@ -407,3 +407,12 @@ async def test_get_cache_stats_counts_keys(mock_redis) -> None:
     with patch("utils.cache.get_redis_or_none", AsyncMock(return_value=mock_redis)):
         stats = await get_cache_stats()
         assert stats["key_counts"]["job_analysis"] >= 1
+
+
+def test_safe_log_identifier_masks_email_in_prefix() -> None:
+    from utils.cache import _safe_log_identifier
+
+    masked = _safe_log_identifier("export_data:user@example.com")
+    assert masked.startswith("export_data:")
+    assert "user@example.com" not in masked
+    assert "***" in masked

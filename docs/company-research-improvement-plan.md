@@ -457,7 +457,7 @@ No new endpoint required — fields already in `company_research` JSON returned 
 
 Ensure `research_quality` and `confidence_assessment.overall_confidence` are included in API responses (they flow via existing JSONB serialization).
 
-### 5.2 Frontend — `ui/static/js/application-detail.js`
+### 5.2 Frontend — `ui/src/application-detail/`
 
 In `renderMainContent()` company tab block (~line 560), **before** company stats card:
 
@@ -742,7 +742,7 @@ Record session IDs + screenshots in PR.
 | `workflows/state_schema.py` | 2, 3 |
 | `utils/llm_client.py` | 4 |
 | `config/settings.py` | 4 |
-| `ui/static/js/application-detail.js` | 5 |
+| `ui/src/application-detail/` | 5 |
 | `ui/templates/application.html` | 5 |
 | `tests/test_utils/test_employer_disambiguation.py` | 1 (new) |
 | `tests/test_agents/test_company_research_golden.py` | 1+ (new) |

@@ -50,8 +50,8 @@ export class NewApplicationPage extends BasePage {
     super(page);
     
     // Step 1 - Basic Info
-    this.jobTitleInput = page.locator('#jobTitle, input[placeholder*="Job Title"], input[placeholder*="Senior Software"]');
-    this.companyNameInput = page.locator('#companyName, input[placeholder*="Company Name"], input[placeholder*="Google"]');
+    this.jobTitleInput = page.locator('#jobTitleInput, #jobTitle, input[placeholder*="Job title"], input[placeholder*="Job Title"]');
+    this.companyNameInput = page.locator('#companyNameInput, #companyName, input[placeholder*="Company"]');
     this.nextStepButton = page.locator('button:has-text("Next")');
     
     // Step 2 - Input methods
@@ -101,12 +101,11 @@ export class NewApplicationPage extends BasePage {
    * Complete Step 1 (Basic Info) and proceed to Step 2
    */
   async completeStep1(jobTitle: string = 'Software Engineer', companyName: string = 'Test Company') {
-    // Fill in basic info if we're on Step 1
     if (await this.jobTitleInput.isVisible({ timeout: 3000 }).catch(() => false)) {
       await this.jobTitleInput.fill(jobTitle);
+    }
+    if (await this.companyNameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
       await this.companyNameInput.fill(companyName);
-      await this.nextStepButton.click();
-      await this.page.waitForTimeout(500);
     }
   }
   

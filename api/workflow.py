@@ -642,6 +642,14 @@ class WorkflowResultsResponse(BaseModel):
         None, description="Generated cover letter"
     )
     notes: Optional[str] = Field(None, description="User's personal notes")
+    application_company_name: Optional[str] = Field(
+        None,
+        description="Company name on the job_applications row (dashboard card label)",
+    )
+    detected_company: Optional[str] = Field(
+        None,
+        description="Company from optional submit header / extension metadata",
+    )
     error_messages: List[str] = Field(
         default_factory=list, description="Any error messages from workflow"
     )
@@ -1145,12 +1153,20 @@ async def get_workflow_results(
         )
         application = app_result.scalar_one_or_none()
 
+        detected_company: Optional[str] = None
+        if workflow_session.job_input_data and isinstance(workflow_session.job_input_data, dict):
+            raw_detected = workflow_session.job_input_data.get("detected_company")
+            if isinstance(raw_detected, str) and raw_detected.strip():
+                detected_company = raw_detected.strip()
+
         return WorkflowResultsResponse(
             session_id=session_id,
             status=workflow_status,
             job_url=application.job_url if application else None,
             application_id=str(application.id) if application else None,
             notes=application.notes if application else None,
+            application_company_name=application.company_name if application else None,
+            detected_company=detected_company,
             job_analysis=sanitize_llm_output(workflow_session.job_analysis) if workflow_session.job_analysis else None,
             company_research=sanitize_llm_output(workflow_session.company_research) if workflow_session.company_research else None,
             profile_matching=sanitize_llm_output(workflow_session.profile_matching) if workflow_session.profile_matching else None,

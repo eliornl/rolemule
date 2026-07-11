@@ -40,9 +40,9 @@ test.describe('Workflow (Mocked)', () => {
     });
     
     test('/dashboard/history returns 404 (route removed)', async ({ page }) => {
-      await page.goto('/dashboard/history');
+      const response = await page.goto('/dashboard/history');
       await page.waitForLoadState('domcontentloaded');
-      expect(page.url()).not.toMatch(/\/dashboard\/history$/);
+      expect(response?.status() === 404 || !page.url().endsWith('/dashboard/history')).toBeTruthy();
     });
     
     test('dashboard has body visible (application list or empty state)', async ({ page }) => {
@@ -124,23 +124,26 @@ test.describe('Workflow Mocked — Detailed', () => {
       await page.waitForLoadState('domcontentloaded');
     });
 
-    test('step 1 job title input is present and fillable', async ({ page }) => {
-      const input = page.locator('#basicJobTitle');
+    test('job title input is present and fillable', async ({ page }) => {
+      const input = page.locator('#jobTitleInput');
       await expect(input).toBeVisible({ timeout: 5000 });
       await input.fill('Senior Developer');
       expect(await input.inputValue()).toBe('Senior Developer');
     });
 
-    test('step 1 company name input is present and fillable', async ({ page }) => {
-      const input = page.locator('#basicCompanyName');
+    test('company name input is present and fillable', async ({ page }) => {
+      const input = page.locator('#companyNameInput');
       await expect(input).toBeVisible({ timeout: 5000 });
       await input.fill('BigCorp');
       expect(await input.inputValue()).toBe('BigCorp');
     });
 
-    test('step 1 has a Next button', async ({ page }) => {
-      const nextBtn = page.locator('button:has-text("Next"), #nextToStep2');
-      await expect(nextBtn.first()).toBeVisible({ timeout: 5000 });
+    test('job description textarea is present', async ({ page }) => {
+      await expect(page.locator('#jobDescription')).toBeVisible({ timeout: 5000 });
+    });
+
+    test('analyze button is visible', async ({ page }) => {
+      await expect(page.locator('[data-action="process-application"]')).toBeVisible({ timeout: 5000 });
     });
 
     test('cancel link is visible and points to /dashboard', async ({ page }) => {

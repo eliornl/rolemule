@@ -48,7 +48,7 @@ test.describe('Complete Page Coverage', () => {
       
       // The reset password page has different sections
       const emailInput = page.locator('input[type="email"], #email, #resetEmail');
-      const submitBtn = page.locator('button[type="submit"], #forgotPasswordBtn, #resetPasswordBtn');
+      const submitBtn = page.locator('button[type="submit"], #forgotBtn, #resetBtn');
       
       await expect(emailInput.first()).toBeVisible();
       await expect(submitBtn.first()).toBeVisible();
@@ -451,9 +451,8 @@ test.describe('Authenticated Page Coverage', () => {
     });
 
     test('/dashboard/history is removed — returns 404', async ({ page }) => {
-      await page.goto('/dashboard/history');
-      await page.waitForLoadState('domcontentloaded');
-      expect(page.url()).not.toMatch(/\/dashboard\/history$/);
+      const response = await page.goto('/dashboard/history');
+      expect(response?.status()).toBe(404);
     });
 
     test('dashboard loads with application list heading', async ({ page }) => {

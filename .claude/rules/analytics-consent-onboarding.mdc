@@ -1,6 +1,6 @@
 ---
 description: PostHog analytics, GDPR cookie consent, and onboarding tour usage
-globs: ui/static/js/analytics.js,ui/static/js/cookie-consent.js,ui/static/js/onboarding.js
+globs: ui/src/pages/analytics.ts,ui/src/pages/cookie-consent.ts,ui/src/pages/onboarding.ts,ui/src/analytics/**/*.ts,ui/src/cookie-consent/**/*.ts,ui/src/onboarding/**/*.ts
 alwaysApply: false
 ---
 

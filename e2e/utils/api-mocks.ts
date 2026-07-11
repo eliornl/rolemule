@@ -1,9 +1,41 @@
 import { Page, Route } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+
+const LIVE_AUTH_FILE = path.join(__dirname, '../playwright/.auth/user.json');
+
+export function readLiveAuthToken(): string | null {
+  try {
+    const raw = fs.readFileSync(LIVE_AUTH_FILE, 'utf8');
+    const state = JSON.parse(raw) as {
+      origins?: Array<{ localStorage?: Array<{ name: string; value: string }> }>;
+    };
+    for (const origin of state.origins ?? []) {
+      for (const item of origin.localStorage ?? []) {
+        if (item.name === 'access_token' || item.name === 'authToken') {
+          if (item.value && item.value.split('.').length === 3) {
+            return item.value;
+          }
+        }
+      }
+    }
+  } catch {
+    // global.setup has not run yet or auth file missing
+  }
+  return null;
+}
 
 /**
  * API Mocking utilities for comprehensive E2E testing
  * Allows testing full workflows without real backend/API keys
+ *
+ * When SKIP_SERVER=1 or SMOKE=1 (mocked Tier 1 / PR smoke gate): inject fake JWT +
+ * intercept API/WS traffic. SMOKE still starts uvicorn for HTML/assets; only API auth
+ * is mocked.
+ * When the live server is used without SMOKE: rely on playwright storageState from
+ * global.setup.ts — never inject MOCK_JWT or WebSocket mocks (that causes server warnings).
  */
+export const isMockedE2E = !!(process.env.SKIP_SERVER || process.env.SMOKE);
 
 // ============================================================================
 // MOCK DATA
@@ -16,6 +48,20 @@ import { Page, Route } from '@playwright/test';
  */
 export const MOCK_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSIsImV4cCI6OTk5OTk5OTk5OX0.fake_sig_for_testing';
 
+/** Auth token for the current E2E mode — real JWT on live server, MOCK_JWT when SKIP_SERVER=1. */
+export function getE2EAuthToken(): string {
+  if (isMockedE2E) {
+    return MOCK_JWT;
+  }
+  const live = readLiveAuthToken();
+  if (!live) {
+    throw new Error(
+      'Live E2E auth token missing. Run the setup project (global.setup.ts) first.',
+    );
+  }
+  return live;
+}
+
 export const mockUser = {
   id: 'mock-user-uuid-12345',
   email: 'mockuser@test.com',
@@ -23,6 +69,15 @@ export const mockUser = {
   profile_completed: true,
   email_verified: true,
   created_at: new Date().toISOString(),
+};
+
+/** Workflow preferences returned by GET/PATCH /api/v1/profile/preferences */
+export const mockApplicationPreferences = {
+  workflow_gate_threshold: 0.5,
+  auto_generate_documents: false,
+  cover_letter_tone: 'professional',
+  resume_length: 'concise',
+  preferred_model: null as string | null,
 };
 
 export const mockProfile = {
@@ -382,6 +437,17 @@ export async function setupCookieConsent(page: Page): Promise<void> {
  * authenticated (dashboard) page without going through the login form.
  */
 export async function setupAuth(page: Page): Promise<void> {
+  await setupCookieConsent(page);
+  if (!isMockedE2E) {
+    const liveToken = readLiveAuthToken();
+    if (liveToken) {
+      await page.addInitScript((token: string) => {
+        localStorage.setItem('access_token', token);
+        localStorage.setItem('authToken', token);
+      }, liveToken);
+    }
+    return;
+  }
   await page.addInitScript((token: string) => {
     localStorage.setItem('access_token', token);
     localStorage.setItem('authToken', token);
@@ -393,6 +459,9 @@ export async function setupAuth(page: Page): Promise<void> {
       timestamp: new Date().toISOString(),
     }));
   }, MOCK_JWT);
+  await setupWebSocketMock(page);
+  await setupProfileMocks(page);
+  await setupMinimalDashboardMocks(page);
 }
 
 /**
@@ -402,11 +471,74 @@ export async function setupAllMocks(
   page: Page,
   profileOptions?: ProfileMocksOptions,
 ): Promise<void> {
+  await setupCookieConsent(page);
+  if (!isMockedE2E) {
+    // Live server: keep real auth + profile; mock only heavy workflow/tools endpoints when needed.
+    await setupWorkflowMocks(page);
+    await setupToolsMocks(page);
+    return;
+  }
+  // Registered first so it runs last (Playwright LIFO) — blocks unmocked API leaks to live server.
+  await setupUnmockedApiGuard(page);
+  await setupWebSocketMock(page);
   await setupAuthMocks(page);
   await setupProfileMocks(page, profileOptions);
   await setupWorkflowMocks(page);
   await setupToolsMocks(page);
   await setupMiscMocks(page);
+}
+
+/**
+ * Minimal dashboard API mocks — prevents authenticated pages from hitting the live server
+ * when a spec only calls setupAuth() without setupAllMocks().
+ */
+export async function setupMinimalDashboardMocks(page: Page): Promise<void> {
+  await page.route('**/api/v1/applications/stats/overview', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        total: 0,
+        applied: 0,
+        interviews: 0,
+        offers: 0,
+        response_rate: 0,
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/applications', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ applications: [], total: 0, page: 1, per_page: 10, pages: 0 }),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'ok' }),
+      });
+    }
+  });
+}
+
+/**
+ * Catch-all for /api/v1/** — must be registered before specific mocks so specific handlers win.
+ * Never use route.continue() in mock handlers; continue() bypasses this guard and hits the server.
+ */
+export async function setupUnmockedApiGuard(page: Page): Promise<void> {
+  await page.route('**/api/v1/**', async (route) => {
+    await route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        detail: 'E2E: unmocked API endpoint',
+        path: new URL(route.request().url()).pathname,
+      }),
+    });
+  });
 }
 
 /**
@@ -456,15 +588,16 @@ export async function setupAuthMocks(page: Page): Promise<void> {
     });
   });
   
-  // Verify token
+  // Verify token — must match GET /api/v1/auth/verify (job-application-assistant checks success)
   await page.route('**/api/v1/auth/verify', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        valid: true,
+        success: true,
         user_id: mockUser.id,
         email: mockUser.email,
+        profile_completed: mockUser.profile_completed,
       }),
     });
   });
@@ -562,7 +695,21 @@ export async function setupProfileMocks(
   // GET /api/v1/profile/ — must match production shape (dashboard reads completion_status)
   await page.route('**/api/v1/profile**', async (route) => {
     if (!isProfileRootDocumentRequest(route)) {
-      await route.continue();
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/preferences')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockApplicationPreferences),
+        });
+        return;
+      }
+      // Fallback — do not route.continue(); that would hit the live server with an invalid JWT.
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'ok' }),
+      });
       return;
     }
     await route.fulfill({
@@ -571,6 +718,15 @@ export async function setupProfileMocks(
       body: JSON.stringify(
         buildMockGetProfileResponse({ profileCompleted: getProfileCompleted }),
       ),
+    });
+  });
+
+  // Workflow preferences (settings page, navbar-notifications on all dashboard pages)
+  await page.route('**/api/v1/profile/preferences', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockApplicationPreferences),
     });
   });
   
@@ -867,6 +1023,20 @@ export async function setupMiscMocks(page: Page): Promise<void> {
   });
   
   // Applications list
+  await page.route('**/api/v1/applications/stats/overview', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        total: 1,
+        applied: 0,
+        interviews: 0,
+        offers: 0,
+        response_rate: 0,
+      }),
+    });
+  });
+
   await page.route('**/api/v1/applications', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({

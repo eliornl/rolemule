@@ -21,8 +21,9 @@ Fixes #
 <!-- How did you verify this works? Be specific — commands run, manual steps, screenshots. -->
 
 - [ ] Unit/integration tests pass: `make test` / `just test`
-- [ ] E2E smoke tests pass: `cd e2e && npm run test:smoke` (if UI or auth flows changed)
-- [ ] Frontend builds cleanly: `make build-frontend` / `just build-frontend` (if JS/CSS changed)
+- [ ] Frontend: `cd ui && npm run typecheck && npm run test && npm run build`
+- [ ] E2E (if UI/backend/e2e changed): `cd e2e && CI=1 npx playwright test --project=chromium --workers=4`
+- [ ] Frontend builds cleanly: `make build-frontend` / `just build-frontend` (if UI changed)
 - [ ] No new linter errors: `make lint` / `just lint`
 
 ## Code checklist
@@ -33,7 +34,7 @@ Fixes #
 - [ ] No `onclick=` / `onchange=` HTML attributes (event delegation + `data-action` instead)
 - [ ] No `style="..."` HTML attributes (CSP blocks inline styles — use CSS classes)
 - [ ] No `alert()` / `confirm()` — uses `notify()` / `window.showConfirm()`
-- [ ] New/changed JS passes strict JSDoc checks (`jsconfig.json`)
+- [ ] New/changed frontend TS passes `cd ui && npm run typecheck`
 
 ## Screenshots / recordings
 

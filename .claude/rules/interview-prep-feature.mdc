@@ -1,6 +1,6 @@
 ---
 description: Interview prep — standalone agent, background generation, atomic Redis locking
-globs: agents/interview_prep.py,api/interview_prep.py,ui/static/js/dashboard-interview-prep.js
+globs: agents/interview_prep.py,api/interview_prep.py,ui/src/pages/dashboard-interview-prep.ts,ui/src/interview-prep/**/*.ts
 alwaysApply: false
 ---
 
@@ -96,7 +96,7 @@ The frontend connects to `WS /api/v1/ws/workflow/{session_id}` **before** callin
 | `interview_prep_complete` | Generation saved to DB — reload from API |
 | `interview_prep_error` | Generation failed — show error, reset UI |
 
-Frontend pattern (see `ui/static/js/dashboard-interview-prep.js`):
+Frontend pattern (see `ui/src/pages/dashboard-interview-prep.ts` and `ui/src/interview-prep/`):
 ```javascript
 connectWs();                    // open WS before firing the task
 await triggerGenerateApi();     // POST /generate

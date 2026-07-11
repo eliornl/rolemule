@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuth } from '../utils/api-mocks';
+import { setupAuth, buildMockGetProfileResponse } from '../utils/api-mocks';
 
 /**
  * API RESPONSE VALIDATION TESTS
@@ -87,8 +87,8 @@ test.describe('A. Full Response Rendering', () => {
     await setupPage(page);
     await page.goto(`/dashboard/application/${SESSION_ID}`);
     await page.waitForTimeout(4000);
-    const scoreEl = page.locator('[class*="score"], #matchScore, .match-score').first();
-    if (await scoreEl.count() > 0) {
+    const scoreEl = page.locator('#matchScore, .match-score, .fit-score-value').first();
+    if (await scoreEl.count() > 0 && await scoreEl.isVisible()) {
       await expect(scoreEl).toBeVisible();
     }
   });
@@ -242,7 +242,7 @@ test.describe('D. Career Tools API Responses', () => {
   });
 
   test('thank you note API 200 response does not crash page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/thank-you**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/thank-you**', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         thank_you_note: 'Dear Jane, thank you for the opportunity...',
@@ -257,7 +257,7 @@ test.describe('D. Career Tools API Responses', () => {
   });
 
   test('rejection analysis API 200 response does not crash page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/rejection**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/rejection-analysis**', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         analysis: 'Your application was strong. Consider improving your system design responses.',
@@ -272,7 +272,7 @@ test.describe('D. Career Tools API Responses', () => {
   });
 
   test('salary coach API 200 response does not crash page', async ({ page }) => {
-    await page.route('**/api/v1/career-tools/salary**', (route: any) => route.fulfill({
+    await page.route('**/api/v1/tools/salary-coach**', (route: any) => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({
         strategy: 'Counter at 15% above the offer based on market data.',
@@ -386,6 +386,14 @@ test.describe('F. Auth API Response Validation', () => {
         token_type: 'bearer',
         user: { name: 'Test', email: 'test@example.com', profile_complete: true },
       }),
+    }));
+    await page.route('**/api/v1/profile**', (route: any) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify(buildMockGetProfileResponse()),
+    }));
+    await page.route('**/api/v1/applications**', (route: any) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ applications: [], total: 0, page: 1, per_page: 10, pages: 0 }),
     }));
     await page.goto('/auth/login');
     await page.waitForLoadState('domcontentloaded');

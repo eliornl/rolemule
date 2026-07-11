@@ -46,7 +46,7 @@ export class SettingsPage extends BasePage {
     // API Key
     this.apiKeySection = page.locator('#apiKeysSection');
     this.apiKeyInput = page.locator('#geminiApiKey');
-    this.saveApiKeyButton = page.locator('#saveApiKeyBtn, button:has-text("Save API Key")');
+    this.saveApiKeyButton = page.locator('#apiKeysSection button[type="submit"], #saveApiKeyBtn, button:has-text("Save API Key")');
     this.deleteApiKeyButton = page.locator('#deleteApiKeyBtn, button:has-text("Delete")');
     this.apiKeyStatus = page.locator('#apiKeyStatus, #apiKeyStatusText');
     
@@ -58,7 +58,7 @@ export class SettingsPage extends BasePage {
     this.updatePasswordButton = page.locator('button:has-text("Update Password")');
     
     // Data
-    this.exportDataButton = page.locator('button:has-text("Export My Data"), button[onclick*="exportData"]');
+    this.exportDataButton = page.locator('[data-action="exportData"], button:has-text("Export")');
     this.clearDataButton = page.locator('button:has-text("Clear Data"), button:has-text("Clear All")');
     this.deleteAccountButton = page.locator('button:has-text("Delete Account"), button:has-text("Delete My Account")');
     
