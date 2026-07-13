@@ -173,6 +173,8 @@ make dev         # or: just dev       — start at http://localhost:8000
 
 > **macOS:** Always use `make setup` / `make dev` rather than bare `pip install`. They strip the `com.apple.quarantine` flag from venv `.so` files and esbuild binaries so Gatekeeper doesn't block them.
 
+> **Python deps:** edit direct packages in `requirements.in`, then regenerate the lockfile with `pip install -r requirements.in && pip freeze > requirements.txt` and run `pip check`. Do not hand-edit pinned versions in `requirements.txt`.
+
 ---
 
 ## Running Tests

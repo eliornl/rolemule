@@ -155,7 +155,7 @@ Standard sectioned output. No email, no copy-all button needed.
 
 ---
 
-## Copy Button Pattern (`dashboard-tools.js`)
+## Copy Button Pattern (`ui/src/pages/dashboard-tools.ts`)
 
 A `_clipboardWrite(text, successMsg)` helper handles all clipboard operations with a `navigator.clipboard` → `execCommand('copy')` fallback:
 

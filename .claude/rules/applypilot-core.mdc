@@ -47,7 +47,7 @@ if not user_api_key and not server_has_key:
     raise no_api_key_error()
 ```
 
-The frontend (`dashboard-new-application.js`) checks `error_code === 'CFG_6001'` and calls `showApiKeyAlert()`, which renders a dismissible warning banner with a direct link to `/settings?tab=ai-setup`.
+The frontend (`ui/src/pages/dashboard-new-application.ts`) checks `error_code === 'CFG_6001'` and calls `showApiKeyAlert()`, which renders a dismissible warning banner with a direct link to `/settings?tab=ai-setup`.
 
 ### `RES_3002` — Duplicate job application (`POST /api/v1/workflow/start`)
 
@@ -59,7 +59,7 @@ The frontend (`dashboard-new-application.js`) checks `error_code === 'CFG_6001'`
 
 `details` includes `application_id` and, when present, `session_id` (`DUPLICATE_APPLICATION`). The handler **releases** the Redis `workflow_creating:{user_id}` lock before raising so the client is not stuck behind a stale lock.
 
-**Frontend:** `dashboard-new-application.js`, `dashboard.js` (apiCall path), `extension/popup/popup.js`, and `extension/background/service-worker.js` should treat `RES_3002` as a **warning-style** user message (not a hard failure).
+**Frontend:** `ui/src/pages/dashboard-new-application.ts` (and shared `ui/src/shared/api.ts`), `extension/popup/popup.js`, and `extension/background/service-worker.js` should treat `RES_3002` as a **warning-style** user message (not a hard failure).
 
 ### Workflow job file upload (`POST /api/v1/workflow/start` — `job_file`)
 
@@ -112,16 +112,6 @@ All API routes: `/api/v1/{router_prefix}`. Legacy backward-compat routes at `/ap
 
 ## Health Check
 `GET /health` — always returns HTTP 200, health status in body. `GET /api/v1/cache/stats` — Redis cache stats for monitoring.
-
-## Workflow failure — no partial client data
-
-When **any** workflow agent fails, the run is terminal (`workflow_status = failed`). Do not leave partial agent JSON blobs exposed on `workflow_sessions` or show inconsistent cards on the dashboard.
-
-- **`workflows/job_application_workflow.py`**: `add_error()` stores **plain** user-facing strings (no `[agent_name]` prefix in `error_messages`). The LangGraph graph routes to `_error_handler_node` when profile matching or company research does not complete successfully; parallel resume + cover letter both must succeed or the step fails entirely. **`_clear_agent_outputs_for_failed_workflow()`** clears in-memory outputs; **`_save_workflow_state`** nulls all five agent JSONB columns when status is `failed`.
-- **`api/workflow.py`**: `_update_workflow_session_with_state()` nulls agent JSONB on failed final state; **`_strip_agent_outputs_on_session_model()`** and raw `UPDATE` nulls on background-task error paths; **`_soft_delete_job_application_for_failed_workflow()`** hides the dashboard row when those code paths run.
-- **`api/applications.py`**: **`_dashboard_application_visibility_filter()`** — list + stats **LEFT JOIN** `workflow_sessions` and exclude rows where `workflow_sessions.workflow_status = 'failed'`, so a row still marked `processing` on `job_applications` does not appear as a phantom FAILED card.
-
-Use **`user_facing_message_from_llm_exception()`** (`utils/llm_client.py`) when converting LLM exceptions to user-visible strings.
 
 ## Workflow failure — no partial client data
 

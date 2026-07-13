@@ -67,9 +67,7 @@ Unchanged: production uses `/static/dist/<hashed>`; missing manifest falls back 
 
 Vite builds use `sourcemap: 'hidden'`: hashed `*.js.map` files are written next to bundles under `ui/static/dist/js/` for server-side debugging, but browsers do not auto-load them (no comment in the bundle). Do not expose `/static/dist/js/*.map` publicly unless you accept revealing TS source structure.
 
-## Source maps (production)
-
-Vite builds use `sourcemap: 'hidden'`: hashed `*.js.map` files are written next to bundles under `ui/static/dist/js/` for server-side debugging, but browsers do not auto-load them (no comment in the bundle). Do not expose `/static/dist/js/*.map` publicly unless you accept revealing TS source structure.
+**Legacy note:** hand-authored files under `ui/static/js/` are obsolete once a page is registered in `ui/vite.entries.json`. Prefer deleting orphans (e.g. old `dashboard.js`) rather than editing them.
 
 ## CI / Docker
 

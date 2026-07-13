@@ -41,7 +41,7 @@ All routes intercepted via `page.route()`. No live server, no database, no LLM n
 | `auth-pages.spec.ts` | 151 | Login/register/forgot/reset/verify — structure + validation |
 | `interview-prep.spec.ts` | 85 | Generate state, 4 question tabs, content validation, mobile layout |
 | `profile-setup.spec.ts` | 72 | 5-step wizard, field validation, step navigation, skills |
-| `application-detail.spec.ts` | 68 | 7 tabs, sub-tabs, cover letter, company research, mobile |
+| `application-detail.spec.ts` | 68 | 8 tabs, sub-tabs, cover letter, company research, mobile |
 | `onboarding.spec.ts` | 45 | Auto-show, step navigation, skip/complete, `window.Onboarding` API, a11y |
 | `complete-coverage.spec.ts` | 42 | Authenticated page coverage: dashboard, settings, career tools, history |
 | `security.spec.ts` | 40 | XSS prevention, JWT format, CSP headers, API security |
@@ -356,29 +356,28 @@ await expect(page).toHaveURL(/login/);
 
 ## CI/CD Integration
 
-GitHub Actions runs the **full live Playwright suite** (~1,430 tests, chromium) in `.github/workflows/ci.yml` when app-related files change.
+GitHub Actions runs the **E2E smoke gate** only (`e2e-smoke` in `.github/workflows/ci.yml`): ~46 `@smoke` tests from `tests/smoke.spec.ts` on chromium. The full ~1,380 Playwright suite is **not** the default CI gate — run it locally when needed.
 
-**Runs E2E when any of these change:** `ui/`, `e2e/`, `api/`, `agents/`, `workflows/`, `models/`, `utils/`, `middleware/`, `main.py`, `alembic/`, `requirements.txt`, `extension/`, or the CI workflow itself.
+**Runs smoke E2E when app-related files change** (paths filter): `ui/`, `e2e/`, `api/`, `agents/`, `workflows/`, `models/`, `utils/`, `middleware/`, `main.py`, `alembic/`, `requirements.txt`, `extension/`, or the CI workflow itself.
 
 **Skips E2E** on docs-only / rules-only PRs (e.g. `docs/`, `CHANGELOG.md`, `.cursor/rules/` with no app code).
 
 ```yaml
 # ci.yml (simplified)
-e2e-full:
+e2e-smoke:
   needs: changes          # dorny/paths-filter@v3
   if: needs.changes.outputs.e2e == 'true'
-  run: npx playwright test --project=chromium --workers=4
-  env: { CI: "1", TESTING: "true" }   # live server + Postgres + Redis
+  run: npx playwright test tests/smoke.spec.ts --grep @smoke --project=chromium --workers=4
 ```
 
 **Local equivalents:**
 
 ```bash
-# Full suite (same as CI)
-cd e2e && CI=1 npx playwright test --project=chromium --workers=4
+# Same as CI smoke gate
+cd e2e && npx playwright test tests/smoke.spec.ts --grep @smoke --project=chromium --workers=4
 
-# Quick smoke only (~3 min, optional)
-SMOKE=1 npx playwright test tests/smoke.spec.ts --project=chromium
+# Full suite (optional / local)
+CI=1 npx playwright test --project=chromium --workers=4
 ```
 
 ---

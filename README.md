@@ -10,6 +10,9 @@
 [![Node.js](https://img.shields.io/badge/Node.js-339933.svg)](https://nodejs.org/)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4.svg)](https://developer.chrome.com/docs/extensions/)
 [![Gemini API](https://img.shields.io/badge/Gemini-API-4285F4.svg)](https://ai.google.dev/gemini-api)
+[![OpenAI](https://img.shields.io/badge/OpenAI-API-412991.svg)](https://platform.openai.com/)
+[![Anthropic](https://img.shields.io/badge/Anthropic-API-D4A27F.svg)](https://www.anthropic.com/)
+[![Ollama](https://img.shields.io/badge/Ollama-Local-000000.svg)](https://ollama.com/)
 [![Claude Code](https://img.shields.io/badge/Claude-Code-D97757.svg)](https://claude.ai/code)
 [![Cursor](https://img.shields.io/badge/Cursor-IDE-000000.svg)](https://cursor.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -22,7 +25,7 @@ Paste a job description — or pull it from any job site with the Chrome extensi
 
 Also includes a dashboard to track every application. And tools for everything around it: interview prep with mock sessions, salary negotiation, job comparison, follow-ups, thank you notes, and references.
 
-Runs on your machine. No subscriptions, no data stored on our servers — just your own Gemini API key connecting directly to Google.
+Runs on your machine. No subscriptions, no data stored on our servers — bring your own Gemini key by default, or point the server at OpenAI, Anthropic, or local Ollama via `LLM_PROVIDER`.
 
 *Here's what a completed application looks like:*
 
@@ -30,7 +33,7 @@ Runs on your machine. No subscriptions, no data stored on our servers — just y
 
 ---
 
-[Six AI Agents](#six-ai-agents) · [Career Tools](#six-career-tools) · [Quick Start](#quick-start) · [CLI](#cli) · [Gemini API Key](#gemini-api-key) · [Chrome Extension](#chrome-extension) · [Highlights](#highlights) · [Optional Features](#optional-features) · [Developer Setup](#developer-setup) · [Environment Variables](#environment-variables) · [How It Works](#how-it-works) · [Project Structure](#project-structure) · [Contributing](#contributing) · [License](#license)
+[Six AI Agents](#six-ai-agents) · [Career Tools](#six-career-tools) · [Quick Start](#quick-start) · [CLI](#cli) · [AI Provider / API Key](#ai-provider--api-key) · [Chrome Extension](#chrome-extension) · [Highlights](#highlights) · [Optional Features](#optional-features) · [Developer Setup](#developer-setup) · [Environment Variables](#environment-variables) · [How It Works](#how-it-works) · [Project Structure](#project-structure) · [Contributing](#contributing) · [License](#license)
 
 ---
 
@@ -206,7 +209,7 @@ INFO:     Application startup complete.
 ```
 
 Open **http://localhost:8000** in your browser and create your account.
-During profile setup you'll be prompted to add your Gemini API key — or you can add it later in **Settings → AI Setup**.
+During profile setup you'll be prompted to add your Gemini API key (default provider) — or you can add it later in **Settings → AI Setup**. Admins can switch the server to OpenAI, Anthropic, or Ollama with `LLM_PROVIDER` (see [Environment Variables](#environment-variables)).
 
 ---
 
@@ -252,9 +255,9 @@ Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** (shel
 
 ---
 
-## Gemini API Key
+## AI Provider / API Key
 
-AI features require a key from Google AI Studio.
+**Default provider is Gemini** (Google AI Studio). Users add a Gemini key in profile setup or **Settings → AI Setup**. BYOK in the UI is Gemini-only today.
 
 1. Go to [aistudio.google.com/api-keys](https://aistudio.google.com/api-keys)
 2. Sign in with your Google account
@@ -264,6 +267,8 @@ AI features require a key from Google AI Studio.
 **For personal use** that's all — no `.env` editing needed. Each user stores their own key, encrypted in the database.
 
 **For multi-user hosting:** add `GEMINI_API_KEY=<your key>` to `.env` to set a shared server-side key so users don't need to provide their own.
+
+**Other providers (server admin):** set `LLM_PROVIDER` to `openai`, `anthropic`, or `ollama` and the matching server env vars (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OLLAMA_BASE_URL` / `OLLAMA_MODEL`). See [`.env.local.example`](.env.local.example) and `.cursor/rules/llm-integration.mdc`.
 
 ---
 
@@ -284,7 +289,7 @@ The extension appears in your Chrome toolbar. Browse jobs naturally. When you fi
 
 - **Local-first** — PostgreSQL, Redis, and the app all run on your machine. One command to start, no external services required.
 - **Full profile system** — work experience, skills, career preferences; agents use your profile in every output.
-- **BYOK AI keys** — each user adds their own Gemini key via Settings, or the admin sets one server-wide key.
+- **BYOK AI keys** — each user adds their own Gemini key via Settings, or the admin sets a server-wide key / switches `LLM_PROVIDER`.
 - **Google OAuth** — optional "Continue with Google" alongside standard email/password.
 - **Multi-user ready** — JWT auth, encrypted key storage, rate limiting per user, soft delete.
 - **No analytics by default** — PostHog is disabled unless you explicitly enable it in `.env`.
@@ -397,8 +402,15 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 | `ENCRYPTION_KEY` | Auto-generated | Encrypts stored API keys |
 | `DATABASE_URL` | Set automatically | PostgreSQL connection |
 | `REDIS_URL` | Set automatically | Redis connection |
-| `GEMINI_API_KEY` | _(empty)_ | Server-wide AI key — users can add their own during profile setup or via **Settings → AI Setup** |
-| `GEMINI_MODEL` | `gemini-3.5-flash` | AI model to use — users can change this in **Settings → AI Setup** |
+| `LLM_PROVIDER` | `gemini` | Active LLM backend: `gemini` \| `openai` \| `anthropic` \| `ollama` |
+| `GEMINI_API_KEY` | _(empty)_ | Server-wide Gemini key when `LLM_PROVIDER=gemini` — users can also add their own via **Settings → AI Setup** |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | Default Gemini model — users can change this in **Settings → AI Setup** (BYOK) |
+| `OPENAI_API_KEY` | _(empty)_ | Required when `LLM_PROVIDER=openai` |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI chat model |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Required when `LLM_PROVIDER=anthropic` |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-5` | Anthropic Messages model |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama host when `LLM_PROVIDER=ollama` |
+| `OLLAMA_MODEL` | `llama3.2` | Local Ollama model name |
 | `BASE_URL` | `http://localhost:8000` | Used in password-reset and verification email links |
 | `DISABLE_EMAIL_VERIFICATION` | `true` | Set `false` when SMTP is configured |
 | `GOOGLE_CLIENT_ID` | _(empty)_ | Enables "Continue with Google" |
@@ -424,7 +436,7 @@ Browser / Chrome Extension
            ├── PostgreSQL   users, profiles, job applications, workflow sessions, agent outputs
            ├── Redis         caching, rate limiting, auth state, background task locks
            │
-           └── Five-Agent Pipeline (Google Gemini + LangGraph)
+           └── Five-Agent Pipeline (`get_llm_client()` + LangGraph)
                   Job Analyzer
                        ↓
                  Profile Matcher  ← gates on low fit score
@@ -465,7 +477,7 @@ applypilot/
 ├── api/                  # FastAPI route handlers
 ├── config/               # Settings (Pydantic BaseSettings + .env)
 ├── models/               # SQLAlchemy ORM models and database setup
-├── utils/                # Auth, email, Redis, encryption, LLM client helpers
+├── utils/                # Auth, email, Redis, encryption, multi-provider LLM (`utils/llm/`)
 ├── alembic/              # Database migrations
 ├── extension/            # Chrome Extension (Manifest V3)
 ├── ui/                   # HTML templates + TypeScript frontend + CSS

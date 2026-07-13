@@ -216,7 +216,7 @@ ApplyPilot does not support linking/unlinking OAuth accounts after registration.
 The old "Link Google Account" / "Unlink Google" section has been **permanently removed**. Do not re-add it.
 
 ### `userHasPassword` Module-Level Flag
-`dashboard-settings.js` exposes `let userHasPassword = true;` at module scope. It is set by `loadGoogleAccountStatus()` which fetches `/api/v1/profile/` and checks `auth_method === 'local' || has_password`. The `passwordSection` div is shown/hidden based on this flag.
+`ui/src/pages/dashboard-settings.ts` exposes `let userHasPassword = true;` at module scope. It is set by `loadGoogleAccountStatus()` which fetches `/api/v1/profile/` and checks `auth_method === 'local' || has_password`. The `passwordSection` div is shown/hidden based on this flag.
 
 `deleteAccount()` reads `userHasPassword` to decide whether to show the password-confirmation step:
 - `true` → second `showConfirm()` with `inputType: 'password'`

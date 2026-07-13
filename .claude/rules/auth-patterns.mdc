@@ -59,6 +59,18 @@ token = create_access_token({"sub": user_id, "email": email})
 | `/api/v1/auth/google/callback` | GET | OAuth callback — redirects with `?code=` |
 | `/api/v1/auth/oauth/exchange-code` | POST | Exchange one-time OAuth code for JWT |
 | `/api/v1/auth/extension-status` | GET | Auth status for Chrome extension |
+| `/api/v1/auth/tokens` | POST | Create personal access token (`ap_pat_…`) — plaintext shown **once** |
+| `/api/v1/auth/tokens` | GET | List PATs (metadata only; no plaintext) |
+| `/api/v1/auth/tokens/{id}` | DELETE | Revoke one PAT |
+
+## Personal Access Tokens (PAT)
+
+Long-lived CLI/automation credentials. Implementation: `utils/personal_access_tokens.py`.
+
+- Prefix: **`ap_pat_`**. Store **SHA-256** of the token; never persist plaintext after create.
+- `get_current_user` and WebSocket auth try **PAT before JWT**.
+- On **password change**, **password reset**, and **account delete**, call **`revoke_all_user_pats`** together with JWT invalidation.
+- CLI: `applypilot auth token create|list|revoke` (see **`cli.mdc`**).
 
 ## Auth Dependencies
 ```python
@@ -172,10 +184,14 @@ Certain security events must invalidate all existing sessions for the user. Alwa
 - **Password reset** (`POST /reset-password`) — the attacker who stole the session token would retain access
 - **Account deletion** (`DELETE /delete-account`) — prevents use of deleted account's tokens
 
+Also call **`revoke_all_user_pats(user_id)`** on those same events (keep JWT + PAT revocation together).
+
 ```python
 from utils.auth import invalidate_all_user_tokens
+from utils.personal_access_tokens import revoke_all_user_pats
 
 await invalidate_all_user_tokens(str(user.id))
+await revoke_all_user_pats(user.id)
 ```
 
 This stores a Redis timestamp; `_validate_jwt_token` rejects tokens with `iat` earlier than this timestamp.
@@ -184,6 +200,7 @@ Wrap in try/except and log as warning — a Redis failure should **not** prevent
 ```python
 try:
     await invalidate_all_user_tokens(str(user.id))
+    await revoke_all_user_pats(user.id)
 except Exception as e:
     logger.warning(f"Failed to invalidate user tokens after password reset: {mask_email(user.email)}", exc_info=True)
 ```
@@ -191,12 +208,12 @@ except Exception as e:
 ## Registration — Never Store JWT Until Email Is Verified
 
 `POST /auth/register` issues a JWT immediately (so the verify-code endpoint can be used
-without re-login), but the **frontend must not store it**. `auth-register.js` must not
+without re-login), but the **frontend must not store it**. `ui/src/pages/auth-register.ts` must not
 call `storeAuthData()` on registration success. The `/auth/verify-code` endpoint issues
-its own fresh token upon successful verification, which `auth-verify-email.js` stores:
+its own fresh token upon successful verification, which `ui/src/pages/auth-verify-email.ts` stores:
 
 ```javascript
-// ✅ Correct — in auth-register.js
+// ✅ Correct — in ui/src/pages/auth-register.ts
 if (response.ok) {
     // Do NOT call storeAuthData(result) here — user is not verified yet
     localStorage.setItem('pendingVerificationEmail', email);
@@ -213,7 +230,7 @@ navigating away from `/auth/verify-email`.
 After a successful `DELETE /profile/delete-account`:
 1. Preserve `cookie_consent` before clearing localStorage (see non-negotiable #46).
 2. Redirect to `/auth/login?account_deleted=1` — no `alert()` dialog.
-3. `auth-login.js` `checkUrlMessages()` picks up `account_deleted` and shows an inline info message.
+3. `ui/src/pages/auth-login.ts` `checkUrlMessages()` picks up `account_deleted` and shows an inline info message.
 
 ```javascript
 // ✅ Correct — in performAccountDeletion()
@@ -251,7 +268,7 @@ After displaying, the URL param is removed via `window.history.replaceState()` s
 
 ## Account Deletion — Password Confirmation by Account Type
 
-The `deleteAccount()` function in `dashboard-settings.js` tracks whether the user has a
+The `deleteAccount()` function in `ui/src/pages/dashboard-settings.ts` tracks whether the user has a
 password via the module-level `userHasPassword` flag (set by `loadGoogleAccountStatus()`):
 
 - **Email-registered users** (`userHasPassword = true`): show a second `showConfirm()` modal

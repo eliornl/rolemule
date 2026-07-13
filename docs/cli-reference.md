@@ -4,7 +4,7 @@ Command-line client for a running ApplyPilot server. Full API parity for auth, p
 
 **Implementation plan:** [cli-implementation-plan.md](./cli-implementation-plan.md)
 
-**Status:** Implemented on branch `feature/cli` — 96 leaf commands, **364** mocked CLI tests + **6** ASGI integration tests.
+**Status:** Merged / complete — 96 leaf commands, **364** mocked CLI tests + **6** ASGI integration tests.
 
 ---
 

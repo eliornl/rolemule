@@ -47,11 +47,11 @@ Do not revert to counting all list rows in the response-rate denominator — tha
 
 ### List pagination — no duplicate rows on Load More
 
-`api/applications.py` list query uses **`EXISTS`** for workflow-session visibility (not a bare **`LEFT JOIN`** that duplicated rows under **`OFFSET`**). Stable **`ORDER BY`** includes an **`id`** tie-breaker. **`dashboard-home.js`** also dedupes merged pages by application **`id`** when appending Load More results.
+`api/applications.py` list query uses **`EXISTS`** for workflow-session visibility (not a bare **`LEFT JOIN`** that duplicated rows under **`OFFSET`**). Stable **`ORDER BY`** includes an **`id`** tie-breaker. **`ui/src/pages/dashboard-home.ts`** also dedupes merged pages by application **`id`** when appending Load More results.
 
 ---
 
-## JS State (`dashboard-home.js`)
+## JS State (`ui/src/pages/dashboard-home.ts`)
 
 All state is module-scoped inside the IIFE:
 
@@ -76,7 +76,7 @@ Session storage key: `'dash_filter_state'` — persists `search`, `status`, `day
 | Function | What it does |
 |---|---|
 | `loadApplications(reset)` | Fetch from API. `reset=true` starts from page 1; `reset=false` appends (Load more). Implements a **single-flight** pattern: overlapping calls while `_isLoading` set `_pendingLoadApplicationsReset` when `reset=true`, then loop `_loadApplicationsSinglePass` until the queue is clear so rapid WS-driven refreshes do not drop a needed reload. |
-| `renderCard(app)` | Returns an HTML string for one application card. All user data passes through `escapeHtml()`. Company line uses **`isPlaceholderCompanyName()`** so API placeholders (`—`, `-`, `N/A`, …) render as **Unknown**, same as `application-detail.js`. |
+| `renderCard(app)` | Returns an HTML string for one application card. All user data passes through `escapeHtml()`. Company line uses **`isPlaceholderCompanyName()`** so API placeholders (`—`, `-`, `N/A`, …) render as **Unknown**, same as `ui/src/pages/application-detail.ts`. |
 | `renderApplications(reset)` | Renders `_loadedApps` into `#applicationsList`. Always shows the same "No applications yet" empty state when the list is empty — regardless of whether filters are active. |
 | `applyFilters()` | Reads DOM inputs → updates state → calls `loadApplications(true)`. |
 | `clearFilters()` | Resets all state + DOM inputs → calls `loadApplications(true)`. |
@@ -342,8 +342,8 @@ function notifyReady(jobTitle, companyName, detailId, failed, failureDetail) {
 
 When `POST /api/v1/workflow/start` returns **409** with `error_code === 'RES_3002'`, the user already has a non-deleted application for the same job (URL, title+company, or long-text fingerprint — see `applypilot-core.mdc`).
 
-- **`dashboard-new-application.js`** — show a **warning**-style alert with the API message; optionally set `sessionStorage` keys (`new_application_toast`, `new_application_session_id`) so a post-redirect toast can deep-link to the existing application when `details` include `session_id`.
-- **`dashboard.js`** — the job form's `apiCall` path attaches `errorCode` on errors; treat `RES_3002` as a warning, not a red failure banner.
+- **`ui/src/pages/dashboard-new-application.ts`** — show a **warning**-style alert with the API message; optionally set `sessionStorage` keys (`new_application_toast`, `new_application_session_id`) so a post-redirect toast can deep-link to the existing application when `details` include `session_id`.
+- Shared API errors attach `errorCode` via **`ui/src/shared/api.ts`** — treat `RES_3002` as a warning, not a red failure banner.
 
 Integration coverage: `tests/test_api/test_workflow.py` (duplicate URL / duplicate manual text).
 
@@ -353,7 +353,7 @@ If **`POST /workflow/start` did not return `RES_3002`** (e.g. missing URL/title 
 
 ## "Application submitted!" — `_submittedToastShownForSession`
 
-For `agent_update` when the session is **not** yet in `_loadedApps`, the user WebSocket can emit many events before the card exists. **`dashboard-home.js`** keeps a **`Set`** (`_submittedToastShownForSession`) so **"Application submitted! …"** fires **once per `session_id`**, combined with the **sessionStorage** toast on redirect from the new-application page. **Never remove** `rememberSubmittedToast` / `hasSubmittedToastForSession` without replacing them with an equivalent guard — users will see stacked duplicate toasts.
+For `agent_update` when the session is **not** yet in `_loadedApps`, the user WebSocket can emit many events before the card exists. **`ui/src/pages/dashboard-home.ts`** keeps a **`Set`** (`_submittedToastShownForSession`) so **"Application submitted! …"** fires **once per `session_id`**, combined with the **sessionStorage** toast on redirect from the new-application page. **Never remove** `rememberSubmittedToast` / `hasSubmittedToastForSession` without replacing them with an equivalent guard — users will see stacked duplicate toasts.
 
 ## Processing Cards — Skeleton Shimmer While Analyzing
 
@@ -377,31 +377,31 @@ The skeleton classes (`.skeleton-line`, `.skeleton-title`, `.skeleton-subtitle`)
 
 ## Unknown employer — `isPlaceholderCompanyName()` / `displayCompanyNameOrUnknown()`
 
-`dashboard-home.js` defines **`isPlaceholderCompanyName(raw)`** (keep in sync with the same helper in **`application-detail.js`**) to detect empty values, common text placeholders (`n/a`, `unknown`, …), and **dash-only** strings (ASCII hyphen, en dash, em dash, Unicode minus, optional whitespace).
+`ui/src/pages/dashboard-home.ts` defines **`isPlaceholderCompanyName(raw)`** (keep in sync with the same helper in **`ui/src/pages/application-detail.ts`** / shared modules) to detect empty values, common text placeholders (`n/a`, `unknown`, …), and **dash-only** strings (ASCII hyphen, en dash, em dash, Unicode minus, optional whitespace).
 
 - **`renderCard`**: show a real `.company-name` line only when `app['company_name']` is present **and** `!isPlaceholderCompanyName(...)`; otherwise use the skeleton (while `processing`) or **`Unknown`**.
 - **`displayCompanyNameOrUnknown(raw)`**: use for **`notifyReady`**, **`syncProcessingApps`** polling maps, and **`handleUserWsMessage`** so completion toasts say `… at Unknown`, not `… at —`, when the API stored a punctuation placeholder.
 
 ---
 
-## Cross-Page Navbar Notification Badge (`navbar-notifications.js`)
+## Cross-Page Navbar Notification Badge (`ui/src/pages/navbar-notifications.ts`)
 
 `ui/src/pages/navbar-notifications.ts` is loaded globally in `base.html`. It shows a small pulsing cyan dot on the "← Back to Dashboard" button in `navbar_subpage.html` when an analysis completes while the user is on a subpage (Career Tools, New Application, etc.).
 
 ### localStorage keys
 | Key | Purpose |
 |---|---|
-| `applypilot_tracked_sessions` | `[{sessionId}]` — sessions to watch; added by `dashboard-new-application.js` on submit |
+| `applypilot_tracked_sessions` | `[{sessionId}]` — sessions to watch; added by `ui/src/pages/dashboard-new-application.ts` on submit |
 | `applypilot_badge` | `'1'` when a completed analysis hasn't been toasted yet on the dashboard |
-| `applypilot_notified_analyses` | JSON array of keys: **`c:{sessionId}`** / **`f:{sessionId}`** (plus legacy bare `sessionId` = completion only). Managed by `dashboard-home.js`; **`navbar-notifications.js`** treats bare, `c:`, and `f:` as “already notified” for the badge |
+| `applypilot_notified_analyses` | JSON array of keys: **`c:{sessionId}`** / **`f:{sessionId}`** (plus legacy bare `sessionId` = completion only). Managed by `ui/src/pages/dashboard-home.ts`; **`ui/src/pages/navbar-notifications.ts`** treats bare, `c:`, and `f:` as “already notified” for the badge |
 
 ### Behaviour
-- **On subpages**: opens the same `/api/v1/ws/user` WebSocket as `dashboard-home.js`; on `workflow_complete` / `workflow_error` sets `applypilot_badge = '1'` and shows the dot
+- **On subpages**: opens the same `/api/v1/ws/user` WebSocket as `ui/src/pages/dashboard-home.ts`; on `workflow_complete` / `workflow_error` sets `applypilot_badge = '1'` and shows the dot
 - **One-shot load check**: on page load, checks any tracked sessions once (catches completions while browser was closed)
-- **On `/dashboard`**: clears `applypilot_badge` immediately and exits — `dashboard-home.js` owns all toasts there
-- **`window.clearNavBadge()`**: exposed function; called by `dashboard-home.js` `DOMContentLoaded` to clear the dot when user arrives on the dashboard
+- **On `/dashboard`**: clears `applypilot_badge` immediately and exits — `ui/src/pages/dashboard-home.ts` owns all toasts there
+- **`window.clearNavBadge()`**: exposed function; called by `ui/src/pages/dashboard-home.ts` `DOMContentLoaded` to clear the dot when user arrives on the dashboard
 
-### Adding the session to tracked list (in `dashboard-new-application.js`)
+### Adding the session to tracked list (in `ui/src/pages/dashboard-new-application.ts`)
 ```javascript
 const parsed = JSON.parse(responseText);
 const sessionId = parsed && parsed.session_id;
@@ -429,7 +429,7 @@ CSS for `.nav-badge-dot` lives in `app.css` (not a page `<style>` block). Always
 ## Non-Negotiables
 
 1. **Never re-add `/dashboard/history`** — the route is deleted; all application listing is on `/dashboard`
-2. **All user data through `escapeHtml()`** in `renderCard()` — job titles and company names may contain HTML entities (`&amp;`, `&#x27;`) from the backend sanitizer; `escapeHtml()` in `dashboard-home.js` must use the decode-first pattern (decode `&amp;` → `&` FIRST, then named entities, then re-encode) to avoid rendering `&amp;` literally in card titles. See `frontend-js-strict.mdc` §1.
+2. **All user data through `escapeHtml()`** in `renderCard()` — job titles and company names may contain HTML entities (`&amp;`, `&#x27;`) from the backend sanitizer; `escapeHtml()` in `ui/src/pages/dashboard-home.ts` must use the decode-first pattern (decode `&amp;` → `&` FIRST, then named entities, then re-encode) to avoid rendering `&amp;` literally in card titles. See `frontend-js-strict.mdc` §1.
 3. **`window.showConfirm()`** for all destructive actions (delete, bulk-delete) — never `confirm()`
 4. **`saveFilterState()`** before any navigation (`viewApplication()`, etc.) so the browser back button restores the same filters and scroll position
 5. **No `style="..."` in `renderCard()` output** — use CSS classes; inline styles are blocked by CSP `style-src`
@@ -443,12 +443,12 @@ CSS for `.nav-badge-dot` lives in `app.css` (not a page `<style>` block). Always
 13. **Never use a `<select>` for inline card status** — the status dropdown was replaced with a read-only AI badge + explicit tracking stage buttons; do not restore the dropdown
 14. **The status filter only shows tracking stages** (Applied, Interview, Offer, Rejected) — never add Processing or Completed back to `#statusFilter`
 15. **Clicking an active tracking button must toggle it off** (reset to `completed`), not re-save the same status — the success toast must say `"Stage cleared."` not `"Status updated to Completed."`
-16. **`window.clearNavBadge()` must be called in `dashboard-home.js` DOMContentLoaded** before showing toasts — it clears the navbar dot that was set on subpages while the user was away from the dashboard
+16. **`window.clearNavBadge()` must be called in `ui/src/pages/dashboard-home.ts` DOMContentLoaded** before showing toasts — it clears the navbar dot that was set on subpages while the user was away from the dashboard
 17. **`handleUserWsMessage` must handle `agent_update` for new sessions** — if `type === 'agent_update'` and the session is NOT in `_loadedApps`, call `loadApplications(true)` immediately so extension-submitted jobs appear on the dashboard without a manual refresh
 18. **`handleUserWsMessage` must not pre-call `_markAnalysisNotified` before `await loadApplications(true)` on `workflow_complete` / `workflow_error`** — that blocked `notifyReady` from ever showing. **`notifyReady()`** performs `_markAnalysisNotified(detailId, failed)` at the start (after its `_isAnalysisNotified(detailId, failed)` guard); pass **`failureDetail`** for errors
 19. **`notifyReady` must guard at entry with `if (_isAnalysisNotified(detailId, failed)) return`** — the WS handler and the poll fallback can race; **`failed`** must participate in the key (`c:` vs `f:`) so a completion never suppresses a failure toast for the same `session_id`
 20. **Processing cards must show skeleton shimmer, not placeholder text** — render `.skeleton-line.skeleton-title` / `.skeleton-line.skeleton-subtitle` when `status === 'processing'` and `job_title` / `company_name` are empty; never show `"Job Application"` / `"Company"` for a card that is still being analyzed
-21. **`RES_3002` from `/workflow/start` must use a warning-style message** — duplicate job is not a server fault; mirror handling in `dashboard-new-application.js` and `dashboard.js`
+21. **`RES_3002` from `/workflow/start` must use a warning-style message** — duplicate job is not a server fault; mirror handling in `ui/src/pages/dashboard-new-application.ts` and `ui/src/shared/api.ts`
 22. **`_submittedToastShownForSession` must dedupe "Application submitted!"** — one toast per `session_id` for the `agent_update` + new-card path; do not stack with the sessionStorage redirect toast
 23. **Placeholder `company_name` values must not render as punctuation** — `—` / `-` / `N/A` from the LLM or DB are truthy strings; always normalize through **`isPlaceholderCompanyName()`** + **`displayCompanyNameOrUnknown()`** so users see **Unknown** (see **Unknown employer** section above)
 24. **`syncProcessingApps` must pass `failed` into `_isAnalysisNotified` / `notifyReady`** — polling uses the same `c:` / `f:` keys as the WebSocket path; never call `_isAnalysisNotified(sessionId)` without the second argument on a terminal completion/failure path

@@ -1,10 +1,10 @@
 # Company Research Improvement — Agent Execution Spec
 
-**Status:** Implemented on branch `feat/company-research-disambiguation`  
+**Status:** Merged / complete (historical execution spec)  
 **Owner:** Engineering  
-**Last updated:** 2026-07-08  
+**Last updated:** 2026-07-13  
 
-This document is the **single source of truth** for fixing wrong-company research in ApplyPilot. An agent (or developer) should execute phases **in order**, run the listed tests after each phase, and not ship until the Pre-Ship Checklist is complete.
+Disambiguation, staffing/confidential handling, and `research_quality` banners are in production. This document remains as the historical phase checklist. See `.cursor/rules/agent-patterns.mdc` and `.cursor/rules/ui-application-detail.mdc`.
 
 ---
 

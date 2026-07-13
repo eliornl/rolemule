@@ -1,10 +1,10 @@
 # LLM Multi-Provider Abstraction — Agent Execution Spec
 
-**Status:** Implemented on branch `feat/llm-provider-abstraction`  
+**Status:** Merged / complete (historical execution spec)  
 **Owner:** Engineering  
-**Last updated:** 2026-07-11  
+**Last updated:** 2026-07-13  
 
-This document is the **single source of truth** for adding a provider-agnostic LLM layer (OpenAI, Anthropic, Ollama later) while keeping Gemini as the first (and initially only) production provider. Execute phases **in order**. After each phase: run listed tests, do a short code review, then proceed.
+All four providers (`gemini`, `openai`, `anthropic`, `ollama`) ship behind `utils/llm/` and `LLM_PROVIDER`. This document remains as the historical phase checklist — do not re-execute phases on `main`. See `.cursor/rules/llm-integration.mdc` for current patterns.
 
 ---
 
@@ -12,7 +12,7 @@ This document is the **single source of truth** for adding a provider-agnostic L
 
 ### 0.1 Goal
 
-Introduce a clear, high-performance provider abstraction so agents call one stable API. Gemini (Google AI Studio + optional Vertex) remains the only wired provider in Phase 1. Later phases add OpenAI, Anthropic, and Ollama behind the same interface without rewriting agents.
+Introduce a clear, high-performance provider abstraction so agents call one stable API. **Delivered:** Gemini (Google AI Studio + optional Vertex), OpenAI, Anthropic, and Ollama all route through `get_llm_client()` / `utils/llm/`.
 
 ### 0.2 Non-negotiables
 

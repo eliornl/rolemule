@@ -115,7 +115,7 @@ await broadcast_cv_optimization_complete(
 await broadcast_cv_optimization_error(user_id=user_id, session_id=session_id, error_message="...")
 ```
 
-Frontend (`cv-optimizer.js`) listens via `window.addEventListener('applypilot:ws', ...)` — same event bus as workflow updates.
+Frontend (`ui/src/pages/cv-optimizer.ts`) listens via `window.addEventListener('applypilot:ws', ...)` — same event bus as workflow updates.
 
 ## All Message Types (client receives)
 
@@ -194,7 +194,7 @@ Always open the WebSocket **before** triggering the background task to avoid mis
 completion event. Keep a slower polling loop as a fallback for environments where WebSockets
 are unavailable (proxies, some corporate networks).
 
-**Dashboard implementation (`dashboard.js`):**
+**Dashboard implementation (`ui/src/pages/dashboard-home.ts`):**
 - WebSocket reconnects automatically with exponential backoff (max 30 s delay) — the `onclose` handler reschedules `connectWebSocket()` unless `wsReconnecting` guard is already set
 - `startStatusPolling()` runs every **5 seconds** and checks `GET /api/v1/workflow/{session_id}/status` for any session in `processingQueue`
 - On reconnect (`onopen`), the client does NOT re-fetch current state — the polling fallback catches any `workflow_complete` event missed during a disconnect

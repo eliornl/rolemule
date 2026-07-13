@@ -1,11 +1,11 @@
 # Frontend Migration Plan — Vite + TypeScript (Option A, No React)
 
-**Status:** Implemented — branch `feat/frontend-vite-typescript` (pending merge to `main`)  
+**Status:** Merged / complete (historical execution spec)  
 **Owner:** Engineering  
-**Last updated:** 2026-07-10  
-**Decision:** Evolve the existing Jinja + vanilla JS multi-page app with **Vite + TypeScript**. Do **not** introduce React/Vue/Svelte in this plan.
+**Last updated:** 2026-07-13  
+**Decision:** Jinja + **Vite + TypeScript** (no React/Vue/Svelte).
 
-This document is the **single source of truth** for the Option A frontend upgrade. An agent (or developer) should execute phases **in order**, run the listed **full test suite** after each phase, complete the **code review checklist**, and not advance until the phase exit criteria pass.
+Migration is done: page entries live in `ui/src/` and `ui/vite.entries.json`. This document remains as the historical phase checklist. See `.cursor/rules/frontend-build-pipeline.mdc`.
 
 ---
 

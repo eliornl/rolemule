@@ -26,7 +26,7 @@ Tab order (left to right): Job Details → Your Fit → Strategy → Company →
 
 Standalone on-demand feature — **not** part of the 5-agent LangGraph workflow. Logic lives in `ui/src/pages/cv-optimizer.ts` and `ui/src/cv-optimizer/**/*.ts`; styles in `application.html` `<style>` block (`.cvo-*` classes). Full export + loop details: **`cv-optimizer-feature.mdc`**.
 
-`application-detail.js` calls `window.initCvOptimizerTab(currentSessionId)` when the user switches to `data-tab="optimize"`.
+`ui/src/pages/application-detail.ts` calls `window.initCvOptimizerTab(currentSessionId)` when the user switches to `data-tab="optimize"`.
 
 State sections inside `#cvOptimizeContent`: `#cvo-setup`, `#cvo-progress`, `#cvo-results` — only one visible at a time via `.is-hidden`. **`#cvo-setup.cvo-setup-empty.is-hidden { display: none; }`** required (setup uses `display: flex`; global `.is-hidden` alone is insufficient).
 
@@ -43,7 +43,7 @@ Score chart bars: **`data-score`** attribute + JS width assignment — never inl
 
 ## Generate Resume Tips / Cover Letter (analysis_complete)
 
-`generateSingle('cover'|'resume', btn)` in `application-detail.js` POSTs to `/workflow/regenerate-cover-letter` or `/workflow/regenerate-resume`.
+`generateSingle('cover'|'resume', btn)` in `ui/src/pages/application-detail.ts` POSTs to `/workflow/regenerate-cover-letter` or `/workflow/regenerate-resume`.
 
 **On any failure (429, quota, other):** show toast (`formatWorkflowFailureDetail` / `apiErrorMessage`), restore **empty-state UI** (photo-2 screen) — **never** render agent error blobs in tab content.
 
@@ -91,7 +91,7 @@ function toTitleCase(s) {
 Use it for any LLM-returned enum-like string that should appear in title case: `employment_type`, `work_arrangement`, priority labels, etc. Always pair with `decodeEntities()` for fields that came from the server: `toTitleCase(decodeEntities(value))`.
 
 ## `escapeHtml()` — Decode `&amp;` First, Then Named Entities
-`application-detail.js` uses the decode-first pattern. **Decode order matters**: `&amp;` must be decoded before `&#x27;` / `&#039;` so that bleach's double-encoded `&amp;#x27;` is correctly resolved to `'`. Wrong order leaves `&#x27;` displaying literally as text in `innerHTML`.
+`ui/src/pages/application-detail.ts` uses the decode-first pattern. **Decode order matters**: `&amp;` must be decoded before `&#x27;` / `&#039;` so that bleach's double-encoded `&amp;#x27;` is correctly resolved to `'`. Wrong order leaves `&#x27;` displaying literally as text in `innerHTML`.
 
 See `frontend-js-strict.mdc` §1 for the canonical implementation.
 
@@ -112,7 +112,17 @@ if (cnEl) {
 }
 ```
 
-**Company tab heading** — When there is no usable employer name, the first section title is **`About this opportunity`** (not “About the Company”). When a real name exists, use **`About ${escapeHtml(trimmedName)}`**.
+**Company tab heading** — Use `About ${escapeHtml(effectiveCompanyName)}` when a usable employer name exists; otherwise **`About this opportunity`**. Effective name resolution lives in `ui/src/application-detail/render-overview.ts` (`resolveEffectiveCompanyName`).
+
+**Company research notices** (`ui/src/application-detail/render-overview.ts`) — Before the About section, show at most one `.company-research-notice`:
+
+| Condition | Banner |
+|-----------|--------|
+| Recruiting/staffing agency labeled while analyzer company is a placeholder | **Posted by {agency} (recruiting agency).** Actual hiring employer not named. |
+| `research_quality === 'uncertain'` or `confidence_assessment.overall_confidence === 'LOW'` | **Company research may not match this employer.** |
+| `research_quality === 'posting_only'` | **Employer not named in this posting.** Role/industry guidance only. |
+
+Backend fields: `employer_type`, `research_quality`, `confidence_assessment` (see **`agent-patterns.mdc`**).
 
 **View posting link — `#jobUrlMeta` / `#jobUrlLink`**  
 When `data.job_url` is a valid http(s) URL, `renderHeader()` sets `jobUrlLink.href` and removes `.is-hidden` from `#jobUrlMeta`. Template: `<a id="jobUrlLink" … rel="noopener noreferrer">View posting</a>`. Same `/^https?:\/\//` guard as company website links — hide the meta row when missing or invalid.
@@ -272,7 +282,7 @@ Use `<div class="section-title"><i class="fas fa-..."></i> Title</div>` — same
 ---
 
 ## Company Tab — Data Field Mapping
-Source: `company` object from `CompanyResearchResult`. If `job.company_name` is empty or passes **`isPlaceholderCompanyName()`**, the main heading still follows the **About this opportunity** pattern above; the rest of the tab renders normal company research output (unnamed-posting / job-context research from the backend).
+Source: `company` object from `CompanyResearchResult`. If `job.company_name` is empty or passes **`isPlaceholderCompanyName()`**, the main heading still follows the **About this opportunity** pattern above; show research notices from `research_quality` / staffing when present. The rest of the tab renders normal company research output (unnamed-posting / job-context research from the backend).
 
 | Section | Fields |
 |---------|--------|
@@ -472,7 +482,7 @@ GET  /api/v1/interview-prep/{session_id}/status              # poll status
 All three regeneration endpoints (`regenerate-cover-letter`, `regenerate-resume`, `generate-interview-prep`) accept the statuses: `completed`, `awaiting_confirmation`, **and `analysis_complete`** — not just `completed`. This is intentional: users on all three states can trigger or re-trigger content generation.
 
 ## Workflow Status — `workflowStatus` Module Variable
-`application-detail.js` stores the current workflow status in a module-level `workflowStatus` string (populated by `loadApplicationData()` from `statusData.status`). Render functions use this to detect gate-stopped applications:
+`ui/src/pages/application-detail.ts` stores the current workflow status in a module-level `workflowStatus` string (populated by `loadApplicationData()` from `statusData.status`). Render functions use this to detect gate-stopped applications:
 ```javascript
 let workflowStatus = '';
 // In loadApplicationData():

@@ -187,7 +187,7 @@ Each file is a **single merged PNG** (not multiple images stacked) that shows th
 | `.ss-panel.active` | Visible with fade-in animation (`ss-fade-in`) |
 | `.ss-panel img` | `width: 100%; height: auto; display: block` |
 
-### JavaScript (`landing.js`)
+### TypeScript (`ui/src/pages/landing.ts`)
 
 ```javascript
 // Activate a tab by ID and scroll the panel back to the top.

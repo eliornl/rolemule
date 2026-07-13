@@ -25,7 +25,7 @@ Tests are split into two tiers based on whether they require a live server.
 | `security.spec.ts` | XSS, JWT format, API headers, content security (all mocked) |
 | `extension.spec.ts` | Manifest V3, content script, service worker, popup JS |
 | `error-handling.spec.ts` | 401/403/429/500 + mocked network errors, form validation |
-| `smoke.spec.ts` | Critical path in ~3 min — optional local quick check (CI runs the full live suite) |
+| `smoke.spec.ts` | Critical path (~46 `@smoke` tests) — **this is what CI runs** (`e2e-smoke` in `.github/workflows/ci.yml`) |
 | `workflow-mocked.spec.ts` | Workflow processing/complete/error states (mocked) |
 | `api-validation.spec.ts` | API response shapes: full/partial/null fields, error bodies, auth tokens |
 | `form-edge-cases.spec.ts` | Unicode, boundary values, special characters, XSS |
@@ -58,10 +58,13 @@ These register real users, call real endpoints, and may invoke real LLM agents.
 cd e2e
 npm install && npx playwright install chromium
 
-# GitHub Actions — full live suite when ui/api/e2e/etc. change (see .github/workflows/ci.yml)
+# GitHub Actions CI — smoke only (matches e2e-smoke job)
+npx playwright test tests/smoke.spec.ts --grep @smoke --project=chromium --workers=4
+
+# Full mocked + live suite locally (not the default CI gate)
 CI=1 npx playwright test --project=chromium --workers=4
 
-# Smoke tests only (~3 min, local quick check)
+# Smoke alias
 SMOKE=1 npx playwright test tests/smoke.spec.ts --project=chromium
 
 # Single suite
@@ -167,7 +170,7 @@ async function waitForMainContent(page: any) {
 
 ## Onboarding Tests — window.Onboarding API
 
-`onboarding.js` exposes `window.Onboarding` globally. Key DOM IDs/selectors:
+`ui/src/pages/onboarding.ts` exposes `window.Onboarding` globally. Key DOM IDs/selectors:
 
 | Element | Selector |
 |---------|----------|

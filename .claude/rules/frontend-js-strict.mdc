@@ -262,7 +262,7 @@ This prevents the value remaining in the DOM where it could be read by XSS or ex
 ### `app.js` Is NOT Loaded on Dashboard Pages
 `app.js` (the `JobApplicationAssistant` class) is only loaded on `ui/index.html` (the landing page). It is **not** in `base.html`, so `window.app` is `undefined` on all dashboard pages.
 
-Dashboard page scripts (`dashboard-home.js`, etc.) already check `window.app` and delegate to it when present. But they must **not rely on `app.js` for global navbar events** — they must set up their own document-level listeners.
+Dashboard page scripts (`ui/src/pages/dashboard-home.ts`, etc.) already check `window.app` and delegate to it when present. But they must **not rely on `app.js` for global navbar events** — they must set up their own document-level listeners.
 
 The most important case is the **logout button**. The navbar renders `<button data-action="logout">` on every dashboard page. Each dashboard JS file must wire this up itself:
 
@@ -292,7 +292,7 @@ function logout() {
 
 ### Text Sanitization — Allow All Unicode
 
-`sanitizeText()` in `profile-setup.js` strips only ASCII control characters. **Never** restrict to a hardcoded ASCII allowlist — this would silently strip Unicode bullet symbols (`■`, `▪`, `▸`, `–`, `—`, etc.) that the LLM uses in parsed descriptions.
+`sanitizeText()` in `ui/src/profile-setup/` (page entry `ui/src/pages/profile-setup.ts`) strips only ASCII control characters. **Never** restrict to a hardcoded ASCII allowlist — this would silently strip Unicode bullet symbols (`■`, `▪`, `▸`, `–`, `—`, etc.) that the LLM uses in parsed descriptions.
 
 ```javascript
 // ✅ Correct — strips control chars only, allows all printable ASCII + Unicode
@@ -336,11 +336,11 @@ for (const { step, fn } of stepValidations) {
 // All valid — now safe to setLoading(true) and save
 ```
 
-### `profile-setup.js` — “No work experience” must be persisted
+### Profile setup — “No work experience” must be persisted
 
 If the user checks **“I don’t have any relevant work experience yet”**, `saveWorkExperience()` must **`PUT /api/v1/profile/work-experience`** with `{ work_experience: [] }`. Returning success without that call leaves the column **`NULL`** in PostgreSQL, so `POST /profile/complete` still reports **Work Experience** as missing. Unchecked = require at least one valid entry (enforced by `validateWorkExperience()`). When loading profile data, keep the checkbox in sync when the saved list is empty.
 
-### `profile-setup.js` — “No formal education” must be persisted
+### Profile setup — “No formal education” must be persisted
 
 If the user checks **“I don't have formal education to add”**, `saveEducation()` must **`PUT /api/v1/profile/education`** with `{ education: [] }`. Skipping the API call leaves **`education` NULL**, so `POST /profile/complete` still reports **Education** incomplete. `[]` means the user explicitly completed step 3 with no schools (`_check_education_completion` treats `NULL` as incomplete and non-null `[]` as complete). See **`database-patterns.mdc`**.
 

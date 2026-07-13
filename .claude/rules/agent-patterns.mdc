@@ -41,6 +41,17 @@ Step 4 (PARALLEL):   Cover Letter Writer  +  Resume Advisor
 
 `agents/company_research.py` uses **`_has_usable_company_name(name)`** before treating `company_name` as a real employer. It returns false for empty/whitespace, common LLM text placeholders (`null`, `unknown`, `n/a`, …), and **dash-only** strings (regex: hyphen / en dash / em dash / Unicode minus, with optional whitespace). When false, research runs in **unnamed-posting** mode using **`_format_job_context_for_unnamed_employer()`** and job-context prompts — the workflow does not fail solely for a missing employer. Frontend **`isPlaceholderCompanyName()`** mirrors this intent for display (see **`dashboard-home.mdc`** / **`ui-application-detail.mdc`**).
 
+### Company Research — disambiguation, staffing, and research quality
+
+Wrong-company research is mitigated before the full research call:
+
+1. **Disambiguation step** (`_run_disambiguation_step`) — lightweight LLM pass using job context + hostname/slug signals from `utils/employer_disambiguation.py`. Skipped when `should_skip_disambiguation_step(...)` says the name is already specific enough.
+2. **Cache keys** — `build_company_research_cache_disambiguators(...)` so generic names with different posting contexts do not share a cached write-up.
+3. **`employer_type`** on job analysis / research output — `direct` | `staffing_agency` | `confidential` | `unknown`. Staffing / confidential postings often force **unnamed-posting** / agency-focused research when the true employer is not named.
+4. **`research_quality`** — derived via `_derive_research_quality(...)` for the UI: e.g. confident vs `uncertain` vs `posting_only`. Application detail shows banners from these fields (see **`ui-application-detail.mdc`**).
+
+Do not invent a specific employer when the posting only names a staffing agency. Prefer honesty (`research_quality=posting_only` / uncertainty banners) over a confident wrong company.
+
 **Any single agent failure fails the entire workflow** — the session ends `failed`, parallel document generation requires **both** agents to succeed, and partial agent JSON is not left on `workflow_sessions` for API clients (see **`applypilot-core.mdc`** workflow failure section).
 
 The default gate threshold is **50%** (`workflow_gate_threshold: 0.5` in `DEFAULT_WORKFLOW_PREFERENCES`). Users can configure it in **Settings → Preferences**.

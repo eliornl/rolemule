@@ -63,15 +63,15 @@ Tour auto-shows on first dashboard visit when `localStorage.onboarding_completed
 
 **`needsApiKey` condition** is evaluated by `checkServerApiKey()` which calls `GET /api/v1/profile/api-key/status` directly via `fetch()` with the user's auth token from `localStorage`. It returns `true` (key available, skip step) when `has_user_key || server_has_key || use_vertex_ai`. The old implementation used `window.app.apiCall()` which is `undefined` on dashboard pages — always use direct `fetch()`.
 
-**CSS lives in `ui/dashboard/index.html`** inside the nonce-gated `<style nonce="...">` block — **never inject `<style>` from `onboarding.js`**. Dynamically created `<style>` elements cannot carry a server-issued nonce and are silently blocked by the CSP `style-src` policy.
+**CSS lives in `ui/dashboard/index.html`** inside the nonce-gated `<style nonce="...">` block — **never inject `<style>` from `ui/src/pages/onboarding.ts`**. Dynamically created `<style>` elements cannot carry a server-issued nonce and are silently blocked by the CSP `style-src` policy.
 
 ## Cookie Consent — CSS Location
 
 All cookie banner and preferences modal CSS lives in **`ui/static/css/app.css`** under the `/* ── Cookie Consent Banner ── */` section.
 
-`cookie-consent.js`'s `_addStyles()` method is intentionally emptied — it returns immediately without injecting anything. The old `document.createElement('style')` approach was blocked by CSP.
+`ui/src/pages/cookie-consent.ts`'s `_addStyles()` method is intentionally emptied — it returns immediately without injecting anything. The old `document.createElement('style')` approach was blocked by CSP.
 
-**Never re-add dynamic style injection to `cookie-consent.js`.**
+**Never re-add dynamic style injection to `ui/src/pages/cookie-consent.ts`.**
 
 CSS class reference for cookie banner:
 - `#cookie-consent-banner` — fixed bottom bar, slides up via `.visible` class

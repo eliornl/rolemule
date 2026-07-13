@@ -162,6 +162,17 @@ The startup guard in `main.py` raises `RuntimeError` if `is_production and not r
 - `DEBUG` must be `false` in any shared / production environment. Setting `DEBUG=true` enables debug-only code paths (e.g., token logging) that are security risks.
 - Verify `.gitignore` covers: `*.pem`, `*.key`, `*.p12`, `service_account*.json`, `credentials*.json`, `*.pfx`, `*.crt`, `*.cer`.
 
+## Python dependencies (`requirements.in` → `requirements.txt`)
+
+Direct dependencies live in **`requirements.in`**. Pinned lockfile is **`requirements.txt`** (generated, not hand-edited).
+
+```bash
+pip install -r requirements.in
+pip freeze > requirements.txt
+pip check
+```
+
+Dev extras: `requirements-dev.txt`. After Dependabot or package changes, regenerate the freeze file and confirm `pip check` is clean.
 ## `Settings.is_production` Property
 ```python
 settings.is_production  # True when debug=False and testing=False

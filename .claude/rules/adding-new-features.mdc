@@ -26,7 +26,7 @@ Before changing how jobs are keyed or deduplicated:
 1. **`api/workflow.py`** — `_find_duplicate_active_application` / `_fingerprint_job_content` / `_canonical_job_url`; `normalize_title_company_key` is **`utils/application_dedupe.py`** (imported where needed). Duplicate responses use **`RES_3002`** (409) and must **release** `workflow_creating:{user_id}` on that path.
 2. **Fingerprint** — stored on `WorkflowSession.job_input_data["content_fingerprint"]` only when normalized text length **≥ 80** (constant `_MIN_JOB_CONTENT_FINGERPRINT_CHARS`). Do not weaken NFKC / zero-width stripping without re-checking extension vs paste dedupe.
 3. **Post-start duplicate handling** — see `applypilot-core.mdc` § *Duplicate job after start* (`find_conflicting_job_application` in `utils/application_dedupe.py`, `_maybe_fail_duplicate_job_after_analyzer` in `workflows/job_application_workflow.py`, integrity handling in `api/workflow.py` `_update_job_application_with_final_state`).
-4. **Tests** — extend `tests/test_api/test_workflow.py` and `tests/test_application_dedupe.py` as appropriate; **frontend** must handle `RES_3002` in `dashboard-new-application.js`, `dashboard.js`, and the Chrome extension (`popup.js`, `service-worker.js`).
+4. **Tests** — extend `tests/test_api/test_workflow.py` and `tests/test_application_dedupe.py` as appropriate; **frontend** must handle `RES_3002` in `ui/src/pages/dashboard-new-application.ts`, `ui/src/shared/api.ts`, and the Chrome extension (`popup.js`, `service-worker.js`).
 5. **Docs** — `applypilot-core.mdc` § `RES_3002` and § *Duplicate job after start*; `dashboard-home.mdc` § *Toast Deduplication — `notifyReady`* (`c:` / `f:` keys vs legacy bare `sessionId`).
 
 ## New Database Column
@@ -198,4 +198,4 @@ if not user_api_key and not server_has_key:
     raise no_api_key_error()
 ```
 
-The frontend (`dashboard-new-application.js`) reads `error_code` from the 422 response body. When it equals `"CFG_6001"` it skips the generic danger toast and instead shows `showApiKeyAlert()` — a dismissible amber warning banner with a direct link to `/settings?tab=ai-setup`.
+The frontend (`ui/src/pages/dashboard-new-application.ts`) reads `error_code` from the 422 response body. When it equals `"CFG_6001"` it skips the generic danger toast and instead shows `showApiKeyAlert()` — a dismissible amber warning banner with a direct link to `/settings?tab=ai-setup`.
