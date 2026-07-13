@@ -4,9 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
-from applypilot_client.client import API_V1_PREFIX, ApplyPilotClient
+from applypilot_client.constants import API_V1_PREFIX
+
+if TYPE_CHECKING:
+    from applypilot_client.client import ApplyPilotClient
 
 
 # =============================================================================

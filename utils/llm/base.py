@@ -28,8 +28,6 @@ class LLMProvider(Protocol):
         use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
         """Generate text from the underlying model API."""
-        ...
 
     async def health_check(self) -> bool:
         """Return True when the provider is reachable (quota 429 counts as healthy)."""
-        ...

@@ -44,7 +44,15 @@ export function escapeHtml(str: string | null | undefined): string {
 
 export function stripHtmlForAlert(text: string | null | undefined): string {
   if (text == null) return '';
-  return String(text).replace(/<[^>]*>/g, '');
+  // DOMParser extracts text safely; regex tag-stripping is incomplete for CodeQL.
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(String(text), 'text/html');
+    return doc.body.textContent ?? '';
+  }
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /** Allow only same-origin relative paths for post-auth redirects. */

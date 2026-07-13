@@ -64,6 +64,7 @@ def logout(ctx: typer.Context) -> None:
         try:
             client.auth.logout()
         except ApiClientError:
+            # Best-effort remote logout; always clear local credentials below.
             pass
     clear_credentials()
     emit(cli_ctx, {"logged_out": True}, human="Logged out.")

@@ -1,5 +1,3 @@
-import { STORAGE_KEYS } from './state';
-
 export function checkAuthentication() {
     // @ts-ignore
     const app = window.app;

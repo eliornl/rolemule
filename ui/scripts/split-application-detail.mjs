@@ -45,24 +45,4 @@ function extractFn(name) {
   throw new Error(`Unclosed function ${name}`);
 }
 
-function transformBody(body, extraReplacements = []) {
-  let s = body
-    .replace(/^(\s*)function /m, '$1export function ')
-    .replace(/^(\s*)async function /m, '$1export async function ')
-    .replace(/\bapplicationData\b/g, 'getApplicationData()')
-    .replace(/getApplicationData\(\)\s*=\s*/g, 'setApplicationData(')
-    .replace(/\(getApplicationData\(\)\)\['([^']+)'\]\s*=/g, "patchApplicationData({ $1:")
-    .replace(/getApplicationData\(\)\)\['([^']+)'\]/g, "getApplicationData()?.$1");
-
-  // Fix setApplicationData patterns from `applicationData = x`
-  s = s.replace(/getApplicationData\(\) = /g, 'setApplicationData(');
-  // Fix `if (applicationData)` -> already getApplicationData()
-  // Fix assignments like `(applicationData)['x'] =` - manual in actions
-
-  for (const [from, to] of extraReplacements) {
-    s = s.replaceAll(from, to);
-  }
-  return s;
-}
-
 console.log('Extract test renderHeader length:', extractFn('renderHeader').length);
