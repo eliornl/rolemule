@@ -8,10 +8,10 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 import httpx
 
+from applypilot_client.constants import API_V1_PREFIX
 from applypilot_client.errors import ApiClientError, parse_error_response
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
-API_V1_PREFIX = "/api/v1"
 
 
 # =============================================================================
@@ -121,6 +121,7 @@ class ApplyPilotClient:
                         _allow_refresh=False,
                     )
             except ApiClientError:
+                # Refresh failed — fall through and raise the original 401 below.
                 pass
 
         if response.is_success:

@@ -1,8 +1,5 @@
 import type { WorkExperienceEntry } from './types';
-import {
-  getWorkExperience,
-  setWorkExperience,
-} from './state-access';
+import { getWorkExperience } from './state-access';
 import { experienceContainer } from './dom';
 import {
   appendProfileDatesMainWithTrashSlot,

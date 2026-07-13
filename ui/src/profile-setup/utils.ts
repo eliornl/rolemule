@@ -57,6 +57,6 @@ export function isValidUrl(url: string): boolean {
 }
 
 export function sanitizeText(text: string | null | undefined): string {
-  if (!text) return String(text ?? '');
+  if (text == null || text === '') return '';
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }

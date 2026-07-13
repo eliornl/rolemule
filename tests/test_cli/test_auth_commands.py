@@ -183,8 +183,6 @@ def test_oauth_status_enabled(invoke) -> None:
 
 
 def test_oauth_status_disabled_json(invoke) -> None:
-    import json
-
     mock_client = MagicMock()
     mock_client.auth.oauth_status.return_value = {"google_oauth_enabled": False}
 

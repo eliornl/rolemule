@@ -1,8 +1,5 @@
 import type { EducationEntry } from './types';
-import {
-  getEducationHistory,
-  setEducationHistory,
-} from './state-access';
+import { getEducationHistory } from './state-access';
 import { educationContainer } from './dom';
 import {
   appendProfileDatesMainWithTrashSlot,

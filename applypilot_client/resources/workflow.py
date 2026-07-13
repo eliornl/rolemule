@@ -6,13 +6,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from applypilot_client.client import API_V1_PREFIX, ApplyPilotClient
+from applypilot_client.constants import API_V1_PREFIX
 
 
 # =============================================================================
 # CLASSES/FUNCTIONS
 # =============================================================================
-
 
 def _http_url(value: Optional[str]) -> Optional[str]:
     if not value:
@@ -22,11 +21,10 @@ def _http_url(value: Optional[str]) -> Optional[str]:
         return trimmed
     return None
 
-
 class WorkflowResource:
     """Workflow API resource (/api/v1/workflow)."""
 
-    def __init__(self, client: ApplyPilotClient) -> None:
+    def __init__(self, client: Any) -> None:
         self._client = client
         self._prefix = f"{API_V1_PREFIX}/workflow"
 

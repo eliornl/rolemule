@@ -794,7 +794,8 @@ function setAuthToken(token: string | null): void {
         let wsFailureDetail = '';
         if (type === 'workflow_error') {
             const d = msg.data;
-            if (d && typeof d === 'object' && d !== null && 'error' in d) {
+            // `d &&` already excludes null; avoid `d !== null` (CodeQL incompatible-types).
+            if (d && typeof d === 'object' && 'error' in d) {
                 wsFailureDetail = String((d as { error?: unknown }).error ?? '');
             }
         }

@@ -24,7 +24,6 @@ import { setupAuth as seedAuth } from '../utils/api-mocks';
  *   I. Access control
  */
 
-const MOCK_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMSIsImV4cCI6OTk5OTk5OTk5OX0.fake_sig_for_testing';
 const SESSION_ID = 'test-session-abc123';
 const PAGE_URL = `/dashboard/application/${SESSION_ID}`;
 

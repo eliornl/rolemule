@@ -1,6 +1,6 @@
 import { API_BASE } from './state';
-import { getAuthToken, setAuthToken } from './api';
-import { getSkills, setSkills } from './state-access';
+import { getAuthToken } from './api';
+import { getSkills } from './state-access';
 import {
   validateBasicInfo,
   validateCareerPreferences,

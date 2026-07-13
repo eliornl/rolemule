@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage, LoginPage, ProfileSetupPage } from '../pages';
+import { RegisterPage, LoginPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, setupAllMocks, buildMockGetProfileResponse, setupWebSocketMock, MOCK_JWT, setupCookieConsent, getE2EAuthToken, isMockedE2E } from '../utils/api-mocks';
 

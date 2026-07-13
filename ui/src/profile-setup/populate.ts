@@ -11,7 +11,7 @@ import { parseSalaryDigits } from './utils';
 import { renderEducation } from './education';
 import { renderSkills } from './skills';
 import { renderWorkExperience } from './work-experience';
-import { checkboxEl, inputEl, textareaEl, checkedInput } from './dom-helpers';
+import { checkboxEl, inputEl, textareaEl } from './dom-helpers';
 
 export function onlyCareerPreferencesMissing(
   completionStatus: import('./types').CompletionStatus | null | undefined,

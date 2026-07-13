@@ -6,18 +6,17 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Tuple
 
-from applypilot_client.client import API_V1_PREFIX, ApplyPilotClient
+from applypilot_client.constants import API_V1_PREFIX
 
 
 # =============================================================================
 # CLASSES/FUNCTIONS
 # =============================================================================
 
-
 class CvOptimizerResource:
     """CV optimizer API resource (/api/v1/cv-optimizer)."""
 
-    def __init__(self, client: ApplyPilotClient) -> None:
+    def __init__(self, client: Any) -> None:
         self._client = client
         self._prefix = f"{API_V1_PREFIX}/cv-optimizer"
 

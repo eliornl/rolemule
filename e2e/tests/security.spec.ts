@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { RegisterPage, LoginPage, DashboardPage, SettingsPage, ProfileSetupPage } from '../pages';
+import { RegisterPage, LoginPage, SettingsPage } from '../pages';
 import { generateTestEmail } from '../fixtures/test-data';
 import { setupAuth, MOCK_JWT, buildMockGetProfileResponse } from '../utils/api-mocks';
 

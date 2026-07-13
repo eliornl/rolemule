@@ -44,7 +44,9 @@ export function escapeHtml(str: string | null | undefined): string {
 
 export function stripHtmlForAlert(text: string | null | undefined): string {
   if (text == null) return '';
-  return String(text).replace(/<[^>]*>/g, '');
+  // Plain text only — no HTML parse / tag-regex (CodeQL: incomplete sanitization + DOM reparse).
+  // Call sites use textContent or escapeHtml before inserting into the DOM.
+  return decodeEntities(String(text));
 }
 
 /** Allow only same-origin relative paths for post-auth redirects. */
