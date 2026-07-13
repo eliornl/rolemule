@@ -7,7 +7,7 @@ uvicorn[standard]==0.35.0
 pydantic-settings==2.14.2
 SQLAlchemy==2.0.36
 greenlet>=3.0.0
-alembic==1.14.0
+alembic==1.18.5
 asyncpg==0.30.0
 redis==6.2.0
 PyJWT==2.13.0
