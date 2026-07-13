@@ -44,15 +44,9 @@ export function escapeHtml(str: string | null | undefined): string {
 
 export function stripHtmlForAlert(text: string | null | undefined): string {
   if (text == null) return '';
-  // DOMParser extracts text safely; regex tag-stripping is incomplete for CodeQL.
-  if (typeof DOMParser !== 'undefined') {
-    const doc = new DOMParser().parseFromString(String(text), 'text/html');
-    return doc.body.textContent ?? '';
-  }
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  // Plain text only — no HTML parse / tag-regex (CodeQL: incomplete sanitization + DOM reparse).
+  // Call sites use textContent or escapeHtml before inserting into the DOM.
+  return decodeEntities(String(text));
 }
 
 /** Allow only same-origin relative paths for post-auth redirects. */

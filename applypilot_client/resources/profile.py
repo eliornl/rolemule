@@ -4,23 +4,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Tuple
 
 from applypilot_client.constants import API_V1_PREFIX
-
-if TYPE_CHECKING:
-    from applypilot_client.client import ApplyPilotClient
 
 
 # =============================================================================
 # CLASSES/FUNCTIONS
 # =============================================================================
 
-
 class ProfileResource:
     """Profile API resource (/api/v1/profile)."""
 
-    def __init__(self, client: ApplyPilotClient) -> None:
+    def __init__(self, client: Any) -> None:
         self._client = client
         self._prefix = f"{API_V1_PREFIX}/profile"
 

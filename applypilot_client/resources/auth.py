@@ -4,23 +4,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional
 
 from applypilot_client.constants import API_V1_PREFIX
-
-if TYPE_CHECKING:
-    from applypilot_client.client import ApplyPilotClient
 
 
 # =============================================================================
 # CLASSES/FUNCTIONS
 # =============================================================================
 
-
 class AuthResource:
     """Auth API resource (/api/v1/auth)."""
 
-    def __init__(self, client: ApplyPilotClient) -> None:
+    def __init__(self, client: Any) -> None:
         self._client = client
 
     def login(self, email: str, password: str, *, remember_me: bool = False) -> Dict[str, Any]:
