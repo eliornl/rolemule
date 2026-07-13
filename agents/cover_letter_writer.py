@@ -8,6 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from workflows.state_schema import WorkflowState, CoverLetterResult
+from utils.llm_preferences import preferred_model_from_state
 from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
@@ -218,8 +219,9 @@ class CoverLetterWriterAgent:
             company_research: Optional[Dict[str, Any]] = state.get("company_research")
             prefs: Dict[str, Any] = state.get("workflow_preferences") or {}
             user_tone: str = prefs.get("cover_letter_tone", "professional")
-            # Only use preferred_model in BYOK mode (user has their own key)
-            user_model: Optional[str] = prefs.get("preferred_model") if self._current_user_api_key else None
+            user_model: Optional[str] = preferred_model_from_state(
+                state, self._current_user_api_key
+            )
 
             # Validate
             if not user_profile:

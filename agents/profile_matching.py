@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 from workflows.state_schema import WorkflowState
 from utils.llm_client import get_gemini_client
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.llm_preferences import preferred_model_from_state
 from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
@@ -352,6 +353,8 @@ class ProfileMatchingAgent:
     def __init__(self) -> None:
         """Initialize Profile Matching Agent."""
         self.gemini_client = None
+        self._current_user_api_key: Optional[str] = None
+        self._current_user_model: Optional[str] = None
 
     async def process(self, state: WorkflowState) -> WorkflowState:
         """
@@ -373,8 +376,11 @@ class ProfileMatchingAgent:
         logger.info('Starting AI profile matching for session %s', sanitize_log_value(session_id))
         start_time: datetime = datetime.now(timezone.utc)
 
-        # Store user API key for use in LLM calls (BYOK mode)
+        # Store user API key / preferred model for LLM calls (BYOK mode)
         self._current_user_api_key = state.get("user_api_key")
+        self._current_user_model = preferred_model_from_state(
+            state, self._current_user_api_key
+        )
 
         try:
             # Validate required data
@@ -473,6 +479,7 @@ class ProfileMatchingAgent:
             temperature=LLM_TEMPERATURE,
             max_tokens=LLM_MAX_TOKENS,
             user_api_key=self._current_user_api_key,
+            model=self._current_user_model,
         )
 
         # Handle safety filter

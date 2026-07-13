@@ -1,15 +1,9 @@
 """
-LLM Client utility — backward-compatible facade.
+Multi-provider LLM package.
 
-Implementation lives in ``utils.llm``. Prefer ``get_llm_client()`` for new code.
-Existing imports from ``utils.llm_client`` continue to work unchanged.
+Prefer ``get_llm_client()`` for new code. ``get_gemini_client`` remains as a
+backward-compatible alias.
 """
-
-from __future__ import annotations
-
-from typing import Any
-
-from config.settings import get_settings
 
 from utils.llm.client import (
     GeminiClient,
@@ -45,17 +39,6 @@ from utils.llm.errors import (
     user_facing_message_from_llm_exception,
 )
 
-
-def __getattr__(name: str) -> Any:
-    """Expose live singleton as ``_gemini_client`` for tests."""
-    if name == "_gemini_client":
-        from utils.llm import client as llm_client_mod
-
-        return llm_client_mod._llm_client
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-# Keep get_settings importable for legacy test patches on utils.llm_client.get_settings
 __all__ = [
     "DEFAULT_LLM_PROVIDER",
     "DEFAULT_MAX_TOKENS",
@@ -80,7 +63,6 @@ __all__ = [
     "close_llm_client",
     "get_gemini_client",
     "get_llm_client",
-    "get_settings",
     "is_llm_quota_or_rate_limit_exception",
     "reset_gemini_client",
     "reset_llm_client",

@@ -403,6 +403,7 @@ class CVOptimizerAgent:
         user_api_key: Optional[str] = None,
         profile_source_cv: str = "",
         user_profile: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None,
     ) -> str:
         """
         Revise the CV based on hiring manager feedback.
@@ -415,6 +416,7 @@ class CVOptimizerAgent:
             user_api_key: BYOK Gemini API key
             profile_source_cv: Read-only baseline CV composed from user profile
             user_profile: Structured profile dict for date validation
+            model: Optional BYOK preferred Gemini model from Settings
 
         Returns:
             Revised CV as markdown text. Falls back to the original on error or invalid revision.
@@ -445,6 +447,7 @@ class CVOptimizerAgent:
             temperature=CV_OPTIMIZER_TEMPERATURE,
             max_tokens=CV_OPTIMIZER_MAX_TOKENS,
             user_api_key=user_api_key,
+            model=model,
         )
 
         _dur_ms = (perf_counter() - _t0) * 1000
@@ -491,6 +494,7 @@ class CoverLetterFinalizer:
         company_research: Optional[Dict[str, Any]],
         user_api_key: str,
         profile_source_cv: str = "",
+        model: Optional[str] = None,
     ) -> str:
         """
         Generate a cover letter for the optimized CV.
@@ -502,6 +506,7 @@ class CoverLetterFinalizer:
             company_research: Optional company research data for personalization
             user_api_key: BYOK Gemini API key
             profile_source_cv: Read-only baseline CV composed from user profile
+            model: Optional BYOK preferred Gemini model from Settings
 
         Returns:
             Cover letter as plain text. Returns empty string on failure.
@@ -544,6 +549,7 @@ class CoverLetterFinalizer:
             temperature=COVER_LETTER_TEMPERATURE,
             max_tokens=COVER_LETTER_MAX_TOKENS,
             user_api_key=user_api_key,
+            model=model,
         )
 
         _dur_ms = (perf_counter() - _t0) * 1000
@@ -593,6 +599,7 @@ class CVOptimizationOrchestrator:
         user_api_key: str,
         broadcast_iteration_fn: Callable,
         user_profile: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None,
     ) -> OptimizationResult:
         """
         Execute the optimization loop.
@@ -608,6 +615,7 @@ class CVOptimizationOrchestrator:
             user_api_key: BYOK Gemini API key (required)
             broadcast_iteration_fn: Async callable(iteration_record) broadcast per iteration
             user_profile: Structured profile dict — source of truth for fact validation
+            model: Optional BYOK preferred Gemini model from Settings
 
         Returns:
             OptimizationResult with all artifacts
@@ -638,6 +646,7 @@ class CVOptimizationOrchestrator:
                     iteration=iteration,
                     previous_score=previous_score,
                     user_api_key=user_api_key,
+                    model=model,
                 )
             except Exception as exc:
                 if iteration_history and is_llm_quota_or_rate_limit_exception(exc):
@@ -717,6 +726,7 @@ class CVOptimizationOrchestrator:
                     user_api_key=user_api_key,
                     profile_source_cv=profile_source_cv,
                     user_profile=user_profile,
+                    model=model,
                 )
             except Exception as exc:
                 if is_llm_quota_or_rate_limit_exception(exc):
@@ -737,6 +747,7 @@ class CVOptimizationOrchestrator:
                     company_research=company_research,
                     user_api_key=user_api_key,
                     profile_source_cv=profile_source_cv,
+                    model=model,
                 )
             except Exception as exc:
                 if iteration_history and is_llm_quota_or_rate_limit_exception(exc):

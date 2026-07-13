@@ -164,6 +164,7 @@ class FollowUpGeneratorAgent:
         key_points: Optional[List[str]] = None,
         user_name: Optional[str] = None,
         user_api_key: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a follow-up email for a specific stage.
@@ -179,11 +180,13 @@ class FollowUpGeneratorAgent:
             key_points: Optional list of key points to mention
             user_name: Optional user's name for sign-off
             user_api_key: Optional user API key for BYOK mode
+            model: Optional BYOK preferred Gemini model from Settings
             
         Returns:
             Dict containing email content and guidance
         """
         self._current_user_api_key = user_api_key
+        self._current_user_model = model
         
         # Validate stage
         if stage not in FOLLOWUP_STAGES:
@@ -230,6 +233,7 @@ class FollowUpGeneratorAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
             )
             
             duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000

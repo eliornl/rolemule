@@ -1038,9 +1038,15 @@ async def parse_resume_endpoint(
                     sanitize_log_value(str(e)),
                 )
 
-        server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or settings.use_vertex_ai
-        if not user_api_key and not server_has_key:
+        from utils.llm.availability import (
+            effective_user_api_key,
+            llm_credentials_available,
+        )
+
+        # Pass module-level ``settings`` so tests that patch ``api.profile.settings`` apply
+        if not llm_credentials_available(user_api_key, settings=settings):
             raise no_api_key_error()
+        user_api_key = effective_user_api_key(user_api_key, settings=settings)
 
         logger.info('Parsing resume for user %s: %s (%d bytes)', sanitize_log_value(current_user.get("id")), sanitize_log_value(resume.filename), len(content))
 
@@ -1666,12 +1672,13 @@ async def get_api_key_status(
                 # If decryption fails, key is corrupted
                 key_preview = "(invalid)"
 
-        # Check if server has a default API key configured
+        # Check if server has credentials for the active LLM provider
         from config.settings import get_settings
+        from utils.llm.availability import server_has_llm_credentials
+
         settings = get_settings()
         use_vertex_ai = bool(getattr(settings, "use_vertex_ai", False))
-        # Vertex AI also means the server provides AI — no user key needed
-        server_has_key = bool(settings.gemini_api_key) or use_vertex_ai
+        server_has_key = server_has_llm_credentials(settings)
 
         return ApiKeyStatusResponse(
             has_user_key=has_user_key,

@@ -134,11 +134,15 @@ def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
 
 
 async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
+    from utils.llm.availability import effective_user_api_key
+
     try:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user and user.gemini_api_key_encrypted:
-            return decrypt_api_key(user.gemini_api_key_encrypted)
+            return effective_user_api_key(
+                decrypt_api_key(user.gemini_api_key_encrypted)
+            )
     except Exception as e:
         logger.warning('Failed to decrypt user API key for autofill: %s', sanitize_log_value(e), exc_info=True)
     return None
@@ -146,8 +150,9 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
 
 def _server_has_llm() -> bool:
     """Read settings at call time so tests and env reloads see current config."""
-    cfg = get_settings()
-    return bool(getattr(cfg, "gemini_api_key", None)) or bool(getattr(cfg, "use_vertex_ai", False))
+    from utils.llm.availability import server_has_llm_credentials
+
+    return server_has_llm_credentials(get_settings())
 
 
 async def _load_profile_bundle(
@@ -386,6 +391,9 @@ async def map_form_fields_to_profile(
     if not user_api_key and not _server_has_llm():
         raise no_api_key_error()
 
+    from utils.llm_preferences import load_preferred_model
+    preferred_model = await load_preferred_model(db, user_id, user_api_key)
+
     user_result = await db.execute(select(User).where(User.id == user_id))
     user_row = user_result.scalar_one_or_none()
     if not user_row:
@@ -452,6 +460,7 @@ async def map_form_fields_to_profile(
             use_cache=False,
             user_api_key=user_api_key,
             user_id=str(user_id),
+            model=preferred_model,
         )
     except GeminiError as e:
         logger.error('Autofill LLM error: %s', sanitize_log_value(e), exc_info=True)

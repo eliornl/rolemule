@@ -63,6 +63,13 @@ class Settings(BaseSettings):
                     "Generate with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"",
     )
 
+    # LLM provider selection (gemini | openai | anthropic | ollama)
+    # Default remains Gemini for existing deployments. Other providers use server env keys.
+    llm_provider: str = Field(
+        default="gemini",
+        description="Active LLM provider: gemini, openai, anthropic, or ollama",
+    )
+
     # Gemini Configuration
     # API key is optional - users can provide their own via BYOK (Bring Your Own Key)
     gemini_api_key: Optional[str] = Field(
@@ -71,7 +78,7 @@ class Settings(BaseSettings):
     )
     gemini_model: str = "gemini-3.5-flash"
     
-    # Vertex AI Configuration (alternative backend - higher rate limits, no free tier limits)
+    # Vertex AI Configuration (optional Gemini backend — higher rate limits)
     # Requires: gcloud auth application-default login (or GOOGLE_APPLICATION_CREDENTIALS)
     use_vertex_ai: bool = Field(
         default=False,
@@ -84,6 +91,36 @@ class Settings(BaseSettings):
     vertex_ai_location: str = Field(
         default="us-central1",
         description="Vertex AI region (e.g., us-central1, europe-west1)"
+    )
+
+    # OpenAI (server key; optional — used when llm_provider=openai)
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        description="OpenAI API key for server-side OpenAI provider",
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="Default OpenAI chat model",
+    )
+
+    # Anthropic (server key; optional — used when llm_provider=anthropic)
+    anthropic_api_key: Optional[str] = Field(
+        default=None,
+        description="Anthropic API key for server-side Anthropic provider",
+    )
+    anthropic_model: str = Field(
+        default="claude-sonnet-4-5",
+        description="Default Anthropic Messages model",
+    )
+
+    # Ollama (local / self-hosted — used when llm_provider=ollama)
+    ollama_base_url: str = Field(
+        default="http://127.0.0.1:11434",
+        description="Ollama base URL (no trailing path)",
+    )
+    ollama_model: str = Field(
+        default="llama3.2",
+        description="Default Ollama model tag",
     )
 
     # Company research — Google Search grounding (off by default)
@@ -307,6 +344,21 @@ class Settings(BaseSettings):
                 "(single line; see https://aistudio.google.com/app/apikey)."
             )
         return v
+
+    @field_validator("llm_provider")
+    @classmethod
+    def validate_llm_provider(cls, v: str) -> str:
+        """Restrict llm_provider to the supported allowlist."""
+        from utils.llm.constants import VALID_LLM_PROVIDERS
+
+        if v is None or not str(v).strip():
+            return "gemini"
+        normalized = str(v).strip().lower()
+        if normalized not in VALID_LLM_PROVIDERS:
+            raise ValueError(
+                f"LLM_PROVIDER must be one of: {', '.join(sorted(VALID_LLM_PROVIDERS))}"
+            )
+        return normalized
 
     @field_validator("cors_origins")
     @classmethod

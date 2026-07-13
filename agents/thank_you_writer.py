@@ -92,6 +92,7 @@ class ThankYouWriterAgent:
         key_discussion_points: Optional[List[str]] = None,
         additional_notes: Optional[str] = None,
         user_api_key: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a personalized thank you note.
@@ -105,11 +106,13 @@ class ThankYouWriterAgent:
             key_discussion_points: Optional list of topics discussed
             additional_notes: Optional additional context
             user_api_key: Optional user API key for BYOK mode
+            model: Optional BYOK preferred Gemini model from Settings
             
         Returns:
             Dict containing subject_line, email_body, key_points_referenced, tone
         """
         self._current_user_api_key = user_api_key
+        self._current_user_model = model
         
         try:
             # Initialize Gemini client
@@ -145,6 +148,7 @@ class ThankYouWriterAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
             )
             
             duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000

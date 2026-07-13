@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 from workflows.state_schema import WorkflowState, ResumeRecommendationsResult
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.llm_preferences import preferred_model_from_state
 from utils.logging_config import sanitize_log_value
 
 logger = logging.getLogger(__name__)
@@ -226,7 +227,9 @@ class ResumeAdvisorAgent:
             company_research: Optional[Dict[str, Any]] = state.get("company_research")
             prefs: Dict[str, Any] = state.get("workflow_preferences") or {}
             resume_length: str = prefs.get("resume_length", "concise")
-            user_model: Optional[str] = prefs.get("preferred_model") if self._current_user_api_key else None
+            user_model: Optional[str] = preferred_model_from_state(
+                state, self._current_user_api_key
+            )
 
             if not user_profile:
                 raise ValueError("User profile is required for resume advisory")

@@ -300,6 +300,7 @@ class InterviewPrepAgent:
         profile_matching: Dict[str, Any],
         user_profile: Dict[str, Any],
         user_api_key: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate interview preparation materials.
@@ -310,6 +311,7 @@ class InterviewPrepAgent:
             profile_matching: Profile matching results (for gaps/concerns)
             user_profile: User's profile data
             user_api_key: Optional user API key (BYOK mode)
+            model: Optional BYOK preferred Gemini model from Settings
             
         Returns:
             Interview preparation materials dictionary
@@ -340,6 +342,7 @@ class InterviewPrepAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=model,
             )
             
             # Handle filtered response

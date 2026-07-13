@@ -140,6 +140,7 @@ class JobComparisonAgent:
         jobs: List[Dict[str, Any]],
         user_context: Optional[Dict[str, Any]] = None,
         user_api_key: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Compare multiple job opportunities.
@@ -151,11 +152,13 @@ class JobComparisonAgent:
                          experience_years, work_style, location_preference,
                          salary_expectations
             user_api_key: Optional user API key for BYOK mode
+            model: Optional BYOK preferred Gemini model from Settings
             
         Returns:
             Dict containing comparison analysis and recommendation
         """
         self._current_user_api_key = user_api_key
+        self._current_user_model = model
         
         if len(jobs) < 2:
             raise ValueError("At least 2 jobs required for comparison")
@@ -210,6 +213,7 @@ class JobComparisonAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
             )
             
             duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000

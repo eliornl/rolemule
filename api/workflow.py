@@ -796,15 +796,15 @@ async def start_workflow(
                 logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
                 # Continue without user key - will use server default if available
 
-        # Check if we have an API key available (either user's or server's)
-        from config.settings import get_settings
-        settings = get_settings()
-        server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or getattr(
-            settings, 'use_vertex_ai', False
+        # Check if we have credentials for the active LLM provider
+        from utils.llm.availability import (
+            effective_user_api_key,
+            llm_credentials_available,
         )
-        
-        if not user_api_key and not server_has_key:
+
+        if not llm_credentials_available(user_api_key):
             raise no_api_key_error()
+        user_api_key = effective_user_api_key(user_api_key)
 
         # Prepare input data for workflow
         user_data = user_profile.to_dict()
@@ -960,8 +960,11 @@ async def start_workflow(
 
         # Dispatch workflow — prefer Cloud Tasks for automatic retry & separate timeout.
         # Falls back to FastAPI BackgroundTasks when Cloud Tasks is not configured.
-        settings = get_settings()
-        if settings.use_cloud_tasks:
+        # Late import so tests that patch config.settings.get_settings are honored.
+        from config.settings import get_settings as _get_settings_for_dispatch
+
+        dispatch_settings = _get_settings_for_dispatch()
+        if dispatch_settings.use_cloud_tasks:
             try:
                 await enqueue_workflow_task(
                     session_id=session_id,
@@ -1247,7 +1250,10 @@ async def regenerate_cover_letter(
         user_api_key = None
         if user_record and user_record.gemini_api_key_encrypted:
             from utils.encryption import decrypt_api_key
-            user_api_key = decrypt_api_key(user_record.gemini_api_key_encrypted)
+            from utils.llm.availability import effective_user_api_key
+            user_api_key = effective_user_api_key(
+                decrypt_api_key(user_record.gemini_api_key_encrypted)
+            )
 
         # Build minimal workflow state for the cover letter agent
         from agents.cover_letter_writer import CoverLetterWriterAgent
@@ -1354,7 +1360,10 @@ async def regenerate_resume(
         user_api_key = None
         if user_record and user_record.gemini_api_key_encrypted:
             from utils.encryption import decrypt_api_key
-            user_api_key = decrypt_api_key(user_record.gemini_api_key_encrypted)
+            from utils.llm.availability import effective_user_api_key
+            user_api_key = effective_user_api_key(
+                decrypt_api_key(user_record.gemini_api_key_encrypted)
+            )
 
         from agents.resume_advisor import ResumeAdvisorAgent
         from utils.llm_client import get_gemini_client
@@ -1463,7 +1472,10 @@ async def generate_interview_prep(
         user_api_key = None
         if user_record and user_record.gemini_api_key_encrypted:
             from utils.encryption import decrypt_api_key
-            user_api_key = decrypt_api_key(user_record.gemini_api_key_encrypted)
+            from utils.llm.availability import effective_user_api_key
+            user_api_key = effective_user_api_key(
+                decrypt_api_key(user_record.gemini_api_key_encrypted)
+            )
 
         from utils.llm_client import get_gemini_client
         import json
@@ -1936,7 +1948,10 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
                 
                 if user and user.gemini_api_key_encrypted:
                     try:
-                        user_api_key = decrypt_api_key(user.gemini_api_key_encrypted)
+                        from utils.llm.availability import effective_user_api_key
+                        user_api_key = effective_user_api_key(
+                            decrypt_api_key(user.gemini_api_key_encrypted)
+                        )
                     except Exception as e:
                         logger.warning('Failed to decrypt user API key for continuation: %s', sanitize_log_value(e))
 
@@ -2063,7 +2078,10 @@ async def _generate_documents_background(
                 user = user_result.scalar_one_or_none()
                 if user and user.gemini_api_key_encrypted:
                     try:
-                        user_api_key = decrypt_api_key(user.gemini_api_key_encrypted)
+                        from utils.llm.availability import effective_user_api_key
+                        user_api_key = effective_user_api_key(
+                            decrypt_api_key(user.gemini_api_key_encrypted)
+                        )
                     except Exception as e:
                         logger.warning('Failed to decrypt API key for document generation: %s', sanitize_log_value(e))
 
