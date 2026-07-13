@@ -12,7 +12,7 @@ Security:
 - error_responses: Standardized error response format
 
 LLM:
-- llm_client: Gemini API client with retries
+- llm / llm_client: multi-provider LLM client (Gemini default; OpenAI/Anthropic/Ollama adapters)
 - llm_parsing: JSON parsing for LLM responses
 
 Caching:

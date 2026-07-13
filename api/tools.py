@@ -246,13 +246,17 @@ def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
 
 
 async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
-    """Get decrypted user API key for BYOK mode."""
+    """Get decrypted BYOK key when valid for the active LLM provider."""
+    from utils.llm.availability import effective_user_api_key
+
     try:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         
         if user and user.gemini_api_key_encrypted:
-            return decrypt_api_key(user.gemini_api_key_encrypted)
+            return effective_user_api_key(
+                decrypt_api_key(user.gemini_api_key_encrypted)
+            )
     except Exception as e:
         logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
     
@@ -260,15 +264,13 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
 
 
 async def _check_api_key_available(db: AsyncSession, user_id: uuid.UUID) -> bool:
-    """Check if an API key is available (user's or server's)."""
-    user_api_key = await _get_user_api_key(db, user_id)
-    if user_api_key:
+    """Check if credentials are available for the active LLM provider."""
+    from utils.llm.availability import server_has_llm_credentials
+
+    if await _get_user_api_key(db, user_id):
         return True
-    
-    server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or getattr(
-        settings, 'use_vertex_ai', False
-    )
-    return server_has_key
+    # Use module-level ``settings`` so tests that patch ``api.tools.settings`` still work
+    return server_has_llm_credentials(settings)
 
 
 async def _get_application_context(
@@ -359,6 +361,8 @@ async def generate_thank_you_note(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
 
         # Build sanitized payload for cache key
         sanitized_payload = {
@@ -380,6 +384,7 @@ async def generate_thank_you_note(
             result = await agent.generate(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
             await cache_tool_result("thank_you", sanitized_payload, result)
 
@@ -452,6 +457,8 @@ async def analyze_rejection(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
 
         sanitized_payload = {
             "tool": "rejection_analysis",
@@ -469,6 +476,7 @@ async def analyze_rejection(
             result = await agent.analyze(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
             await cache_tool_result("rejection_analysis", sanitized_payload, result)
 
@@ -537,6 +545,8 @@ async def generate_reference_request(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
 
         sanitized_payload = {
             "tool": "reference_request",
@@ -559,6 +569,7 @@ async def generate_reference_request(
             result = await agent.generate(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
             await cache_tool_result("reference_request", sanitized_payload, result)
 
@@ -860,6 +871,8 @@ async def compare_jobs(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
         
         # Prepare jobs data
         jobs_data = []
@@ -897,6 +910,7 @@ async def compare_jobs(
                 jobs=jobs_data,
                 user_context=user_context,
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
             await cache_tool_result("job_comparison", sanitized_payload, result)
 
@@ -1003,6 +1017,8 @@ async def generate_followup(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
         
         # Get user's name from current_user if not provided
         user_name = request.user_name or current_user.get("full_name", "")
@@ -1028,6 +1044,7 @@ async def generate_followup(
             result = await agent.generate(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
             await cache_tool_result("followup", sanitized_payload, result)
 
@@ -1101,6 +1118,8 @@ async def get_salary_coaching(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
         
         # Get years_experience from profile if not provided
         years_experience = request.years_experience
@@ -1146,6 +1165,7 @@ async def get_salary_coaching(
             result = await agent.generate_strategy(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
             await cache_tool_result("salary_coach", sanitized_payload, result)
 

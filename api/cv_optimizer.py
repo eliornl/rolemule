@@ -216,6 +216,7 @@ def _resolve_soffice_path() -> Optional[str]:
 async def _generate_cv_html_from_markdown(
     cv_markdown: str,
     user_api_key: Optional[str],
+    preferred_model: Optional[str] = None,
 ) -> str:
     """
     Use Gemini to convert markdown CV text to styled HTML for document export.
@@ -234,6 +235,7 @@ async def _generate_cv_html_from_markdown(
         temperature=0.2,
         max_tokens=16000,
         user_api_key=user_api_key,
+        model=preferred_model,
     )
 
     if response.get("filtered"):
@@ -260,6 +262,7 @@ async def _markdown_cv_to_odt_via_libreoffice(
     cv_markdown: str,
     user_api_key: Optional[str],
     soffice_path: str,
+    preferred_model: Optional[str] = None,
 ) -> bytes:
     """
     Convert markdown CV to ODT via Gemini HTML generation + LibreOffice headless.
@@ -268,6 +271,7 @@ async def _markdown_cv_to_odt_via_libreoffice(
         cv_markdown: Markdown-formatted CV text
         user_api_key: BYOK Gemini API key, or None to use the server key
         soffice_path: Path to the ``soffice`` binary
+        preferred_model: Optional BYOK preferred Gemini model from Settings
 
     Returns:
         ODT file contents as bytes
@@ -275,7 +279,9 @@ async def _markdown_cv_to_odt_via_libreoffice(
     Raises:
         ValueError: If LibreOffice conversion fails
     """
-    html_content = await _generate_cv_html_from_markdown(cv_markdown, user_api_key)
+    html_content = await _generate_cv_html_from_markdown(
+        cv_markdown, user_api_key, preferred_model=preferred_model
+    )
 
     tmpdir = tempfile.mkdtemp(prefix="cvo_odt_")
     try:
@@ -325,6 +331,7 @@ async def _markdown_cv_to_odt_via_libreoffice(
 async def _export_optimized_cv_file(
     cv_markdown: str,
     user_api_key: Optional[str],
+    preferred_model: Optional[str] = None,
 ) -> tuple[bytes, str, str]:
     """
     Export optimized CV markdown to a downloadable document.
@@ -342,7 +349,7 @@ async def _export_optimized_cv_file(
     if soffice_path:
         try:
             odt_bytes = await _markdown_cv_to_odt_via_libreoffice(
-                cv_markdown, user_api_key, soffice_path
+                cv_markdown, user_api_key, soffice_path, preferred_model=preferred_model
             )
             return (
                 odt_bytes,
@@ -437,10 +444,14 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
         Decrypted API key string, or None if not set
     """
     try:
+        from utils.llm.availability import effective_user_api_key
+
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user and user.gemini_api_key_encrypted:
-            return decrypt_api_key(user.gemini_api_key_encrypted)
+            return effective_user_api_key(
+                decrypt_api_key(user.gemini_api_key_encrypted)
+            )
     except Exception as e:
         logger.warning(
             "Failed to decrypt user API key for user %s: %s",
@@ -504,17 +515,21 @@ async def start_cv_optimization(
                 f"Rate limit exceeded. Maximum {RATE_LIMIT_CV_OPTIMIZER} optimization runs per hour."
             )
 
-        # Resolve API key: prefer BYOK, fall back to server key from .env
+        # Resolve API key: prefer BYOK (Gemini), fall back to server credentials
+        from utils.llm.availability import server_has_llm_credentials
+
         user_api_key = await _get_user_api_key(db, user_id)
         if (
             not user_api_key
-            and not getattr(settings, "gemini_api_key", None)
-            and not getattr(settings, "use_vertex_ai", False)
+            and not server_has_llm_credentials(settings)
         ):
             raise no_api_key_error(
-                "No Gemini API key is configured. "
-                "Please add your API key in Settings → AI Setup."
+                "No AI API key is configured. "
+                "Please add your API key in Settings → AI Setup, or configure a server LLM key."
             )
+
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
 
         # Load workflow session
         result = await db.execute(
@@ -589,6 +604,7 @@ async def start_cv_optimization(
             user_id=str(user_id),
             user_api_key=user_api_key,
             config=config,
+            preferred_model=preferred_model,
         )
 
         logger.info('Started CV optimization for session %s user=%s max_iter=%d threshold=%.1f', sanitize_log_value(session_id), sanitize_log_value(user_id), config.max_iterations, config.score_threshold)
@@ -770,6 +786,8 @@ async def download_optimized_cv_odt(
             )
 
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
 
         # Verify ownership first, then serve optimization data from cache
         result = await db.execute(
@@ -797,7 +815,7 @@ async def download_optimized_cv_odt(
             raise not_found_error("Optimized CV text not found in result")
 
         file_bytes, media_type, filename = await _export_optimized_cv_file(
-            cv_markdown, user_api_key
+            cv_markdown, user_api_key, preferred_model=preferred_model
         )
 
         buffer = io.BytesIO(file_bytes)
@@ -896,6 +914,7 @@ async def _run_cv_optimization_background(
     user_id: Optional[str] = None,
     user_api_key: Optional[str] = None,
     config: Optional[OptimizationConfig] = None,
+    preferred_model: Optional[str] = None,
 ) -> None:
     """
     Background task that runs the full CV optimization loop.
@@ -908,6 +927,7 @@ async def _run_cv_optimization_background(
         user_id: User ID string for WebSocket broadcasts
         user_api_key: User's BYOK Gemini API key
         config: Optimization configuration
+        preferred_model: Optional BYOK preferred Gemini model from Settings
     """
     if config is None:
         config = OptimizationConfig()
@@ -975,6 +995,7 @@ async def _run_cv_optimization_background(
             user_api_key=user_api_key,
             broadcast_iteration_fn=_broadcast_iteration,
             user_profile=user_data,
+            model=preferred_model,
         )
 
         result_dict = sanitize_llm_output(optimization_result.to_dict())

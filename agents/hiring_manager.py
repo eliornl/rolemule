@@ -139,6 +139,7 @@ class HiringManagerAgent:
         iteration: int,
         previous_score: Optional[float] = None,
         user_api_key: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> HiringManagerEvaluation:
         """
         Score a CV against the job description and return structured feedback.
@@ -150,6 +151,7 @@ class HiringManagerAgent:
             iteration: Current loop iteration number (0-indexed)
             previous_score: Score from the previous iteration, if any
             user_api_key: BYOK Gemini API key
+            model: Optional BYOK preferred Gemini model from Settings
 
         Returns:
             HiringManagerEvaluation with score, strengths, gaps, and action items
@@ -179,6 +181,7 @@ class HiringManagerAgent:
             temperature=LLM_TEMPERATURE,
             max_tokens=LLM_MAX_TOKENS,
             user_api_key=user_api_key,
+            model=model,
         )
 
         duration_ms = (time.monotonic() - start_time) * 1000

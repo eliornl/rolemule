@@ -13,6 +13,7 @@ from typing import Dict, List, Any, Optional
 from config.settings import get_settings
 from workflows.state_schema import WorkflowState, CompanyResearchResult
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.llm_preferences import preferred_model_from_state
 from utils.logging_config import sanitize_log_value
 from utils.employer_disambiguation import (
     build_company_research_cache_disambiguators,
@@ -407,6 +408,8 @@ class CompanyResearchAgent:
             raise TypeError("gemini_client cannot be None")
 
         self.gemini_client: Any = gemini_client
+        self._current_user_api_key: Optional[str] = None
+        self._current_user_model: Optional[str] = None
         logger.info("Company Research Agent initialized (Gemini-powered)")
 
     async def process(self, state: WorkflowState) -> WorkflowState:
@@ -421,6 +424,9 @@ class CompanyResearchAgent:
         """
         logger.info("Starting company research process")
         self._current_user_api_key = state.get("user_api_key")
+        self._current_user_model = preferred_model_from_state(
+            state, self._current_user_api_key
+        )
 
         try:
             job_analysis: Optional[Dict[str, Any]] = state.get("job_analysis")
@@ -556,6 +562,7 @@ class CompanyResearchAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=2048,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
             )
             if response.get("filtered"):
                 return None
@@ -787,6 +794,7 @@ class CompanyResearchAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
                 use_google_search_grounding=use_google_search_grounding,
             )
         except Exception as grounding_exc:
@@ -803,6 +811,7 @@ class CompanyResearchAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
                 use_google_search_grounding=False,
             )
 

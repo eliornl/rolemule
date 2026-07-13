@@ -108,13 +108,17 @@ def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
 
 
 async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
-    """Get decrypted user API key for BYOK mode."""
+    """Get decrypted BYOK key when valid for the active LLM provider."""
+    from utils.llm.availability import effective_user_api_key
+
     try:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         
         if user and user.gemini_api_key_encrypted:
-            return decrypt_api_key(user.gemini_api_key_encrypted)
+            return effective_user_api_key(
+                decrypt_api_key(user.gemini_api_key_encrypted)
+            )
     except Exception as e:
         logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
     
@@ -122,17 +126,13 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
 
 
 async def _check_api_key_available(db: AsyncSession, user_id: uuid.UUID) -> bool:
-    """Check if an API key is available (user's or server's)."""
-    # Check for user API key
-    user_api_key = await _get_user_api_key(db, user_id)
-    if user_api_key:
+    """Check if credentials are available for the active LLM provider."""
+    from utils.llm.availability import server_has_llm_credentials
+
+    if await _get_user_api_key(db, user_id):
         return True
-    
-    # Check for server API key
-    server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or getattr(
-        settings, 'use_vertex_ai', False
-    )
-    return server_has_key
+    # Use module-level ``settings`` so tests that patch ``api.interview_prep.settings`` still work
+    return server_has_llm_credentials(settings)
 
 
 # =============================================================================
@@ -340,6 +340,8 @@ async def generate_interview_prep(
         
         # Get user API key for BYOK
         user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_preferences import load_preferred_model
+        preferred_model = await load_preferred_model(db, user_id, user_api_key)
         
         # Invalidate cache if regenerating
         if regenerate:
@@ -356,6 +358,7 @@ async def generate_interview_prep(
             session_id=session_id,
             user_id=str(user_id),
             user_api_key=user_api_key,
+            preferred_model=preferred_model,
         )
         
         logger.info('Started interview prep generation for session %s', sanitize_log_value(session_id))
@@ -435,6 +438,7 @@ async def _generate_interview_prep_background(
     session_id: str,
     user_id: Optional[str] = None,
     user_api_key: Optional[str] = None,
+    preferred_model: Optional[str] = None,
 ) -> None:
     """
     Background task to generate interview preparation materials.
@@ -443,6 +447,7 @@ async def _generate_interview_prep_background(
         session_id: Workflow session ID
         user_id: User ID string for WebSocket broadcasts
         user_api_key: Optional user API key for BYOK mode
+        preferred_model: Optional BYOK preferred Gemini model from Settings
     """
     try:
         async with get_session() as db:
@@ -471,6 +476,7 @@ async def _generate_interview_prep_background(
                 profile_matching=workflow_session.profile_matching or {},
                 user_profile=workflow_session.user_data or {},
                 user_api_key=user_api_key,
+                model=preferred_model,
             )
 
             # Sanitize all string values before storing to prevent XSS when rendered

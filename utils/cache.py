@@ -787,15 +787,29 @@ async def invalidate_workflow_state(session_id: str) -> bool:
 # =============================================================================
 
 
-def _get_llm_cache_key(prompt: str, system: Optional[str] = None, user_id: Optional[str] = None) -> str:
+def _get_llm_cache_key(
+    prompt: str,
+    system: Optional[str] = None,
+    user_id: Optional[str] = None,
+    provider: Optional[str] = None,
+) -> str:
     """
     Generate versioned cache key for LLM response.
 
     When user_id is provided the key is scoped per user, preventing cross-user
     data leakage for prompts that contain personal content (resumes, etc.).
     Omit user_id only for purely public/shared prompts (e.g. job descriptions).
+
+    Provider is included so switching LLM_PROVIDER cannot return another
+    backend's cached text for the same prompt.
     """
-    content = f"{system or ''}:{prompt}"
+    try:
+        from utils.llm.availability import active_llm_provider
+
+        provider_part = provider or active_llm_provider()
+    except Exception:
+        provider_part = provider or "gemini"
+    content = f"{provider_part}:{system or ''}:{prompt}"
     content_hash = generate_hash(content)
     if user_id:
         return f"{CACHE_VERSION}:{CACHE_PREFIX_LLM_RESPONSE}:{user_id}:{content_hash}"

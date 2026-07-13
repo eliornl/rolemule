@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List
 from utils.text_processing import clean_text
 from workflows.state_schema import WorkflowState, InputMethod, JobAnalysisResult
 from utils.llm_parsing import parse_json_from_llm_response
+from utils.llm_preferences import preferred_model_from_state
 from utils.logging_config import sanitize_log_value
 from utils.cache import (
     get_cached_job_analysis,
@@ -350,6 +351,8 @@ class JobAnalyzerAgent:
             raise TypeError("Gemini client is required")
 
         self.gemini_client = gemini_client
+        self._current_user_api_key: Optional[str] = None
+        self._current_user_model: Optional[str] = None
 
     async def process(self, state: WorkflowState) -> WorkflowState:
         """
@@ -373,8 +376,11 @@ class JobAnalyzerAgent:
         logger.info('Starting job analysis for session %s', sanitize_log_value(session_id))
         start_time: datetime = datetime.now(timezone.utc)
 
-        # Store user API key for use in LLM calls (BYOK mode)
+        # Store user API key / preferred model for LLM calls (BYOK mode)
         self._current_user_api_key = state.get("user_api_key")
+        self._current_user_model = preferred_model_from_state(
+            state, self._current_user_api_key
+        )
 
         try:
             analysis_result: JobAnalysisResult
@@ -546,6 +552,7 @@ class JobAnalyzerAgent:
                 temperature=AI_TEMPERATURE,
                 max_tokens=AI_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
             )
 
             # Use our shared utility function to parse JSON from LLM response

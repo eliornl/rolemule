@@ -32,16 +32,29 @@ DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
-# LLM — Google Gemini / AI Studio (BYOK default, recommended for self-hosting)
-# Optional server-side key; Google rotates key formats (not only the legacy AIza… shape).
+# LLM — provider selection (default gemini)
+# LLM_PROVIDER=gemini   # gemini | openai | anthropic | ollama
+# Optional server-side Gemini key; Google rotates key formats (not only the legacy AIza… shape).
 GEMINI_API_KEY=<your Gemini API key>
 GEMINI_MODEL=gemini-3.5-flash
 
-# LLM — Vertex AI (optional, server-admin only)
+# LLM — Vertex AI (optional Gemini backend, server-admin only)
 # USE_VERTEX_AI=true
 # VERTEX_AI_PROJECT=your-gcp-project
 # IMPORTANT: gemini-3-* models ONLY work with VERTEX_AI_LOCATION=global
 # VERTEX_AI_LOCATION=global
+
+# LLM — OpenAI (when LLM_PROVIDER=openai)
+# OPENAI_API_KEY=
+# OPENAI_MODEL=gpt-4o-mini
+
+# LLM — Anthropic (when LLM_PROVIDER=anthropic)
+# ANTHROPIC_API_KEY=
+# ANTHROPIC_MODEL=claude-sonnet-4-5
+
+# LLM — Ollama local/self-hosted (when LLM_PROVIDER=ollama)
+# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# OLLAMA_MODEL=llama3.2
 
 # Google OAuth (optional)
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
@@ -92,7 +105,13 @@ clear_settings_cache()
 
 ## BYOK — Google Gemini / AI Studio keys
 
-**Users bring their own Google Gemini / Google AI Studio API keys** for the `google-genai` client. There is no user-facing way to use Vertex AI or a Google Cloud service account — `USE_VERTEX_AI` is a server-admin setting only. Do not suggest or document a "use your own Google Cloud project" path for end users.
+**Users bring their own Google Gemini / Google AI Studio API keys** via Settings → AI Setup. Multi-provider BYOK (OpenAI/Anthropic user keys) is not in the Settings UI yet — non-Gemini providers use **server env keys** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or local Ollama).
+
+Gate helpers live in `utils/llm/availability.py`:
+- `server_has_llm_credentials()` — True when the **active** `LLM_PROVIDER` has server credentials
+- `effective_user_api_key(gemini_key)` — returns the BYOK key only when `LLM_PROVIDER=gemini` (never send a Gemini key to OpenAI/Anthropic)
+
+There is no user-facing way to use Vertex AI — `USE_VERTEX_AI` is server-admin only.
 
 **Format validation** is intentionally loose: `utils/gemini_api_key_format.validate_gemini_api_key()` (length bounds, single line, no whitespace, URL-safe / base64-style characters). The same helper validates optional `GEMINI_API_KEY` in `config/settings.py` and user keys in `api/profile.py`. Google may issue new key shapes over time; real validity is determined when the API is called.
 
@@ -103,6 +122,7 @@ Do **not** reintroduce an `AIza`-only or overly strict allowlist without a concr
 
 | Setting | Validation |
 |---------|-----------|
+| `LLM_PROVIDER` | Must be one of: `gemini`, `openai`, `anthropic`, `ollama` |
 | `GEMINI_API_KEY` | If set, must pass `validate_gemini_api_key()` (see `utils/gemini_api_key_format.py`) |
 | `ENCRYPTION_KEY` | Must be a valid Fernet key (`Fernet(v)` check) |
 | `JWT_SECRET` | Min 32 chars, 3 character types, no weak patterns |

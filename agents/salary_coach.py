@@ -171,6 +171,7 @@ class SalaryCoachAgent:
         non_negotiables: Optional[List[str]] = None,
         style_preference: Optional[str] = None,
         user_api_key: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a comprehensive salary negotiation strategy.
@@ -197,11 +198,13 @@ class SalaryCoachAgent:
             non_negotiables: Deal breakers
             style_preference: Preferred negotiation style
             user_api_key: Optional user API key for BYOK mode
+            model: Optional BYOK preferred Gemini model from Settings
             
         Returns:
             Dict containing negotiation strategy and scripts
         """
         self._current_user_api_key = user_api_key
+        self._current_user_model = model
         
         try:
             # Initialize Gemini client
@@ -263,6 +266,7 @@ class SalaryCoachAgent:
                 temperature=LLM_TEMPERATURE,
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
+                model=self._current_user_model,
             )
             
             duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000

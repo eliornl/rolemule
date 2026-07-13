@@ -18,7 +18,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `codeql-security-scanning.mdc` | CodeQL CI, `sanitize_log_value()` / `mask_email()` logging, query-filters, secret scanning test keys, Pydantic `field_validator`, extension entity decode |
 | `security-middleware.mdc` | Middleware stack, CORS explicit headers, no wildcard origins, maintenance mode, **CSP nonce-based style-src** (no `'unsafe-inline'`), `.is-hidden` / CSS utility class reference |
 | `settings-and-env.mdc` | All env vars, `get_settings()`, `ENCRYPTION_KEY` requirement, `.env` commit rules |
-| `llm-integration.mdc` | Gemini client, BYOK, `user_facing_message_from_llm_exception()`, `asyncio.wait_for()` timeout, JSON parsing |
+| `llm-integration.mdc` | Multi-provider LLM (`get_llm_client` / Gemini default; OpenAI/Anthropic/Ollama adapters), BYOK, `user_facing_message_from_llm_exception()`, `asyncio.wait_for()` timeout, JSON parsing |
 | `agent-patterns.mdc` | 5 workflow agents + 2 standalone on-demand agents (interview prep, CV optimizer loop) + 6 career tool agents, **any workflow agent failure fails the run**, workflow_preferences injection, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting (dash-only placeholders)** |
 | `interview-prep-feature.mdc` | Standalone agent, background task, Redis atomic lock, rate limit |
 | `cv-optimizer-feature.mdc` | CV Optimizer loop — hiring manager + reviser agents, `cv_optimization` JSONB, ownership-before-cache, WebSocket iteration events, Optimize CV tab |

@@ -1,89 +1,98 @@
 ---
-description: Gemini LLM client usage — BYOK, retry, timeout, JSON parsing, safety filters, backend selection
-globs: agents/**/*.py,utils/llm_client.py
+description: Multi-provider LLM client — Gemini default, OpenAI/Anthropic/Ollama adapters, BYOK, retry, timeout, JSON parsing
+globs: agents/**/*.py,utils/llm_client.py,utils/llm/**/*.py
 alwaysApply: false
 ---
 
 # LLM Integration Patterns
 
-## Gemini Client Usage
-```python
-from utils.llm_client import get_gemini_client
+## Architecture
 
-gemini_client = await get_gemini_client()
-response = await gemini_client.generate(
+```
+utils/llm/
+  client.py          # LLMClient facade (cache + retry + route)
+  registry.py        # provider name → factory
+  providers/
+    gemini.py        # Google AI Studio + optional Vertex
+    openai.py        # Chat Completions (httpx async)
+    anthropic.py     # Messages API (httpx async)
+    ollama.py        # Local /api/chat (httpx async)
+utils/llm_client.py  # backward-compatible re-exports
+```
+
+Prefer **`get_llm_client()`** for new code. **`get_gemini_client()`** remains an alias.
+
+```python
+from utils.llm_client import get_llm_client  # or get_gemini_client
+
+llm = await get_llm_client()
+response = await llm.generate(
     prompt=prompt,
     system=system_message,       # optional
     temperature=0.7,
     max_tokens=16000,            # default — see Unified output cap below
-    user_api_key=user_api_key,   # BYOK — pass from workflow state
+    user_api_key=user_api_key,   # BYOK — Gemini path today
 )
 text = response.get("response", "")
 ```
 
+Stable response shape: `{ "response": str, "done": bool, "model"?: str, "filtered"?: bool, "from_cache"?: bool }`.
+
+## Provider selection
+
+`settings.llm_provider` (`LLM_PROVIDER` env) — allowlist: `gemini` | `openai` | `anthropic` | `ollama`. Default **`gemini`**.
+
+| Provider | Auth | Notes |
+|----------|------|--------|
+| `gemini` | `GEMINI_API_KEY` / BYOK / optional Vertex | Default; Google Search grounding supported |
+| `openai` | `OPENAI_API_KEY` | httpx Chat Completions; grounding ignored |
+| `anthropic` | `ANTHROPIC_API_KEY` | httpx Messages API; grounding ignored |
+| `ollama` | none (local) | `OLLAMA_BASE_URL` + `OLLAMA_MODEL` |
+
+User BYOK in Settings remains **Gemini-only** until a dedicated multi-key Settings PR. Switching `LLM_PROVIDER` is a **server-admin** control.
+
 ## Unified LLM output token cap (16,000)
 
-`utils/llm_client.py` defines **`DEFAULT_MAX_TOKENS = 16000`**. All workflow agents, career-tool agents, `InterviewPrepAgent`, `utils/resume_parser.py`, and any `gemini_client.generate(...)` that passes an explicit cap use **16,000 max output tokens** so long JSON responses are not truncated by a lower per-agent ceiling.
+`utils/llm/constants.py` (re-exported from `utils.llm_client`) defines **`DEFAULT_MAX_TOKENS = 16000`**. All workflow agents, career-tool agents, `InterviewPrepAgent`, `utils/resume_parser.py`, and any `generate(...)` that passes an explicit cap use **16,000 max output tokens**.
 
 - Omitting `max_tokens` on `generate()` uses **`DEFAULT_MAX_TOKENS`**.
-- Per-agent modules typically expose **`LLM_MAX_TOKENS`** / **`AI_MAX_TOKENS`** set to **16000** for explicit calls.
-
-Raising this default increases worst-case latency and API cost; change it in one place (`DEFAULT_MAX_TOKENS`) and align agent constants.
+- Per-agent modules typically expose **`LLM_MAX_TOKENS`** / **`AI_MAX_TOKENS`** set to **16000**.
 
 ## BYOK in Agents (always pass user key + optional model override)
+
+**All agents** honor Settings → preferred model when BYOK is active (not only cover letter / resume).
+
 ```python
-# Agent __init__
-self._current_user_api_key: Optional[str] = None
+from utils.llm_preferences import preferred_model_from_state, load_preferred_model
 
-# In process() / generate():
+# Workflow agents (LangGraph state):
 self._current_user_api_key = state.get("user_api_key")
-
-# Read user-preferred model — only respected in BYOK mode
-prefs = state.get("workflow_preferences") or {}
-user_model: Optional[str] = prefs.get("preferred_model") if self._current_user_api_key else None
+user_model = preferred_model_from_state(state, self._current_user_api_key)
 
 response = await self.gemini_client.generate(
     prompt=prompt,
     user_api_key=self._current_user_api_key,
-    model=user_model,  # None → system default; ignored in Vertex AI mode
+    model=user_model,  # None → system default; ignored without BYOK
 )
+
+# Standalone agents (interview prep, CV optimizer, career tools, autofill):
+preferred_model = await load_preferred_model(db, user_id, user_api_key)
 ```
 
-`model=None` always falls back to `settings.gemini_model`. In Vertex AI mode `user_api_key` is always `None`, so `user_model` is always `None` — the server model is never overridable by users.
-
+`model=None` falls back to the active provider’s default model setting. In Vertex AI mode `user_api_key` is always `None`, so preferred model is never applied.
 ## LLM Response Caching — User ID Scoping
-`generate()` accepts `use_cache=True` for opt-in response caching. When the prompt contains personal content (resumes, cover letters, job-fit analysis), always pass `user_id` to scope the cache key per user — otherwise two users with identical inputs would share each other's cached output.
+`generate()` accepts `use_cache=True` for opt-in response caching. When the prompt contains personal content, always pass `user_id` to scope the cache key.
 
 ```python
-# ✅ Public prompt (job description only) — safe to share across users
-response = await gemini_client.generate(
-    prompt=job_description_prompt,
-    use_cache=True,
-)
-
-# ✅ Personal prompt (contains resume) — must be user-scoped
-response = await gemini_client.generate(
-    prompt=resume_tailoring_prompt,
-    use_cache=True,
-    user_id=str(current_user["id"]),
-)
-
-# ❌ Personal prompt without user_id — potential cross-user cache hit
-response = await gemini_client.generate(
-    prompt=resume_tailoring_prompt,
-    use_cache=True,
-    # missing user_id!
-)
+response = await llm.generate(prompt=personal_prompt, use_cache=True, user_id=str(current_user["id"]))
 ```
 
-`use_cache` defaults to `False` — only enable it for prompts that produce deterministic, reusable results.
+`use_cache` defaults to `False`.
 
 ## LLM Call Timeout — Required
-Wrap every `run_in_executor` SDK call in `asyncio.wait_for()`:
-```python
-import asyncio
+Wrap every sync SDK call in `asyncio.wait_for()` (Gemini). OpenAI / Anthropic / Ollama use **httpx AsyncClient** with `Timeout(DEFAULT_TIMEOUT, connect=HTTP_CONNECT_TIMEOUT)`.
 
-# ✅ Correct — bounded by wall-clock timeout (DEFAULT_TIMEOUT = 180s)
+```python
 response = await asyncio.wait_for(
     asyncio.get_event_loop().run_in_executor(
         None,
@@ -91,18 +100,12 @@ response = await asyncio.wait_for(
     ),
     timeout=self.timeout,
 )
-# ❌ Wrong — can hang indefinitely, exhausts thread pool
 ```
-`asyncio.TimeoutError` ⊆ `TimeoutError` (Python 3.11+) — tenacity retries cover it automatically.
 
 ## JSON Parsing from LLM
 ```python
 from utils.llm_parsing import parse_json_from_llm_response
-
 parsed = parse_json_from_llm_response(response.get("response", ""))
-# Handles: ```json blocks, raw JSON, nested objects
-if not parsed:
-    return self._create_parse_error_result(raw_response)
 ```
 
 ## Safety Filter Handling
@@ -111,139 +114,60 @@ if response.get("filtered"):
     return {"error": "Content filtered", "safety_filter_message": response["response"]}
 ```
 
-## GeminiError — Custom Exception
+## LLMError / GeminiError
 
-`GeminiError` is raised by `utils/llm_client.py` for all upstream API failures. It carries structured context:
-
-```python
-from utils.llm_client import GeminiError
-
-# Constructor
-GeminiError(message: str, status_code: int | None = None, original_error: Exception | None = None)
-
-# Attributes available on the caught exception
-exc.message        # human-readable description
-exc.status_code    # HTTP status from upstream API, if available (e.g. 429, 503)
-exc.original_error # the underlying exception, for re-raising or cause chaining
-```
-
-When raising inside `llm_client.py`, always pass `original_error=e` to preserve the full chain:
+`LLMError` is the canonical exception (`utils.llm.errors`). **`GeminiError` is an alias** of `LLMError` for backward compatibility.
 
 ```python
-# ✅ Correct — chain preserved, full traceback in logs
-raise GeminiError(f"Vertex AI generate failed: {e}", original_error=e)
+from utils.llm_client import LLMError, GeminiError  # GeminiError is LLMError
 
-# ❌ Wrong — original traceback is lost
-raise GeminiError(f"Vertex AI generate failed: {e}")
+raise LLMError("OpenAI generate failed: …", status_code=429, original_error=e, provider="openai")
 ```
 
-Callers that catch `GeminiError` should check `status_code` for 429 (rate-limited) vs 5xx (service error) before deciding whether to retry manually.
-
-## User-facing LLM error strings (`user_facing_message_from_llm_exception`)
-
-Use **`user_facing_message_from_llm_exception(exc)`** in `utils/llm_client.py` when converting caught exceptions to strings shown to users or stored in **`workflow_sessions.error_messages`**, WebSocket `workflow_error` payloads, resume parse failures, etc.
-
-- Maps quota / rate-limit / `RESOURCE_EXHAUSTED` to concise, actionable copy (no raw stack traces in production).
-- **`workflows/state_schema.add_error()`** stores the message **without** an `[agent_name]` prefix — which agent failed stays in `failed_agents` and logs only.
+Always pass `original_error=e` when wrapping. Use **`user_facing_message_from_llm_exception(exc)`** for dashboard / workflow error strings (maps Gemini, OpenAI, and Anthropic quota patterns).
 
 ## Retry Logic
-- `tenacity`: 3 attempts, exponential backoff (2s → 4s → 8s)
-- Retries on: `GeminiError`, `ConnectionError`, `TimeoutError`
+- `tenacity` on the facade: 3 attempts, exponential backoff (2s → 4s → 8s)
+- Retries on: `LLMError` / `GeminiError`, `ConnectionError`, `TimeoutError`
 
-## Backend Selection
-- `USE_VERTEX_AI=true` + `VERTEX_AI_PROJECT` → Vertex AI with ADC auth (production)
-- Otherwise → Google AI Studio with `GEMINI_API_KEY` (development)
+## Gemini backends (when `llm_provider=gemini`)
+- `USE_VERTEX_AI=true` + `VERTEX_AI_PROJECT` → Vertex AI with ADC (optional; kept for server deployments)
+- Otherwise → Google AI Studio with `GEMINI_API_KEY` / BYOK
 
-`GET /api/v1/profile/api-key/status` returns `use_vertex_ai: bool`. The frontend uses this to decide whether to show the model selector — it is hidden when Vertex AI is active (server controls the model) and only shown for BYOK users on Google AI Studio.
+`GET /api/v1/profile/api-key/status` returns `use_vertex_ai: bool`. Model selector is hidden when Vertex AI is active.
 
-## Model Reference
+## Model Reference (Gemini)
 
 | Model | Speed | Notes |
 |---|---|---|
-| `gemini-3.5-flash` | Fastest | **Current default.** Stable GA (2026-05-19). Requires `VERTEX_AI_LOCATION=global` on Vertex AI |
-| `gemini-3.1-pro-preview` | Slower | Most capable; current Pro tier (preview) |
-| `gemini-3.1-flash-lite` | Fastest | Lowest cost/quota; stable GA (2026-05-07) |
+| `gemini-3.5-flash` | Fastest | **Current default.** |
+| `gemini-3.1-pro-preview` | Slower | Most capable |
+| `gemini-3.1-flash-lite` | Fastest | Lowest cost/quota |
 | `gemini-2.5-flash` | Fast | Stable fallback |
 | `gemini-2.5-pro` | Slower | Capable 2.5 fallback |
 
-**Default resolution:** a request that passes no model — i.e. a BYOK user whose `preferred_model` is `null` (the default), or any non-BYOK path — falls back to `settings.gemini_model` (`gemini-3.5-flash`) via `model_to_use = model or current_settings.gemini_model` in `utils/llm_client.py`. A BYOK user's saved `preferred_model` overrides it.
+Selectable list must stay identical to `_VALID_MODELS` in `api/profile.py`.
 
-**Why the Gemini 2.5 GA pair is retained** (not pruned with the 2.0 / 1.5 models): `gemini-2.5-flash` / `gemini-2.5-pro` are still GA (no sunset announced), give a stable, lower-cost alternative to the preview Pro tier, and are the only options that run on a **region-pinned Vertex deployment** — every `gemini-3.*` model requires `VERTEX_AI_LOCATION=global`. The selectable model list (Settings dropdown) must stay identical to `_VALID_MODELS` in `api/profile.py` or `PATCH /profile/preferences` will reject a value the UI offers.
+## Thinking Mode — Always Disabled (Gemini)
 
-## Thinking Mode — Always Disabled
+**Both Gemini backends must always set `thinking_budget=0`** in `GenerateContentConfig`.
 
-**Both backends must always set `thinking_budget=0`** in `GenerateContentConfig`. On Gemini 3 Flash (and 2.5 Flash), thinking mode is enabled by default and consumes output token budget for internal reasoning — this causes slow responses (40–75s) with truncated output while appearing to succeed.
+## Required Package — `google-genai` Only (Gemini)
 
-```python
-from google.genai import types
+**`google-generativeai` is removed.** Never add it back. OpenAI/Anthropic/Ollama use **httpx** (already a dependency) — no extra SDK packages required.
 
-config = types.GenerateContentConfig(
-    temperature=temperature,
-    max_output_tokens=max_tokens,
-    top_p=DEFAULT_TOP_P,
-    top_k=DEFAULT_TOP_K,
-    thinking_config=types.ThinkingConfig(thinking_budget=0),  # ← required on both paths
-)
-```
+## Health Checks
 
-Without this, flash models may silently spend most of the token budget on internal thinking and return only a partial response (e.g. 1 of 3 expected JSON objects).
+- **Gemini Vertex:** `client.models.get(model=…)` — never `generate_content()` for health
+- **Gemini AI Studio:** `client.models.list()`
+- **OpenAI / Anthropic:** lightweight models list; missing server key → healthy no-op
+- **Ollama:** `GET {base}/api/tags`
+- **429 / RESOURCE_EXHAUSTED** → treat as healthy (`return True`)
 
-## Required Package — `google-genai` Only
+## Google Search grounding
 
-**`google-generativeai` has been removed from this project.** Both Vertex AI and BYOK (Google AI Studio) paths use `google-genai`:
-
-```python
-from google import genai as google_genai
-from google.genai import types
-
-# Vertex AI
-client = google_genai.Client(vertexai=True, project=project, location=location)
-
-# BYOK / Google AI Studio
-client = google_genai.Client(api_key=effective_api_key)
-
-# User-supplied and env keys: loose shape check only — `utils/gemini_api_key_format.py`
-# (Google rotates key formats; do not assume an `AIza` prefix).
-
-# Both use the same generate_content / models.list / models.get API
-response = client.models.generate_content(model=model_to_use, contents=prompt, config=config)
-```
-
-**Never add `google-generativeai` back** — it does not support `ThinkingConfig` and is superseded by `google-genai`.
-Do **not** add `google==3.0.0` as a dependency — it breaks the `google.*` namespace packages.
-
-## Gemini Health Check Pattern
-
-Health checks run at server startup via `check_gemini_health()` in `utils/llm_client.py`.
-
-**Rules:**
-- **Vertex AI:** use `client.models.get(model=settings.gemini_model)` — a quota-free metadata fetch. **Never** use `generate_content()` for health checks; it burns a real token on every restart.
-- **Google AI Studio:** use `client.models.list()` (via `google-genai` Client) — also quota-free.
-- **429 / RESOURCE_EXHAUSTED** means the service is up and responding. Return `True` and log `INFO`; do **not** mark the service as unavailable.
-
-```python
-# Correct Vertex AI health check
-await asyncio.get_event_loop().run_in_executor(
-    None,
-    lambda: client.models.get(model=settings.gemini_model),
-)
-
-# Correct 429 handling
-except Exception as e:
-    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-        logger.info("Gemini health check: quota limit hit but service is reachable")
-        return True
-    logger.warning(f"Gemini health check failed: {e}")
-    return False
-```
+`use_google_search_grounding=True` is **Gemini-only** (Company Research). Other providers log at debug and ignore the flag.
 
 ## Robust JSON Parsing (`utils/llm_parsing.py`)
 
-`parse_json_from_llm_response()` handles three common LLM output issues automatically:
-
-1. **Literal control characters in strings** — `_fix_json_strings()` escapes `\n`/`\r`/`\t` inside JSON string values
-2. **Truncated responses** — `_repair_truncated_json()` closes unclosed strings/arrays/objects so partial output is still parseable
-3. **Markdown fences** — strips ` ```json ` wrappers before parsing
-
-Always use this utility instead of calling `json.loads()` directly on LLM output.
-
+Always use `parse_json_from_llm_response()` instead of `json.loads()` on LLM output.
