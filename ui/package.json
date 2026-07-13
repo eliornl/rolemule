@@ -19,7 +19,7 @@
     "esbuild": "^0.28.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^3.1.4"
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.0"
