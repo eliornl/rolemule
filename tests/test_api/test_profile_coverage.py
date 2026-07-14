@@ -2008,6 +2008,114 @@ class TestProfileCoverageRemaining:
             await _delete_user_data(uid)
 
     @pytest.mark.asyncio
+    async def test_set_api_key_openai_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await set_api_key(
+                        ApiKeyRequest(api_key="not-a-valid-key", provider="openai"),
+                        _current_user(uid, email),
+                        db,
+                    )
+                assert exc.value.status_code == 422
+                assert "OpenAI" in exc.value.message
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_set_api_key_anthropic_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await set_api_key(
+                        ApiKeyRequest(api_key="sk-not-anthropic", provider="anthropic"),
+                        _current_user(uid, email),
+                        db,
+                    )
+                assert exc.value.status_code == 422
+                assert "Anthropic" in exc.value.message
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_openai_key_success(self) -> None:
+        uid, email = await _create_user_with_password()
+        openai_key = "sk-testopenaikey1234567890"
+        try:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))), patch(
+                "httpx.AsyncClient"
+            ) as client_cls:
+                client = AsyncMock()
+                client.__aenter__.return_value = client
+                client.__aexit__.return_value = None
+                client.get = AsyncMock(return_value=mock_resp)
+                client_cls.return_value = client
+                result = await validate_api_key_endpoint(
+                    ApiKeyRequest(api_key=openai_key, provider="openai"),
+                    _current_user(uid, email),
+                )
+            assert result["valid"] is True
+            assert result["provider"] == "openai"
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_anthropic_key_success(self) -> None:
+        uid, email = await _create_user_with_password()
+        anthropic_key = "sk-ant-testkey1234567890"
+        try:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))), patch(
+                "httpx.AsyncClient"
+            ) as client_cls:
+                client = AsyncMock()
+                client.__aenter__.return_value = client
+                client.__aexit__.return_value = None
+                client.get = AsyncMock(return_value=mock_resp)
+                client_cls.return_value = client
+                result = await validate_api_key_endpoint(
+                    ApiKeyRequest(api_key=anthropic_key, provider="anthropic"),
+                    _current_user(uid, email),
+                )
+            assert result["valid"] is True
+            assert result["provider"] == "anthropic"
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_openai_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))):
+                with pytest.raises(Exception) as exc:
+                    await validate_api_key_endpoint(
+                        ApiKeyRequest(api_key="notvalidopenaikey", provider="openai"),
+                        _current_user(uid, email),
+                    )
+            assert exc.value.status_code == 422
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_anthropic_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))):
+                with pytest.raises(Exception) as exc:
+                    await validate_api_key_endpoint(
+                        ApiKeyRequest(api_key="sk-not-anthropic", provider="anthropic"),
+                        _current_user(uid, email),
+                    )
+            assert exc.value.status_code == 422
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
     async def test_validate_api_key_invalid_format_before_api(self) -> None:
         uid, email = await _create_user_with_password()
         try:

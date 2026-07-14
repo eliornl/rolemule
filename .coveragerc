@@ -8,6 +8,4 @@ omit =
     applypilot_client/*
 
 [report]
-# Multi-provider LLM surface (providers, availability, BYOK gates) expanded
-# statement count; keep gate at 96 until tools/CV optimizer paths are fully attributed.
-fail_under = 96
+fail_under = 97

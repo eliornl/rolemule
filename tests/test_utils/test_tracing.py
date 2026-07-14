@@ -1,186 +1,218 @@
-"""Tests for utils/tracing.py."""
+"""Unit tests for utils.tracing (OpenTelemetry optional)."""
 
-from contextlib import contextmanager
+from __future__ import annotations
+
+import sys
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-import utils.tracing as tracing_mod
+from utils import tracing
 
 
-@pytest.fixture(autouse=True)
-def reset_tracing_state():
-    tracing_mod._tracer = None
-    yield
-    tracing_mod._tracer = None
+def _install_fake_otel(monkeypatch: pytest.MonkeyPatch) -> dict[str, MagicMock]:
+    """Inject minimal opentelemetry modules so tracing setup can run without deps."""
+    fake_span = MagicMock(name="span")
+    fake_tracer = MagicMock(name="tracer")
+    fake_tracer.start_as_current_span.return_value.__enter__.return_value = fake_span
+    fake_tracer.start_as_current_span.return_value.__exit__.return_value = None
+
+    otel_trace = ModuleType("opentelemetry.trace")
+    otel_trace.set_tracer_provider = MagicMock()
+    otel_trace.get_tracer = MagicMock(return_value=fake_tracer)
+    otel_trace.get_current_span = MagicMock(return_value=fake_span)
+    StatusCode = SimpleNamespace(ERROR="ERROR")
+    otel_trace.StatusCode = StatusCode
+
+    otel_root = ModuleType("opentelemetry")
+    otel_root.trace = otel_trace
+
+    resources = ModuleType("opentelemetry.sdk.resources")
+    resources.Resource = MagicMock()
+    resources.Resource.create = MagicMock(return_value=MagicMock(name="resource"))
+
+    sdk_trace = ModuleType("opentelemetry.sdk.trace")
+    sdk_trace.TracerProvider = MagicMock(return_value=MagicMock(name="provider"))
+
+    sdk_export = ModuleType("opentelemetry.sdk.trace.export")
+    sdk_export.BatchSpanProcessor = MagicMock(return_value=MagicMock(name="bsp"))
+    sdk_export.ConsoleSpanExporter = MagicMock(return_value=MagicMock(name="console"))
+
+    fastapi_instr = ModuleType("opentelemetry.instrumentation.fastapi")
+    fastapi_instr.FastAPIInstrumentor = MagicMock(return_value=MagicMock(name="fastapi_instr"))
+
+    sa_instr = ModuleType("opentelemetry.instrumentation.sqlalchemy")
+    sa_instr.SQLAlchemyInstrumentor = MagicMock(return_value=MagicMock(name="sa_instr"))
+
+    gcp_export = ModuleType("opentelemetry.exporter.gcp.trace")
+    gcp_export.CloudTraceSpanExporter = MagicMock(return_value=MagicMock(name="gcp"))
+
+    modules = {
+        "opentelemetry": otel_root,
+        "opentelemetry.trace": otel_trace,
+        "opentelemetry.sdk": ModuleType("opentelemetry.sdk"),
+        "opentelemetry.sdk.resources": resources,
+        "opentelemetry.sdk.trace": sdk_trace,
+        "opentelemetry.sdk.trace.export": sdk_export,
+        "opentelemetry.instrumentation": ModuleType("opentelemetry.instrumentation"),
+        "opentelemetry.instrumentation.fastapi": fastapi_instr,
+        "opentelemetry.instrumentation.sqlalchemy": sa_instr,
+        "opentelemetry.exporter": ModuleType("opentelemetry.exporter"),
+        "opentelemetry.exporter.gcp": ModuleType("opentelemetry.exporter.gcp"),
+        "opentelemetry.exporter.gcp.trace": gcp_export,
+    }
+    for name, mod in modules.items():
+        monkeypatch.setitem(sys.modules, name, mod)
+
+    # Bind names the real import would have set on the tracing module.
+    monkeypatch.setattr(tracing, "otel_trace", otel_trace, raising=False)
+    monkeypatch.setattr(tracing, "Resource", resources.Resource, raising=False)
+    monkeypatch.setattr(tracing, "TracerProvider", sdk_trace.TracerProvider, raising=False)
+    monkeypatch.setattr(tracing, "BatchSpanProcessor", sdk_export.BatchSpanProcessor, raising=False)
+    monkeypatch.setattr(tracing, "StatusCode", StatusCode, raising=False)
+    monkeypatch.setattr(tracing, "_OTEL_AVAILABLE", True)
+
+    return {
+        "otel_trace": otel_trace,
+        "Resource": resources.Resource,
+        "TracerProvider": sdk_trace.TracerProvider,
+        "BatchSpanProcessor": sdk_export.BatchSpanProcessor,
+        "FastAPIInstrumentor": fastapi_instr.FastAPIInstrumentor,
+        "SQLAlchemyInstrumentor": sa_instr.SQLAlchemyInstrumentor,
+        "CloudTraceSpanExporter": gcp_export.CloudTraceSpanExporter,
+        "ConsoleSpanExporter": sdk_export.ConsoleSpanExporter,
+        "tracer": fake_tracer,
+        "span": fake_span,
+    }
 
 
-def _enable_otel_on_module(monkeypatch):
-    """Inject OTEL symbols that only exist when the package is installed."""
-    fake_tracer = MagicMock()
-    fake_trace = MagicMock()
-    fake_trace.get_tracer.return_value = fake_tracer
-    fake_trace.get_current_span.return_value = MagicMock()
-    monkeypatch.setattr(tracing_mod, "_OTEL_AVAILABLE", True, raising=False)
-    monkeypatch.setattr(tracing_mod, "Resource", MagicMock(create=MagicMock(return_value=MagicMock())), raising=False)
-    monkeypatch.setattr(tracing_mod, "TracerProvider", MagicMock(return_value=MagicMock()), raising=False)
-    monkeypatch.setattr(tracing_mod, "BatchSpanProcessor", MagicMock(), raising=False)
-    monkeypatch.setattr(tracing_mod, "otel_trace", fake_trace, raising=False)
-    monkeypatch.setattr(tracing_mod, "StatusCode", MagicMock(ERROR="ERROR"), raising=False)
-    return fake_tracer
+@pytest.mark.asyncio
+async def test_trace_span_noop_when_tracer_unset() -> None:
+    with patch.object(tracing, "_OTEL_AVAILABLE", True), patch.object(tracing, "_tracer", None):
+        async with tracing.trace_span("test.span", {"k": "v"}) as span:
+            assert span is None
 
 
 @pytest.mark.asyncio
 async def test_trace_span_noop_when_otel_unavailable() -> None:
-    with patch.object(tracing_mod, "_OTEL_AVAILABLE", False):
-        async with tracing_mod.trace_span("test.span", {"k": "v"}) as span:
+    with patch.object(tracing, "_OTEL_AVAILABLE", False), patch.object(tracing, "_tracer", MagicMock()):
+        async with tracing.trace_span("test.span") as span:
             assert span is None
 
 
-def test_get_current_span_noop_when_unavailable() -> None:
-    with patch.object(tracing_mod, "_OTEL_AVAILABLE", False):
-        assert tracing_mod.get_current_span() is None
+def test_get_current_span_when_otel_unavailable() -> None:
+    with patch.object(tracing, "_OTEL_AVAILABLE", False):
+        assert tracing.get_current_span() is None
 
 
 def test_setup_tracing_noop_when_otel_unavailable() -> None:
-    with patch.object(tracing_mod, "_OTEL_AVAILABLE", False):
-        tracing_mod.setup_tracing(service_name="applypilot", environment="production")
-        assert tracing_mod._tracer is None
+    with patch.object(tracing, "_OTEL_AVAILABLE", False):
+        tracing.setup_tracing()
 
 
-def test_setup_tracing_development_no_exporter(monkeypatch) -> None:
-    fake_tracer = _enable_otel_on_module(monkeypatch)
-    fake_fa = MagicMock()
-    fake_sa = MagicMock()
-    with patch.dict(
-        "sys.modules",
-        {
-            "opentelemetry.instrumentation.fastapi": MagicMock(FastAPIInstrumentor=fake_fa),
-            "opentelemetry.instrumentation.sqlalchemy": MagicMock(SQLAlchemyInstrumentor=fake_sa),
-        },
-    ):
-        tracing_mod.setup_tracing(environment="development")
-        assert tracing_mod._tracer is fake_tracer
-        fake_fa.return_value.instrument.assert_called_once()
-        fake_sa.return_value.instrument.assert_called_once()
+def test_setup_tracing_development(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    monkeypatch.setattr(tracing, "_tracer", None)
+    tracing.setup_tracing(service_name="applypilot", environment="development")
+    fakes["Resource"].create.assert_called_once()
+    fakes["TracerProvider"].assert_called_once()
+    fakes["BatchSpanProcessor"].assert_not_called()
+    fakes["otel_trace"].set_tracer_provider.assert_called_once()
+    fakes["FastAPIInstrumentor"].assert_called_once()
+    fakes["SQLAlchemyInstrumentor"].assert_called_once()
+    assert tracing._tracer is fakes["tracer"]
 
 
-def test_setup_tracing_production_adds_exporter(monkeypatch) -> None:
-    _enable_otel_on_module(monkeypatch)
-    mock_exporter = MagicMock()
-    mock_provider = MagicMock()
-    monkeypatch.setattr(tracing_mod, "TracerProvider", MagicMock(return_value=mock_provider), raising=False)
-    with patch.object(tracing_mod, "_build_cloud_trace_exporter", return_value=mock_exporter), \
-         patch.dict(
-             "sys.modules",
-             {
-                 "opentelemetry.instrumentation.fastapi": MagicMock(FastAPIInstrumentor=MagicMock()),
-                 "opentelemetry.instrumentation.sqlalchemy": MagicMock(SQLAlchemyInstrumentor=MagicMock()),
-             },
-         ):
-        tracing_mod.setup_tracing(environment="production")
-        mock_provider.add_span_processor.assert_called_once()
+def test_setup_tracing_production_uses_cloud_exporter(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    monkeypatch.setattr(tracing, "_tracer", None)
+    tracing.setup_tracing(environment="production")
+    fakes["CloudTraceSpanExporter"].assert_called_once()
+    fakes["BatchSpanProcessor"].assert_called_once()
 
 
-def test_setup_tracing_handles_fastapi_instrumentor_missing(monkeypatch) -> None:
-    _enable_otel_on_module(monkeypatch)
-    with patch.dict("sys.modules", {"opentelemetry.instrumentation.fastapi": None}):
-        tracing_mod.setup_tracing(environment="development")
+def test_build_cloud_trace_exporter_falls_back_to_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    # Force GCP import failure → console exporter fallback.
+    monkeypatch.setitem(
+        sys.modules,
+        "opentelemetry.exporter.gcp.trace",
+        ModuleType("opentelemetry.exporter.gcp.trace"),
+    )
 
+    real_import = __import__
 
-def test_setup_tracing_handles_exception(monkeypatch) -> None:
-    _enable_otel_on_module(monkeypatch)
-    monkeypatch.setattr(tracing_mod, "Resource", MagicMock(side_effect=RuntimeError("fail")), raising=False)
-    tracing_mod.setup_tracing(environment="production")
-    assert tracing_mod._tracer is None
-
-
-def test_build_cloud_trace_exporter_gcp_path() -> None:
-    mock_exporter = MagicMock()
-    fake_mod = MagicMock(CloudTraceSpanExporter=MagicMock(return_value=mock_exporter))
-    with patch.dict("sys.modules", {"opentelemetry.exporter.gcp.trace": fake_mod}):
-        result = tracing_mod._build_cloud_trace_exporter()
-        assert result is mock_exporter
-
-
-def test_build_cloud_trace_exporter_console_fallback() -> None:
-    mock_console_cls = MagicMock(return_value="console-exporter")
-    fake_export_mod = MagicMock(ConsoleSpanExporter=mock_console_cls)
-    with patch.dict(
-        "sys.modules",
-        {
-            "opentelemetry.exporter.gcp.trace": None,
-            "opentelemetry.sdk.trace.export": fake_export_mod,
-        },
-    ):
-        result = tracing_mod._build_cloud_trace_exporter()
-        assert result == "console-exporter"
-
-
-@pytest.mark.asyncio
-async def test_trace_span_records_exception(monkeypatch) -> None:
-    mock_span = MagicMock()
-    mock_tracer = MagicMock()
-
-    @contextmanager
-    def _span_cm(*args, **kwargs):
-        yield mock_span
-
-    mock_tracer.start_as_current_span.side_effect = _span_cm
-    _enable_otel_on_module(monkeypatch)
-    monkeypatch.setattr(tracing_mod, "_tracer", mock_tracer, raising=False)
-
-    async def _run_span_raises() -> None:
-        async with tracing_mod.trace_span("agent.test", {"x": 1}):
-            raise ValueError("boom")
-
-    with pytest.raises(ValueError) as exc_info:
-        await _run_span_raises()
-    assert str(exc_info.value) == "boom"
-    mock_span.set_status.assert_called_once()
-    mock_span.record_exception.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_trace_span_yields_active_span(monkeypatch) -> None:
-    mock_span = MagicMock()
-    mock_tracer = MagicMock()
-
-    @contextmanager
-    def _span_cm(*args, **kwargs):
-        yield mock_span
-
-    mock_tracer.start_as_current_span.side_effect = _span_cm
-    _enable_otel_on_module(monkeypatch)
-    monkeypatch.setattr(tracing_mod, "_tracer", mock_tracer, raising=False)
-
-    async with tracing_mod.trace_span("agent.ok", {"a": "b"}) as span:
-        assert span is mock_span
-    mock_span.set_attribute.assert_called_with("a", "b")
-
-
-def test_get_current_span_with_otel(monkeypatch) -> None:
-    mock_span = MagicMock()
-    _enable_otel_on_module(monkeypatch)
-    tracing_mod.otel_trace.get_current_span.return_value = mock_span
-    assert tracing_mod.get_current_span() is mock_span
-
-
-def test_import_error_sets_otel_unavailable(monkeypatch) -> None:
-    import builtins
-    import importlib
-    import sys
-
-    real_import = builtins.__import__
-
-    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "opentelemetry" or name.startswith("opentelemetry."):
-            raise ImportError("blocked for test")
+    def _fail_gcp(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "opentelemetry.exporter.gcp.trace" or (
+            name == "opentelemetry.exporter.gcp" and fromlist and "trace" in fromlist
+        ):
+            raise ImportError(name)
+        if name.startswith("opentelemetry.exporter.gcp.trace"):
+            raise ImportError(name)
         return real_import(name, globals, locals, fromlist, level)
 
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-    sys.modules.pop("utils.tracing", None)
-    reloaded = importlib.import_module("utils.tracing")
-    assert reloaded._OTEL_AVAILABLE is False
-    sys.modules.pop("utils.tracing", None)
-    _ = importlib.import_module("utils.tracing")
+    monkeypatch.setattr("builtins.__import__", _fail_gcp)
+    exporter = tracing._build_cloud_trace_exporter()
+    fakes["ConsoleSpanExporter"].assert_called_once()
+    assert exporter is fakes["ConsoleSpanExporter"].return_value
+
+
+def test_setup_tracing_handles_instrumentor_import_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    monkeypatch.setattr(tracing, "_tracer", None)
+
+    # Remove instrumentor modules so `from opentelemetry.instrumentation...` raises.
+    monkeypatch.delitem(sys.modules, "opentelemetry.instrumentation.fastapi", raising=False)
+    monkeypatch.delitem(sys.modules, "opentelemetry.instrumentation.sqlalchemy", raising=False)
+
+    real_import = __import__
+
+    def _fail_instrumentors(name, globals=None, locals=None, fromlist=(), level=0):
+        if "instrumentation.fastapi" in name or "instrumentation.sqlalchemy" in name:
+            raise ImportError(name)
+        if fromlist and (
+            (name == "opentelemetry.instrumentation" and "fastapi" in fromlist)
+            or (name == "opentelemetry.instrumentation" and "sqlalchemy" in fromlist)
+        ):
+            raise ImportError(name)
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr("builtins.__import__", _fail_instrumentors)
+    tracing.setup_tracing(environment="development")
+    assert tracing._tracer is fakes["tracer"]
+
+
+def test_setup_tracing_swallows_unexpected_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fake_otel(monkeypatch)
+    monkeypatch.setattr(tracing, "_tracer", None)
+    broken = MagicMock()
+    broken.create.side_effect = RuntimeError("boom")
+    monkeypatch.setattr(tracing, "Resource", broken)
+    tracing.setup_tracing(environment="development")
+    assert tracing._tracer is None
+
+
+@pytest.mark.asyncio
+async def test_trace_span_sets_attributes_and_yields(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    monkeypatch.setattr(tracing, "_tracer", fakes["tracer"])
+    async with tracing.trace_span("agent.job", {"model": "x"}) as span:
+        assert span is fakes["span"]
+    fakes["span"].set_attribute.assert_called_with("model", "x")
+
+
+@pytest.mark.asyncio
+async def test_trace_span_records_exceptions(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    monkeypatch.setattr(tracing, "_tracer", fakes["tracer"])
+    with pytest.raises(ValueError, match="fail"):
+        async with tracing.trace_span("agent.job"):
+            raise ValueError("fail")
+    fakes["span"].set_status.assert_called_once()
+    fakes["span"].record_exception.assert_called_once()
+
+
+def test_get_current_span_when_otel_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    fakes = _install_fake_otel(monkeypatch)
+    assert tracing.get_current_span() is fakes["span"]

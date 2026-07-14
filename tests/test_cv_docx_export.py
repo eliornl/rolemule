@@ -200,6 +200,25 @@ jane@example.com
         assert "Languages" in xml
         assert "Python" in xml
 
+    def test_date_line_skipped_as_bullet_and_single_asterisk_subtitle(self):
+        from utils.cv_docx_export import _is_date_line, _strip_wrapping_asterisks
+
+        assert _is_date_line("*2020–2024*") is True
+        assert _strip_wrapping_asterisks("*Subtitle*") == "Subtitle"
+
+    def test_skill_colon_line_in_skills_section(self):
+        cv = """# Jane Doe
+jane@example.com
+
+## Skills
+Languages: Python, Go, Rust
+"""
+        data = markdown_cv_to_docx_bytes(cv)
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            xml = zf.read("word/document.xml").decode("utf-8")
+        assert "Python" in xml
+        assert "Languages" in xml
+
     def test_single_asterisk_strip_and_date_line_skipped(self):
         cv = """# Jane Doe
 *Product Designer*
