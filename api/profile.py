@@ -1025,32 +1025,24 @@ async def parse_resume_endpoint(
             except UnicodeDecodeError:
                 raise validation_error("TXT files must be UTF-8 encoded.")
 
-        # Resolve the user's BYOK key (if any) so the LLM call uses it.
-        user_api_key = None
+        # Resolve per-user LLM credentials (provider + BYOK / Ollama / Vertex)
+        from utils.llm_context import require_user_llm_context
+
         user_result = await db.execute(select(User).where(User.id == user_id))
         user_record = user_result.scalar_one_or_none()
-        if user_record and user_record.gemini_api_key_encrypted:
-            try:
-                user_api_key = decrypt_api_key(user_record.gemini_api_key_encrypted)
-            except Exception as e:
-                logger.warning(
-                    "Failed to decrypt user API key for resume parse: %s",
-                    sanitize_log_value(str(e)),
-                )
-
-        from utils.llm.availability import (
-            effective_user_api_key,
-            llm_credentials_available,
+        _u, llm_ctx, _p = await require_user_llm_context(
+            db, user_id, user=user_record
         )
-
-        # Pass module-level ``settings`` so tests that patch ``api.profile.settings`` apply
-        if not llm_credentials_available(user_api_key, settings=settings):
-            raise no_api_key_error()
-        user_api_key = effective_user_api_key(user_api_key, settings=settings)
+        user_api_key = llm_ctx.user_api_key
 
         logger.info('Parsing resume for user %s: %s (%d bytes)', sanitize_log_value(current_user.get("id")), sanitize_log_value(resume.filename), len(content))
 
-        parsed_data = await parse_resume_from_file(content, resume.filename, user_api_key=user_api_key)
+        parsed_data = await parse_resume_from_file(
+            content,
+            resume.filename,
+            user_api_key=user_api_key,
+            llm_provider=llm_ctx.provider,
+        )
 
         try:
             await _upsert_user_resume_asset(
@@ -1616,26 +1608,95 @@ async def complete_profile(
 
 
 class ApiKeyRequest(BaseModel):
-    """Request model for setting an API key."""
+    """Request model for setting / validating a provider API key."""
 
     api_key: str = Field(
         ...,
-        min_length=20,
-        max_length=100,
-        description="The Gemini API key to store",
+        min_length=12,
+        max_length=512,
+        description="The API key to store or validate",
     )
+    provider: Optional[str] = Field(
+        None,
+        description="LLM provider: gemini | openai | anthropic (defaults to gemini)",
+    )
+
+
+class ApiKeyDeleteRequest(BaseModel):
+    """Optional body for DELETE /api-key."""
+
+    provider: Optional[str] = Field(
+        None,
+        description="Provider whose key to delete (defaults to gemini)",
+    )
+
+
+class ProviderKeyStatus(BaseModel):
+    """Per-provider key presence."""
+
+    has_key: bool
+    key_preview: Optional[str] = None
 
 
 class ApiKeyStatusResponse(BaseModel):
-    """Response model for API key status."""
+    """Response model for API key / AI setup status."""
 
-    has_user_key: bool = Field(..., description="Whether user has their own API key configured")
-    has_api_key: bool = Field(..., description="Whether user has an API key configured (alias for has_user_key)")
-    server_has_key: bool = Field(..., description="Whether server has a default API key configured")
-    use_vertex_ai: bool = Field(False, description="Whether the server is using Vertex AI (model choice locked)")
-    key_preview: Optional[str] = Field(
-        None, description="Masked preview of the key (first 4 and last 4 chars)"
+    has_user_key: bool = Field(
+        ...,
+        description="Whether the user is ready to run LLM (BYOK/Ollama/Vertex)",
     )
+    has_api_key: bool = Field(
+        ...,
+        description="Alias for has_user_key (backward compatible)",
+    )
+    has_credentials: bool = Field(
+        ...,
+        description="True when resolve_user_llm_context is ready",
+    )
+    server_has_key: bool = Field(
+        ...,
+        description="True only when Vertex AI is enabled (admin escape hatch)",
+    )
+    use_vertex_ai: bool = Field(
+        False, description="Whether the server is using Vertex AI"
+    )
+    preferred_provider: Optional[str] = Field(
+        None, description="User's chosen LLM provider, or null if unset"
+    )
+    key_preview: Optional[str] = Field(
+        None,
+        description="Masked preview of the active provider key (if any)",
+    )
+    providers: Dict[str, ProviderKeyStatus] = Field(
+        default_factory=dict,
+        description="Per-provider key status",
+    )
+    models: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Selectable model ids per provider",
+    )
+
+
+def _mask_key_preview(decrypted_key: str) -> str:
+    """Return a masked preview of a decrypted API key."""
+    if len(decrypted_key) > 8:
+        return f"{decrypted_key[:4]}...{decrypted_key[-4:]}"
+    return "****"
+
+
+def _normalize_key_provider(raw: Optional[str]) -> str:
+    """Normalize API-key provider; default gemini for backward compatibility."""
+    from utils.llm.constants import VALID_LLM_PROVIDERS
+    from utils.llm.registry import normalize_provider_name
+
+    if not raw or not str(raw).strip():
+        return "gemini"
+    name = normalize_provider_name(str(raw))
+    if name == "ollama":
+        raise validation_error("Ollama does not use an API key")
+    if name not in VALID_LLM_PROVIDERS:
+        raise validation_error(f"Unsupported provider: {raw}")
+    return name
 
 
 @router.get("/api-key/status", response_model=ApiKeyStatusResponse)
@@ -1644,48 +1705,68 @@ async def get_api_key_status(
     db: AsyncSession = Depends(get_database),
 ) -> ApiKeyStatusResponse:
     """
-    Check if user has a Gemini API key configured.
-    
-    Returns status and a masked preview of the key if set.
+    Return AI setup status: preferred provider, per-provider keys, model lists.
     """
     try:
+        from utils.llm.availability import (
+            decrypt_user_key_for_provider,
+            resolve_user_llm_context,
+            user_has_key_for_provider,
+        )
+        from utils.llm.models import models_payload
+        from utils.llm_preferences import load_workflow_preferences
+
         user_id = get_user_id_from_token(current_user)
 
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-
         if not user:
             raise not_found_error("User not found")
 
-        has_user_key = user.gemini_api_key_encrypted is not None
-        key_preview = None
+        prefs = await load_workflow_preferences(db, user_id)
+        ctx = resolve_user_llm_context(user, prefs)
 
-        if has_user_key:
-            try:
-                decrypted_key = decrypt_api_key(user.gemini_api_key_encrypted)
-                # Show first 4 and last 4 characters
-                if len(decrypted_key) > 8:
-                    key_preview = f"{decrypted_key[:4]}...{decrypted_key[-4:]}"
-                else:
-                    key_preview = "****"
-            except Exception:
-                # If decryption fails, key is corrupted
-                key_preview = "(invalid)"
-
-        # Check if server has credentials for the active LLM provider
         from config.settings import get_settings
-        from utils.llm.availability import server_has_llm_credentials
 
         settings = get_settings()
         use_vertex_ai = bool(getattr(settings, "use_vertex_ai", False))
-        server_has_key = server_has_llm_credentials(settings)
+
+        providers_status: Dict[str, ProviderKeyStatus] = {}
+        for pname in ("gemini", "openai", "anthropic", "ollama"):
+            if pname == "ollama":
+                providers_status[pname] = ProviderKeyStatus(has_key=True, key_preview=None)
+                continue
+            has_key = user_has_key_for_provider(user, pname)
+            preview = None
+            if has_key:
+                try:
+                    decrypted = decrypt_user_key_for_provider(user, pname)
+                    preview = _mask_key_preview(decrypted) if decrypted else "(invalid)"
+                except Exception:
+                    preview = "(invalid)"
+            providers_status[pname] = ProviderKeyStatus(
+                has_key=has_key, key_preview=preview
+            )
+
+        preferred = ctx.provider if ctx.provider else (
+            prefs.preferred_provider if prefs else None
+        )
+        key_preview = None
+        if preferred and preferred != "ollama" and not use_vertex_ai:
+            key_preview = providers_status.get(
+                preferred, ProviderKeyStatus(has_key=False)
+            ).key_preview
 
         return ApiKeyStatusResponse(
-            has_user_key=has_user_key,
-            has_api_key=has_user_key,  # Alias for backward compatibility
-            server_has_key=server_has_key,
+            has_user_key=ctx.ready,
+            has_api_key=ctx.ready,
+            has_credentials=ctx.ready,
+            server_has_key=use_vertex_ai,
             use_vertex_ai=use_vertex_ai,
+            preferred_provider=preferred or None,
             key_preview=key_preview,
+            providers=providers_status,
+            models=models_payload(),
         )
 
     except HTTPException:
@@ -1702,39 +1783,80 @@ async def set_api_key(
     db: AsyncSession = Depends(get_database),
 ):
     """
-    Set or update the user's Gemini API key.
-    
+    Set or update a BYOK API key for the given provider.
+
     The key is encrypted before storage and never logged.
     """
     try:
+        from utils.anthropic_api_key_format import validate_anthropic_api_key
+        from utils.llm.availability import encrypted_key_attr_for_provider
+        from utils.openai_api_key_format import validate_openai_api_key
+
         user_id = get_user_id_from_token(current_user)
+        provider = _normalize_key_provider(request.provider)
+        key = request.api_key.strip()
 
-        # Validate the API key format
-        if not validate_gemini_api_key(request.api_key):
-            raise validation_error("Invalid API key format. Please check your Gemini API key.")
+        if provider == "gemini":
+            if not validate_gemini_api_key(key):
+                raise validation_error(
+                    "Invalid API key format. Please check your Gemini API key."
+                )
+        elif provider == "openai":
+            if not validate_openai_api_key(key):
+                raise validation_error(
+                    "Invalid API key format. OpenAI keys usually start with sk-."
+                )
+        elif provider == "anthropic":
+            if not validate_anthropic_api_key(key):
+                raise validation_error(
+                    "Invalid API key format. Anthropic keys usually start with sk-ant-."
+                )
 
-        # Encrypt the API key
-        encrypted_key = encrypt_api_key(request.api_key.strip())
+        encrypted_key = encrypt_api_key(key)
+        attr = encrypted_key_attr_for_provider(provider)
+        if not attr:
+            raise validation_error(f"Unsupported provider: {provider}")
 
-        # Update user record
         await db.execute(
             update(User)
             .where(User.id == user_id)
             .values(
-                gemini_api_key_encrypted=encrypted_key,
-                updated_at=datetime.now(timezone.utc),
+                **{attr: encrypted_key, "updated_at": datetime.now(timezone.utc)}
             )
         )
+
+        # Saving a key for a provider also activates that provider
+        prefs_result = await db.execute(
+            select(UserWorkflowPreferences).where(
+                UserWorkflowPreferences.user_id == user_id
+            )
+        )
+        prefs_row = prefs_result.scalar_one_or_none()
+        if prefs_row is None:
+            prefs_row = UserWorkflowPreferences(
+                user_id=user_id,
+                preferred_provider=provider,
+                preferred_model=None,
+            )
+            db.add(prefs_row)
+        else:
+            if prefs_row.preferred_provider != provider:
+                prefs_row.preferred_model = None
+            prefs_row.preferred_provider = provider
+            prefs_row.updated_at = datetime.now(timezone.utc)
+
         await db.commit()
 
-        # Invalidate user profile cache and all per-user LLM response caches
-        # so that requests under the new key start fresh.
         await invalidate_user_profile(str(user_id))
         await invalidate_user_llm_cache(str(user_id))
 
-        logger.info("API key updated for user: %s", _log_user_email(current_user))
+        logger.info(
+            "API key updated for user=%s provider=%s",
+            _log_user_email(current_user),
+            sanitize_log_value(provider),
+        )
 
-        return {"message": "API key saved successfully"}
+        return {"message": "API key saved successfully", "provider": provider}
 
     except HTTPException:
         raise
@@ -1748,35 +1870,42 @@ async def set_api_key(
 
 @router.delete("/api-key")
 async def delete_api_key(
+    provider: Optional[str] = None,
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_database),
 ):
     """
-    Delete the user's stored Gemini API key.
+    Delete the user's stored API key for a provider (query ``?provider=``).
     """
     try:
-        user_id = get_user_id_from_token(current_user)
+        from utils.llm.availability import encrypted_key_attr_for_provider
 
-        # Update user record to remove the key
+        user_id = get_user_id_from_token(current_user)
+        resolved = _normalize_key_provider(provider)
+        attr = encrypted_key_attr_for_provider(resolved)
+        if not attr:
+            raise validation_error(f"Unsupported provider: {resolved}")
+
         await db.execute(
             update(User)
             .where(User.id == user_id)
-            .values(
-                gemini_api_key_encrypted=None,
-                updated_at=datetime.now(timezone.utc),
-            )
+            .values(**{attr: None, "updated_at": datetime.now(timezone.utc)})
         )
         await db.commit()
 
-        # Invalidate user profile cache and all per-user LLM response caches
-        # so that requests now using the shared default key start fresh.
         await invalidate_user_profile(str(user_id))
         await invalidate_user_llm_cache(str(user_id))
 
-        logger.info("API key deleted for user: %s", _log_user_email(current_user))
+        logger.info(
+            "API key deleted for user=%s provider=%s",
+            _log_user_email(current_user),
+            sanitize_log_value(resolved),
+        )
 
-        return {"message": "API key deleted successfully"}
+        return {"message": "API key deleted successfully", "provider": resolved}
 
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         logger.error("Failed to delete API key: %s", sanitize_log_value(str(e)), exc_info=True)
@@ -1789,48 +1918,132 @@ async def validate_api_key_endpoint(
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
-    Validate a Gemini API key by making a test API call.
-    
-    This endpoint tests if the key works without saving it.
+    Validate an API key by making a lightweight provider API call (does not save).
     """
     try:
+        import httpx
+
+        from utils.anthropic_api_key_format import validate_anthropic_api_key
+        from utils.llm.constants import HTTP_CONNECT_TIMEOUT
+        from utils.openai_api_key_format import validate_openai_api_key
+
         user_id = get_user_id_from_token(current_user)
 
-        # Rate limit: 10 validation attempts per hour per user (calls external Google API)
         is_allowed, _remaining = await check_rate_limit(
             identifier=f"api_key_validate:{user_id}",
             limit=10,
             window_seconds=3600,
         )
         if not is_allowed:
-            raise rate_limit_error("Too many API key validation attempts. Please try again later.", retry_after=3600)
+            raise rate_limit_error(
+                "Too many API key validation attempts. Please try again later.",
+                retry_after=3600,
+            )
 
-        if not validate_gemini_api_key(request.api_key):
-            raise validation_error("Invalid API key format")
+        provider = _normalize_key_provider(request.provider)
+        key = request.api_key.strip()
 
-        # Test the API key by making a simple call
-        from google import genai as google_genai
+        if provider == "gemini":
+            if not validate_gemini_api_key(key):
+                raise validation_error("Invalid API key format")
+            from google import genai as google_genai
 
-        client = google_genai.Client(api_key=request.api_key.strip())
+            client = google_genai.Client(api_key=key)
+            try:
+                models = list(client.models.list())
+                if not models:
+                    raise validation_error(
+                        "API key appears valid but returned no models"
+                    )
+            except Exception as api_error:
+                logger.warning(
+                    "API key validation failed: %s",
+                    sanitize_log_value(str(api_error)),
+                )
+                raise validation_error(
+                    "API key validation failed. Please check your key is correct "
+                    "and has proper permissions."
+                )
+            return {
+                "valid": True,
+                "message": "API key is valid",
+                "provider": provider,
+                "models_available": len(models),
+            }
 
-        try:
-            models = list(client.models.list())
-            if not models:
-                raise validation_error("API key appears valid but returned no models")
-        except Exception as api_error:
-            logger.warning("API key validation failed: %s", sanitize_log_value(str(api_error)))
-            raise validation_error("API key validation failed. Please check your key is correct and has proper permissions.")
+        if provider == "openai":
+            if not validate_openai_api_key(key):
+                raise validation_error("Invalid API key format")
+            try:
+                timeout = httpx.Timeout(15.0, connect=HTTP_CONNECT_TIMEOUT)
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    resp = await client.get(
+                        "https://api.openai.com/v1/models",
+                        headers={"Authorization": f"Bearer {key}"},
+                    )
+                if resp.status_code >= 400:
+                    raise validation_error(
+                        "API key validation failed. Please check your OpenAI key."
+                    )
+            except HTTPException:
+                raise
+            except Exception as api_error:
+                logger.warning(
+                    "OpenAI key validation failed: %s",
+                    sanitize_log_value(str(api_error)),
+                )
+                raise validation_error(
+                    "API key validation failed. Please check your OpenAI key."
+                )
+            return {
+                "valid": True,
+                "message": "API key is valid",
+                "provider": provider,
+            }
 
-        return {
-            "valid": True,
-            "message": "API key is valid",
-            "models_available": len(models),
-        }
+        if provider == "anthropic":
+            if not validate_anthropic_api_key(key):
+                raise validation_error("Invalid API key format")
+            try:
+                timeout = httpx.Timeout(15.0, connect=HTTP_CONNECT_TIMEOUT)
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    resp = await client.get(
+                        "https://api.anthropic.com/v1/models",
+                        headers={
+                            "x-api-key": key,
+                            "anthropic-version": "2023-06-01",
+                        },
+                    )
+                if resp.status_code >= 400:
+                    raise validation_error(
+                        "API key validation failed. Please check your Anthropic key."
+                    )
+            except HTTPException:
+                raise
+            except Exception as api_error:
+                logger.warning(
+                    "Anthropic key validation failed: %s",
+                    sanitize_log_value(str(api_error)),
+                )
+                raise validation_error(
+                    "API key validation failed. Please check your Anthropic key."
+                )
+            return {
+                "valid": True,
+                "message": "API key is valid",
+                "provider": provider,
+            }
+
+        raise validation_error(f"Unsupported provider: {provider}")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("API key validation error: %s", sanitize_log_value(str(e)), exc_info=True)
+        logger.error(
+            "API key validate endpoint failed: %s",
+            sanitize_log_value(str(e)),
+            exc_info=True,
+        )
         raise internal_error("Failed to validate API key")
 
 
@@ -2015,17 +2228,13 @@ _PREFERENCE_DEFAULTS: Dict[str, Any] = {
     "cover_letter_tone": "professional",
     "resume_length": "concise",
     "preferred_model": None,
+    "preferred_provider": None,
 }
 
 _VALID_COVER_LETTER_TONES = {"professional", "conversational", "enthusiastic"}
 _VALID_RESUME_LENGTHS = {"concise", "detailed"}
-_VALID_MODELS = {
-    "gemini-3.5-flash",
-    "gemini-3.1-pro-preview",
-    "gemini-3.1-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-}
+# Kept for backward-compatible imports/tests; prefer utils.llm.models
+from utils.llm.models import VALID_GEMINI_MODELS as _VALID_MODELS  # noqa: E402
 
 
 class ApplicationPreferencesRequest(BaseModel):
@@ -2058,10 +2267,13 @@ class ApplicationPreferencesRequest(BaseModel):
     preferred_model: Optional[str] = Field(
         None,
         description=(
-            "Preferred Gemini model for BYOK users. "
-            f"Allowed values: {', '.join(sorted(_VALID_MODELS))}. "
+            "Preferred model for the user's chosen provider. "
             "Set to null to revert to the system default."
         ),
+    )
+    preferred_provider: Optional[str] = Field(
+        None,
+        description="LLM provider: gemini | openai | anthropic | ollama. Required before AI features work.",
     )
 
 
@@ -2073,6 +2285,7 @@ class ApplicationPreferencesResponse(BaseModel):
     cover_letter_tone: str
     resume_length: str
     preferred_model: Optional[str] = None
+    preferred_provider: Optional[str] = None
 
 
 @router.get("/preferences", response_model=ApplicationPreferencesResponse)
@@ -2098,6 +2311,7 @@ async def get_application_preferences(
                 cover_letter_tone=prefs_row.cover_letter_tone,
                 resume_length=prefs_row.resume_length,
                 preferred_model=prefs_row.preferred_model,
+                preferred_provider=prefs_row.preferred_provider,
             )
 
         # No row yet — return defaults without writing anything
@@ -2122,6 +2336,10 @@ async def update_application_preferences(
     Only provided fields are updated; omitted fields keep their current value.
     """
     try:
+        from utils.llm.constants import VALID_LLM_PROVIDERS
+        from utils.llm.models import is_valid_model_for_provider
+        from utils.llm.registry import normalize_provider_name
+
         user_id = get_user_id_from_token(current_user)
 
         result = await db.execute(
@@ -2132,11 +2350,6 @@ async def update_application_preferences(
         prefs_row = result.scalar_one_or_none()
 
         if prefs_row is None:
-            # First time — create row with defaults, then apply the patch.
-            # Wrap the INSERT in a savepoint so that a concurrent INSERT from
-            # another request (race condition) causes an IntegrityError that we
-            # can recover from with a re-SELECT instead of rolling back the
-            # entire transaction.
             try:
                 async with db.begin_nested():
                     prefs_row = UserWorkflowPreferences(
@@ -2147,14 +2360,10 @@ async def update_application_preferences(
                         cover_letter_tone=_PREFERENCE_DEFAULTS["cover_letter_tone"],
                         resume_length=_PREFERENCE_DEFAULTS["resume_length"],
                         preferred_model=_PREFERENCE_DEFAULTS["preferred_model"],
+                        preferred_provider=_PREFERENCE_DEFAULTS["preferred_provider"],
                     )
                     db.add(prefs_row)
             except IntegrityError:
-                # The savepoint context manager automatically rolled back the savepoint
-                # on IntegrityError — the parent transaction is still valid.
-                # Do NOT call db.rollback() here: that would roll back the entire
-                # parent transaction, making all subsequent DB work in this request
-                # fail with "transaction is already rolled back".
                 result2 = await db.execute(
                     select(UserWorkflowPreferences).where(
                         UserWorkflowPreferences.user_id == user_id
@@ -2176,14 +2385,44 @@ async def update_application_preferences(
             if length not in _VALID_RESUME_LENGTHS:
                 raise validation_error(f"resume_length must be one of: {', '.join(_VALID_RESUME_LENGTHS)}")
             prefs_row.resume_length = length
+
+        if "preferred_provider" in request.model_fields_set:
+            if request.preferred_provider is None:
+                prefs_row.preferred_provider = None
+                prefs_row.preferred_model = None
+            else:
+                try:
+                    provider = normalize_provider_name(request.preferred_provider)
+                except Exception:
+                    raise validation_error(
+                        f"preferred_provider must be one of: {', '.join(sorted(VALID_LLM_PROVIDERS))}"
+                    )
+                if prefs_row.preferred_provider != provider:
+                    prefs_row.preferred_model = None
+                prefs_row.preferred_provider = provider
+
         if "preferred_model" in request.model_fields_set:
-            if request.preferred_model is not None and request.preferred_model not in _VALID_MODELS:
-                raise validation_error(f"preferred_model must be one of: {', '.join(sorted(_VALID_MODELS))}")
+            target_provider = prefs_row.preferred_provider or "gemini"
+            if request.preferred_model is not None and not is_valid_model_for_provider(
+                target_provider, request.preferred_model
+            ):
+                raise validation_error(
+                    f"preferred_model is not valid for provider {target_provider}"
+                )
             prefs_row.preferred_model = request.preferred_model
 
         await db.commit()
 
-        logger.info('Updated workflow preferences for %s: gate=%s auto_docs=%s tone=%s resume_length=%s model=%s', _log_user_email(current_user), sanitize_log_value(prefs_row.workflow_gate_threshold), sanitize_log_value(prefs_row.auto_generate_documents), sanitize_log_value(prefs_row.cover_letter_tone), sanitize_log_value(prefs_row.resume_length), sanitize_log_value(prefs_row.preferred_model))
+        logger.info(
+            "Updated workflow preferences for %s: gate=%s auto_docs=%s tone=%s resume_length=%s model=%s provider=%s",
+            _log_user_email(current_user),
+            sanitize_log_value(prefs_row.workflow_gate_threshold),
+            sanitize_log_value(prefs_row.auto_generate_documents),
+            sanitize_log_value(prefs_row.cover_letter_tone),
+            sanitize_log_value(prefs_row.resume_length),
+            sanitize_log_value(prefs_row.preferred_model),
+            sanitize_log_value(prefs_row.preferred_provider),
+        )
 
         return ApplicationPreferencesResponse(
             workflow_gate_threshold=prefs_row.workflow_gate_threshold,
@@ -2191,6 +2430,7 @@ async def update_application_preferences(
             cover_letter_tone=prefs_row.cover_letter_tone,
             resume_length=prefs_row.resume_length,
             preferred_model=prefs_row.preferred_model,
+            preferred_provider=prefs_row.preferred_provider,
         )
 
     except HTTPException:

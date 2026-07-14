@@ -135,7 +135,10 @@ def emit_workflow_error(ctx: CliContext, exc: ApiClientError) -> None:
     if exc.error_code == "RES_3002":
         emit_duplicate_application(ctx, exc)
     if exc.error_code == "CFG_6001":
-        hint = "Add API key: applypilot profile api-key set (or configure server GEMINI_API_KEY / Vertex AI)"
+        hint = (
+            "Configure AI: applypilot profile api-key set --provider gemini "
+            "(or openai/anthropic), or set preferred_provider=ollama / USE_VERTEX_AI"
+        )
         if ctx.output_format == "json":
             payload = {
                 "success": False,

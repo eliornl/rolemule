@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 
-from utils.llm_client import get_gemini_client, user_facing_message_from_llm_exception
+from utils.llm_client import get_llm_client, user_facing_message_from_llm_exception
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.logging_config import sanitize_log_value
 
@@ -276,15 +276,18 @@ def extract_text_from_file(
 # =============================================================================
 
 
-async def parse_resume(resume_text: str, user_api_key: str | None = None) -> Dict[str, Any]:
+async def parse_resume(
+    resume_text: str,
+    user_api_key: str | None = None,
+    llm_provider: str | None = None,
+) -> Dict[str, Any]:
     """
-    Parse resume text using Gemini LLM to extract structured profile data.
+    Parse resume text using the user's LLM to extract structured profile data.
 
     Args:
         resume_text: Extracted text from resume file
-        user_api_key: Optional BYOK key. When provided, used instead of the
-                      server-side key so self-hosted users can parse resumes
-                      with their own Gemini API key.
+        user_api_key: Optional BYOK key for the resolved provider
+        llm_provider: Explicit provider name for multi-provider routing
 
     Returns:
         Dictionary containing parsed profile data matching UserProfile schema
@@ -300,7 +303,7 @@ async def parse_resume(resume_text: str, user_api_key: str | None = None) -> Dic
     start_time = datetime.now(timezone.utc)
 
     try:
-        gemini_client = await get_gemini_client()
+        gemini_client = await get_llm_client()
 
         prompt = RESUME_PARSE_PROMPT.format(
             resume_text=resume_text[:15000]
@@ -312,6 +315,7 @@ async def parse_resume(resume_text: str, user_api_key: str | None = None) -> Dic
             temperature=LLM_TEMPERATURE,
             max_tokens=LLM_MAX_TOKENS,
             user_api_key=user_api_key,
+            provider=llm_provider,
         )
 
         if response.get("filtered"):
@@ -345,7 +349,10 @@ async def parse_resume(resume_text: str, user_api_key: str | None = None) -> Dic
 
 
 async def parse_resume_from_file(
-    content: bytes, filename: str, user_api_key: str | None = None
+    content: bytes,
+    filename: str,
+    user_api_key: str | None = None,
+    llm_provider: str | None = None,
 ) -> Dict[str, Any]:
     """
     Complete resume parsing: extract text from file and parse with LLM.
@@ -354,6 +361,7 @@ async def parse_resume_from_file(
         content: File content as bytes
         filename: Original filename
         user_api_key: Optional BYOK key forwarded to the LLM call.
+        llm_provider: Explicit provider name for multi-provider routing
 
     Returns:
         Dictionary containing parsed profile data
@@ -371,7 +379,9 @@ async def parse_resume_from_file(
         )
 
     # Step 2: Parse with LLM
-    return await parse_resume(resume_text, user_api_key=user_api_key)
+    return await parse_resume(
+        resume_text, user_api_key=user_api_key, llm_provider=llm_provider
+    )
 
 
 # =============================================================================

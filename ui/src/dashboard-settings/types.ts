@@ -4,14 +4,24 @@ export interface ApplicationPreferences {
   cover_letter_tone?: string;
   resume_length?: string;
   preferred_model?: string | null;
+  preferred_provider?: string | null;
+}
+
+export interface ProviderKeyStatus {
+  has_key?: boolean;
+  key_preview?: string | null;
 }
 
 export interface ApiKeyStatusResponse {
   has_user_key?: boolean;
   has_api_key?: boolean;
+  has_credentials?: boolean;
   server_has_key?: boolean;
   use_vertex_ai?: boolean;
+  preferred_provider?: string | null;
   key_preview?: string | null;
+  providers?: Record<string, ProviderKeyStatus>;
+  models?: Record<string, string[]>;
 }
 
 export interface ApiKeyValidateResponse {
@@ -19,6 +29,7 @@ export interface ApiKeyValidateResponse {
   models_available?: number | string;
   message?: string;
   detail?: string;
+  provider?: string;
 }
 
 export interface UserProfilePayload {

@@ -101,7 +101,7 @@ async def test_parse_resume_success(monkeypatch) -> None:
             "response": '{"full_name": "Jane Doe", "skills": ["Python"], "work_experience": [], "education": []}',
         }
     )
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     result = await parse_resume("x" * 80)
     assert result["full_name"] == "Jane Doe"
 
@@ -110,7 +110,7 @@ async def test_parse_resume_success(monkeypatch) -> None:
 async def test_parse_resume_filtered(monkeypatch) -> None:
     mock_client = AsyncMock()
     mock_client.generate = AsyncMock(return_value={"filtered": True, "response": "blocked"})
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     result = await parse_resume("x" * 80)
     assert result.get("filtered") is True
 
@@ -119,7 +119,7 @@ async def test_parse_resume_filtered(monkeypatch) -> None:
 async def test_parse_resume_json_parse_failure(monkeypatch) -> None:
     mock_client = AsyncMock()
     mock_client.generate = AsyncMock(return_value={"response": "not json at all"})
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     result = await parse_resume("x" * 80)
     assert result.get("parse_error") is True
 
@@ -130,7 +130,7 @@ async def test_parse_resume_from_file_txt(monkeypatch) -> None:
     mock_client.generate = AsyncMock(
         return_value={"response": '{"full_name": "Bob", "skills": [], "work_experience": [], "education": []}'}
     )
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     content = ("Professional summary " * 10).encode()
     result = await parse_resume_from_file(content, "resume.txt")
     assert result["full_name"] == "Bob"
@@ -202,7 +202,7 @@ def test_clean_parsed_data_non_list_work_and_education() -> None:
 async def test_parse_resume_llm_exception_with_friendly_message(monkeypatch) -> None:
     mock_client = AsyncMock()
     mock_client.generate = AsyncMock(side_effect=RuntimeError("RESOURCE_EXHAUSTED"))
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     monkeypatch.setattr(
         "utils.resume_parser.user_facing_message_from_llm_exception",
         lambda e: "Rate limit exceeded",
@@ -223,7 +223,7 @@ async def test_parse_resume_from_file_success(monkeypatch) -> None:
     mock_client.generate = AsyncMock(
         return_value={"response": '{"full_name": "Ann", "skills": [], "work_experience": [], "education": []}'}
     )
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     content = ("Professional experience " * 10).encode()
     result = await parse_resume_from_file(content, "resume.txt")
     assert result["full_name"] == "Ann"
@@ -275,7 +275,7 @@ def test_clean_list_non_list_returns_empty() -> None:
 async def test_parse_resume_generic_failure_message(monkeypatch) -> None:
     mock_client = AsyncMock()
     mock_client.generate = AsyncMock(side_effect=RuntimeError("network down"))
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", AsyncMock(return_value=mock_client))
     monkeypatch.setattr(
         "utils.resume_parser.user_facing_message_from_llm_exception",
         str,

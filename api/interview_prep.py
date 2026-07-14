@@ -28,7 +28,7 @@ from utils.cache import (
 )
 from utils.encryption import decrypt_api_key
 from utils.security import sanitize_llm_output
-from utils.error_responses import APIError, ErrorCode, internal_error, not_found_error, rate_limit_error, validation_error
+from utils.error_responses import APIError, ErrorCode, internal_error, no_api_key_error, not_found_error, rate_limit_error, validation_error
 from models.database import WorkflowSession, User
 from agents.interview_prep import InterviewPrepAgent
 from api.websocket import (
@@ -108,31 +108,30 @@ def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
 
 
 async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
-    """Get decrypted BYOK key when valid for the active LLM provider."""
-    from utils.llm.availability import effective_user_api_key
-
+    """Get decrypted BYOK key for the user's preferred provider (if ready)."""
     try:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if user and user.gemini_api_key_encrypted:
-            return effective_user_api_key(
-                decrypt_api_key(user.gemini_api_key_encrypted)
-            )
+        from utils.llm_context import require_user_llm_context
+
+        _u, ctx, _p = await require_user_llm_context(db, user_id)
+        return ctx.user_api_key
     except Exception as e:
-        logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
-    
+        from utils.error_responses import APIError
+
+        if isinstance(e, APIError) and getattr(e, "error_code", None) and getattr(e.error_code, "value", e.error_code) == "CFG_6001":
+            return None
+        logger.warning('Failed to resolve user API key: %s', sanitize_log_value(e))
     return None
 
 
 async def _check_api_key_available(db: AsyncSession, user_id: uuid.UUID) -> bool:
-    """Check if credentials are available for the active LLM provider."""
-    from utils.llm.availability import server_has_llm_credentials
+    """Check if the user has configured provider + credentials."""
+    try:
+        from utils.llm_context import require_user_llm_context
 
-    if await _get_user_api_key(db, user_id):
+        await require_user_llm_context(db, user_id)
         return True
-    # Use module-level ``settings`` so tests that patch ``api.interview_prep.settings`` still work
-    return server_has_llm_credentials(settings)
+    except Exception:
+        return False
 
 
 # =============================================================================
@@ -334,14 +333,16 @@ async def generate_interview_prep(
                 message="Interview prep already exists. Use regenerate=true to regenerate.",
             )
         
-        # Check API key availability
-        if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
-        
-        # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
+        # Resolve LLM context (BYOK / Ollama / Vertex)
+        from utils.llm_context import require_user_llm_context
+
+        _u, llm_ctx, _p = await require_user_llm_context(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
         
         # Invalidate cache if regenerating
         if regenerate:
@@ -359,6 +360,7 @@ async def generate_interview_prep(
             user_id=str(user_id),
             user_api_key=user_api_key,
             preferred_model=preferred_model,
+            llm_provider=llm_provider,
         )
         
         logger.info('Started interview prep generation for session %s', sanitize_log_value(session_id))
@@ -439,6 +441,7 @@ async def _generate_interview_prep_background(
     user_id: Optional[str] = None,
     user_api_key: Optional[str] = None,
     preferred_model: Optional[str] = None,
+    llm_provider: Optional[str] = None,
 ) -> None:
     """
     Background task to generate interview preparation materials.
@@ -477,6 +480,7 @@ async def _generate_interview_prep_background(
                 user_profile=workflow_session.user_data or {},
                 user_api_key=user_api_key,
                 model=preferred_model,
+                llm_provider=llm_provider,
             )
 
             # Sanitize all string values before storing to prevent XSS when rendered

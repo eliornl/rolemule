@@ -322,7 +322,7 @@ If the loop stops early because of API quota, ApplyPilot saves the best CV reach
 
 ### Requirements
 
-- A **Gemini API key** in **Settings → AI Setup**, or a server-configured key if your instance operator provides one
+- A **provider + API key** in **Settings → AI Setup** (Gemini, OpenAI, or Anthropic), or **Ollama** with no key, or Vertex AI if your instance operator enabled it
 - A **completed workflow** for that application — if document generation was skipped, finish the workflow from the Cover Letter or Resume tab first
 
 ### Output and actions
@@ -427,15 +427,18 @@ Edit your basic information, work experience, skills, and career preferences.
 
 ### AI Setup
 
-If the instance is running in BYOK mode (no server-side AI key configured):
+Each user picks an AI provider and adds their own API key (bring-your-own-key). Local Ollama needs no key. Vertex AI is only available when the instance operator enables it server-side.
 
 1. Go to **Settings → AI Setup**
-2. Get your own key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-3. Paste the key and click **Save** (copy the full string exactly; Google may show different key formats over time)
+2. Choose a provider: **Google Gemini**, **OpenAI**, **Anthropic**, or **Ollama (local)**
+3. For cloud providers, open the linked **Get API Key** page, create a key, paste it, and click **Save**
+4. Optionally pick a preferred model for that provider (or leave the system default)
 
-Your key is encrypted at rest and never logged or exposed.
+Your keys are encrypted at rest and never logged or exposed. Switching provider clears any previously saved preferred model so you don’t keep a model id from another vendor.
 
-**Model selection** — the AI Setup tab also lets you choose which Gemini model to use (e.g. `gemini-3.5-flash`). The default is set by the instance operator. Only change this if you have a specific reason — different models have different speed and quality trade-offs.
+**Model selection** — after a key is saved (or Ollama is selected), you can choose a model from that provider’s list. Defaults: Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3`. Only change this if you have a specific reason — different models have different speed, cost, and quality trade-offs.
+
+**Key pages:** [Google AI Studio](https://aistudio.google.com/app/apikey) · [OpenAI API keys](https://platform.openai.com/api-keys) · [Anthropic console](https://console.anthropic.com/settings/keys) · Ollama: `ollama pull <model>` on the server.
 
 ### Preferences
 
@@ -518,18 +521,18 @@ The score improves with a more complete profile — sparse profiles, especially 
 A: Yes. If the score is below 50% the gate decision appears, but you can always click "Continue Anyway." A low score just means you may need to address some gaps in your materials.
 
 **Q: Why does the analysis take ~30 seconds?**  
-A: Five AI agents run across four steps — the last two (Resume Advisor and Cover Letter Writer) run in parallel. Each makes an API call to Gemini. This is by design.
+A: Five AI agents run across four steps — the last two (Resume Advisor and Cover Letter Writer) run in parallel. Each makes an API call to your chosen provider. This is by design.
 
 ### API Keys
 
-**Q: Do I need my own Gemini API key?**  
-A: It depends on how the instance is configured. If the operator has set a `GEMINI_API_KEY` in the server's `.env`, you don't need one. If not, go to **Settings → AI Setup** to add yours.
+**Q: Do I need my own API key?**  
+A: Yes for Gemini, OpenAI, and Anthropic — add it under **Settings → AI Setup**. Ollama needs no key. If the operator enabled **Vertex AI** on the server, you don’t need a personal key.
 
 **Q: Is my API key secure?**  
 A: Yes. Keys are encrypted at rest using Fernet symmetric encryption and are never logged or returned by the API.
 
-**Q: Where do I get a Gemini API key?**  
-A: Visit [Google AI Studio](https://aistudio.google.com/app/apikey) and click "Create API Key". Usage is billed directly to your Google account at very low rates.
+**Q: Where do I get an API key?**  
+A: Gemini — [Google AI Studio](https://aistudio.google.com/app/apikey). OpenAI — [platform.openai.com/api-keys](https://platform.openai.com/api-keys). Anthropic — [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys). Usage is billed to your provider account.
 
 ### Technical
 

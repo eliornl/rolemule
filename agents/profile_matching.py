@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from workflows.state_schema import WorkflowState
-from utils.llm_client import get_gemini_client
+from utils.llm_client import get_llm_client, get_gemini_client  # test-patch alias
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.llm_preferences import preferred_model_from_state
 from utils.logging_config import sanitize_log_value
@@ -378,6 +378,7 @@ class ProfileMatchingAgent:
 
         # Store user API key / preferred model for LLM calls (BYOK mode)
         self._current_user_api_key = state.get("user_api_key")
+        self._current_llm_provider = state.get("llm_provider")
         self._current_user_model = preferred_model_from_state(
             state, self._current_user_api_key
         )
@@ -393,7 +394,7 @@ class ProfileMatchingAgent:
                 raise ValueError("Job analysis is required for matching analysis")
 
             # Initialize Gemini client
-            self.gemini_client = await get_gemini_client()
+            self.gemini_client = await get_llm_client()
 
             # Perform AI-powered matching analysis
             matching_result: Dict[str, Any] = await self._analyze_match(
@@ -480,6 +481,7 @@ class ProfileMatchingAgent:
             max_tokens=LLM_MAX_TOKENS,
             user_api_key=self._current_user_api_key,
             model=self._current_user_model,
+            provider=getattr(self, "_current_llm_provider", None),
         )
 
         # Handle safety filter

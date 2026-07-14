@@ -57,11 +57,11 @@ Tour auto-shows on first dashboard visit when `localStorage.onboarding_completed
 **Tour steps (conditional):**
 - Welcome *(always)*
 - Install Chrome Extension *(always)* — explains load-unpacked dev flow
-- Set Up Your API Key *(only when `needsApiKey` — server has no key AND no Vertex AI)*
+- Set Up Your API Key *(only when `needsApiKey` — user lacks `has_credentials` and Vertex is off)*
 - Analyze Job Postings *(always)*
 - Career Tools *(always — last step, "Next" becomes "Get Started ✓")*
 
-**`needsApiKey` condition** is evaluated by `checkServerApiKey()` which calls `GET /api/v1/profile/api-key/status` directly via `fetch()` with the user's auth token from `localStorage`. It returns `true` (key available, skip step) when `has_user_key || server_has_key || use_vertex_ai`. The old implementation used `window.app.apiCall()` which is `undefined` on dashboard pages — always use direct `fetch()`.
+**`needsApiKey` condition** is evaluated by `checkServerApiKey()` which calls `GET /api/v1/profile/api-key/status` directly via `fetch()` with the user's auth token from `localStorage`. Prefer **`has_credentials || use_vertex_ai`** (multi-provider readiness). Legacy responses may still expose `has_user_key` / `server_has_key` — treat Vertex / credentials as the source of truth. The old implementation used `window.app.apiCall()` which is `undefined` on dashboard pages — always use direct `fetch()`.
 
 **CSS lives in `ui/dashboard/index.html`** inside the nonce-gated `<style nonce="...">` block — **never inject `<style>` from `ui/src/pages/onboarding.ts`**. Dynamically created `<style>` elements cannot carry a server-issued nonce and are silently blocked by the CSP `style-src` policy.
 

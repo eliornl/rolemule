@@ -11,7 +11,7 @@ from utils.llm.providers.anthropic import AnthropicProvider
 def _settings(**overrides):
     base = dict(
         anthropic_api_key="sk-ant-test",
-        anthropic_model="claude-sonnet-4-5",
+        anthropic_model="claude-sonnet-5",
     )
     base.update(overrides)
     return MagicMock(**base)
@@ -40,7 +40,7 @@ async def test_anthropic_generate_success() -> None:
         provider = AnthropicProvider()
         result = await provider.generate(prompt="hi", system="sys")
         assert result["response"] == "hello from claude"
-        assert result["model"] == "claude-sonnet-4-5"
+        assert result["model"] == "claude-sonnet-5"
 
 
 @pytest.mark.asyncio

@@ -378,6 +378,7 @@ class JobAnalyzerAgent:
 
         # Store user API key / preferred model for LLM calls (BYOK mode)
         self._current_user_api_key = state.get("user_api_key")
+        self._current_llm_provider = state.get("llm_provider")
         self._current_user_model = preferred_model_from_state(
             state, self._current_user_api_key
         )
@@ -553,6 +554,7 @@ class JobAnalyzerAgent:
                 max_tokens=AI_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
                 model=self._current_user_model,
+                provider=getattr(self, "_current_llm_provider", None),
             )
 
             # Use our shared utility function to parse JSON from LLM response

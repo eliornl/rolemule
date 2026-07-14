@@ -210,6 +210,7 @@ class CoverLetterWriterAgent:
 
         # Store user API key for use in LLM calls (BYOK mode)
         self._current_user_api_key = state.get("user_api_key")
+        self._current_llm_provider = state.get("llm_provider")
 
         try:
             # Extract required data
@@ -338,6 +339,7 @@ class CoverLetterWriterAgent:
                     max_tokens=LLM_MAX_TOKENS,
                     user_api_key=self._current_user_api_key,
                     model=user_model,
+                    provider=getattr(self, "_current_llm_provider", None),
                 ),
                 timeout=LLM_TIMEOUT,
             )

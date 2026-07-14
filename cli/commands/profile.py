@@ -19,7 +19,7 @@ from cli.util import filename_from_headers, payload_from_file, require_confirm
 profile_app = typer.Typer(help="Profile, resume, API key, and account settings.")
 set_app = typer.Typer(help="Update profile sections.")
 resume_app = typer.Typer(help="Resume file management.")
-api_key_app = typer.Typer(help="Bring-your-own Gemini API key.")
+api_key_app = typer.Typer(help="Bring-your-own LLM API key (Gemini / OpenAI / Anthropic).")
 workflow_prefs_app = typer.Typer(help="Workflow agent preferences.")
 
 profile_app.add_typer(set_app, name="set")
@@ -296,7 +296,7 @@ def resume_delete(
 
 @api_key_app.command("status")
 def api_key_status(ctx: typer.Context) -> None:
-    """Show API key configuration status."""
+    """Show AI provider / API key configuration status."""
     cli_ctx: CliContext = ctx.obj
     client = require_client(cli_ctx)
     try:
@@ -305,15 +305,19 @@ def api_key_status(ctx: typer.Context) -> None:
         emit_error(cli_ctx, exc)
 
     if cli_ctx.output_format != "json":
-        has_key = data.get("has_user_key") or data.get("has_api_key")
+        preferred = data.get("preferred_provider") or "(none)"
+        has_creds = data.get("has_credentials") or data.get("has_user_key") or data.get("has_api_key")
         server = data.get("server_has_key") or data.get("use_vertex_ai")
-        if has_key:
-            preview = data.get("key_preview") or "configured"
-            human = f"Your API key is set ({preview})."
-        elif server:
-            human = "Using server-configured AI (no personal key needed)."
+        if server:
+            human = "Using Vertex AI (no personal key needed)."
+        elif has_creds:
+            preview = data.get("key_preview") or "ready"
+            human = f"Ready — provider={preferred} ({preview})."
         else:
-            human = "No API key configured. Run: applypilot profile api-key set"
+            human = (
+                f"Not ready (provider={preferred}). "
+                "Pick a provider and set a key: applypilot profile api-key set --provider gemini"
+            )
         emit(cli_ctx, data, human=human)
         return
     emit(cli_ctx, data)
@@ -322,46 +326,83 @@ def api_key_status(ctx: typer.Context) -> None:
 @api_key_app.command("set")
 def api_key_set(
     ctx: typer.Context,
-    api_key: Optional[str] = typer.Option(None, "--api-key", help="Gemini API key (prefer getpass prompt)"),
+    provider: str = typer.Option(
+        "gemini",
+        "--provider",
+        help="Provider: gemini | openai | anthropic",
+    ),
+    api_key: Optional[str] = typer.Option(
+        None, "--api-key", help="API key (prefer getpass prompt)"
+    ),
 ) -> None:
-    """Save a Gemini API key (BYOK)."""
+    """Save a BYOK API key for a provider (also sets preferred_provider)."""
     cli_ctx: CliContext = ctx.obj
+    provider_norm = provider.strip().lower()
+    if provider_norm not in ("gemini", "openai", "anthropic"):
+        typer.secho(
+            "Provider must be gemini, openai, or anthropic (Ollama needs no key).",
+            fg="red",
+            err=True,
+        )
+        raise typer.Exit(code=int(ExitCode.ERROR))
     _require_tty_for_secret("api-key set")
-    key = api_key or getpass.getpass("Gemini API key: ")
+    prompt = f"{provider_norm.capitalize()} API key: "
+    key = api_key or getpass.getpass(prompt)
     if not key.strip():
         typer.secho("API key cannot be empty.", fg="red", err=True)
         raise typer.Exit(code=int(ExitCode.ERROR))
 
     client = require_client(cli_ctx)
     try:
-        data = client.profile.api_key_set(key.strip())
+        data = client.profile.api_key_set(key.strip(), provider=provider_norm)
     except ApiClientError as exc:
         emit_error(cli_ctx, exc)
-    emit(cli_ctx, data, human="API key saved.")
+    emit(cli_ctx, data, human=f"API key saved for {provider_norm}.")
 
 
 @api_key_app.command("delete")
 def api_key_delete(
     ctx: typer.Context,
+    provider: str = typer.Option(
+        "gemini",
+        "--provider",
+        help="Provider whose key to delete: gemini | openai | anthropic",
+    ),
     confirm: bool = typer.Option(False, "--confirm", help="Confirm deletion"),
 ) -> None:
-    """Remove the stored API key."""
+    """Remove the stored API key for a provider."""
     require_confirm(confirm, "delete your API key")
-    _run(ctx, lambda c: c.profile.api_key_delete())
+    provider_norm = provider.strip().lower()
+    _run(ctx, lambda c: c.profile.api_key_delete(provider=provider_norm))
 
 
 @api_key_app.command("validate")
 def api_key_validate(
     ctx: typer.Context,
-    api_key: Optional[str] = typer.Option(None, "--api-key", help="Key to validate (prefer getpass prompt)"),
+    provider: str = typer.Option(
+        "gemini",
+        "--provider",
+        help="Provider: gemini | openai | anthropic",
+    ),
+    api_key: Optional[str] = typer.Option(
+        None, "--api-key", help="Key to validate (prefer getpass prompt)"
+    ),
 ) -> None:
-    """Validate a Gemini API key without saving it."""
+    """Validate an API key without saving it."""
     cli_ctx: CliContext = ctx.obj
+    provider_norm = provider.strip().lower()
+    if provider_norm not in ("gemini", "openai", "anthropic"):
+        typer.secho(
+            "Provider must be gemini, openai, or anthropic.",
+            fg="red",
+            err=True,
+        )
+        raise typer.Exit(code=int(ExitCode.ERROR))
     _require_tty_for_secret("api-key validate")
-    key = api_key or getpass.getpass("Gemini API key: ")
+    key = api_key or getpass.getpass(f"{provider_norm.capitalize()} API key: ")
     client = require_client(cli_ctx)
     try:
-        data = client.profile.api_key_validate(key.strip())
+        data = client.profile.api_key_validate(key.strip(), provider=provider_norm)
     except ApiClientError as exc:
         emit_error(cli_ctx, exc)
     emit(cli_ctx, data, human=data.get("message", "API key is valid"))
@@ -384,6 +425,11 @@ def workflow_preferences_set(
     cover_letter_tone: Optional[str] = typer.Option(None, "--cover-letter-tone"),
     resume_length: Optional[str] = typer.Option(None, "--resume-length"),
     preferred_model: Optional[str] = typer.Option(None, "--preferred-model"),
+    preferred_provider: Optional[str] = typer.Option(
+        None,
+        "--preferred-provider",
+        help="LLM provider: gemini | openai | anthropic | ollama",
+    ),
 ) -> None:
     """Update workflow preferences (partial patch)."""
     cli_ctx: CliContext = ctx.obj
@@ -401,6 +447,8 @@ def workflow_preferences_set(
             payload["resume_length"] = resume_length
         if preferred_model is not None:
             payload["preferred_model"] = preferred_model
+        if preferred_provider is not None:
+            payload["preferred_provider"] = preferred_provider
         if not payload:
             typer.secho("Provide --file or at least one preference flag.", fg="red", err=True)
             raise typer.Exit(code=int(ExitCode.ERROR))

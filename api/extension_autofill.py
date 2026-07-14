@@ -56,7 +56,7 @@ from utils.error_responses import (
     not_found_error,
     rate_limit_error,
 )
-from utils.llm_client import GeminiError, get_gemini_client, user_facing_message_from_llm_exception
+from utils.llm_client import GeminiError, get_llm_client, get_gemini_client, user_facing_message_from_llm_exception
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.security import sanitize_text
 from utils.logging_config import sanitize_log_value
@@ -134,22 +134,37 @@ def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
 
 
 async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
-    from utils.llm.availability import effective_user_api_key
-
     try:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if user and user.gemini_api_key_encrypted:
-            return effective_user_api_key(
-                decrypt_api_key(user.gemini_api_key_encrypted)
-            )
+        from utils.llm_context import require_user_llm_context
+
+        _u, ctx, _p = await require_user_llm_context(db, user_id)
+        return ctx.user_api_key
     except Exception as e:
-        logger.warning('Failed to decrypt user API key for autofill: %s', sanitize_log_value(e), exc_info=True)
+        from utils.error_responses import APIError
+
+        if isinstance(e, APIError) and getattr(e, "error_code", None) and getattr(e.error_code, "value", e.error_code) == "CFG_6001":
+            return None
+        logger.warning(
+            'Failed to resolve user API key for autofill: %s',
+            sanitize_log_value(e),
+            exc_info=True,
+        )
     return None
 
 
+async def _llm_ready(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Return True when the user can run LLM-backed autofill."""
+    try:
+        from utils.llm_context import require_user_llm_context
+
+        await require_user_llm_context(db, user_id)
+        return True
+    except Exception:
+        return False
+
+
 def _server_has_llm() -> bool:
-    """Read settings at call time so tests and env reloads see current config."""
+    """Vertex-only admin escape hatch (legacy name kept for call sites)."""
     from utils.llm.availability import server_has_llm_credentials
 
     return server_has_llm_credentials(get_settings())
@@ -387,12 +402,15 @@ async def map_form_fields_to_profile(
     for hk, hv in rate.get_headers().items():
         response.headers[hk] = hv
 
-    user_api_key = await _get_user_api_key(db, user_id)
-    if not user_api_key and not _server_has_llm():
-        raise no_api_key_error()
-
+    from utils.llm_context import require_user_llm_context
     from utils.llm_preferences import load_preferred_model
-    preferred_model = await load_preferred_model(db, user_id, user_api_key)
+
+    _u, llm_ctx, _p = await require_user_llm_context(db, user_id)
+    user_api_key = llm_ctx.user_api_key
+    llm_provider = llm_ctx.provider
+    preferred_model = await load_preferred_model(
+        db, user_id, user_api_key, has_credentials=True
+    )
 
     user_result = await db.execute(select(User).where(User.id == user_id))
     user_row = user_result.scalar_one_or_none()
@@ -449,7 +467,7 @@ async def map_form_fields_to_profile(
     user_prompt = _build_user_prompt(fields_compact, profile_bundle, extras_clean, page_url_clean)
 
     try:
-        client = await get_gemini_client()
+        client = await get_llm_client()
         # Tool-level Redis cache (get_cached_tool_result) is sufficient; avoid a second
         # LLM-response cache layer that can drift from this endpoint's validation rules.
         gen = await client.generate(
@@ -461,6 +479,7 @@ async def map_form_fields_to_profile(
             user_api_key=user_api_key,
             user_id=str(user_id),
             model=preferred_model,
+            provider=llm_provider,
         )
     except GeminiError as e:
         logger.error('Autofill LLM error: %s', sanitize_log_value(e), exc_info=True)

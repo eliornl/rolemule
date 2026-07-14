@@ -103,7 +103,9 @@ def test_api_key_set_uses_getpass(invoke, write_credentials) -> None:
             with patch("cli.commands.profile._require_tty_for_secret"):
                 result = invoke("profile", "api-key", "set")
     assert result.exit_code == 0
-    mock_client.profile.api_key_set.assert_called_once_with("Gsk-test-key-1234567890")
+    mock_client.profile.api_key_set.assert_called_once_with(
+        "Gsk-test-key-1234567890", provider="gemini"
+    )
 
 
 def test_clear_data_without_confirm_fails(invoke, write_credentials) -> None:

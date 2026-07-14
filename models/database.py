@@ -129,8 +129,14 @@ class User(Base):
         String(255), nullable=True, unique=True, index=True
     )
     
-    # API Keys (encrypted)
+    # API Keys (encrypted BYOK — one column per cloud provider)
     gemini_api_key_encrypted: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True, default=None
+    )
+    openai_api_key_encrypted: Mapped[Optional[str]] = mapped_column(
+        Text, nullable=True, default=None
+    )
+    anthropic_api_key_encrypted: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True, default=None
     )
 
@@ -200,6 +206,8 @@ class User(Base):
             "profile_completed": self.profile_completed,
             "profile_completion_percentage": self.profile_completion_percentage,
             "has_gemini_api_key": self.gemini_api_key_encrypted is not None,
+            "has_openai_api_key": self.openai_api_key_encrypted is not None,
+            "has_anthropic_api_key": self.anthropic_api_key_encrypted is not None,
             "has_google_linked": self.google_id is not None,
             "last_login": self.last_login.isoformat() if self.last_login else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -444,13 +452,17 @@ class UserWorkflowPreferences(Base):
         String(16), nullable=False, default="concise"
     )
 
-    # Preferred Gemini model when user is in BYOK mode.
-    # NULL means "use the system default". Only honoured when the user
-    # has their own API key (Vertex AI mode always uses the server model).
+    # Preferred model for the user's chosen provider.
+    # NULL means "use the system default for that provider".
     preferred_model: Mapped[Optional[str]] = mapped_column(
         String(64), nullable=True, default=None
     )
 
+    # Required per-user LLM provider (gemini|openai|anthropic|ollama).
+    # NULL means the user has not configured AI yet → CFG_6001.
+    preferred_provider: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True, default=None
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -470,6 +482,7 @@ class UserWorkflowPreferences(Base):
             "cover_letter_tone": self.cover_letter_tone,
             "resume_length": self.resume_length,
             "preferred_model": self.preferred_model,
+            "preferred_provider": self.preferred_provider,
         }
 
 

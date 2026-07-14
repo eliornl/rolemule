@@ -11,7 +11,7 @@ from utils.llm.providers.openai import OpenAIProvider
 def _settings(**overrides):
     base = dict(
         openai_api_key="sk-test-key",
-        openai_model="gpt-4o-mini",
+        openai_model="gpt-5.6-luna",
     )
     base.update(overrides)
     return MagicMock(**base)
@@ -39,7 +39,7 @@ async def test_openai_generate_success() -> None:
         result = await provider.generate(prompt="hi", system="sys")
         assert result["response"] == "hello from openai"
         assert result["done"] is True
-        assert result["model"] == "gpt-4o-mini"
+        assert result["model"] == "gpt-5.6-luna"
 
 
 @pytest.mark.asyncio

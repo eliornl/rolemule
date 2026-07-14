@@ -435,25 +435,28 @@ def _get_company_research_cache_key(
     company_name: str,
     *,
     disambiguators: Optional[Dict[str, str]] = None,
+    provider: Optional[str] = None,
 ) -> str:
     """
     Generate versioned cache key for company research.
 
-    Keys include posting context (URL domain, industry, location) so employers
-    with the same name but different careers URLs do not share one cache entry.
+    Keys include posting context (URL domain, industry, location) and LLM
+    provider so grounded Gemini vs OpenAI results do not share one entry.
     """
     normalized = company_name.lower().strip()
+    provider_part = (provider or "unknown").strip().lower()
     if disambiguators:
         key_material = "|".join(
             [
                 normalized,
+                provider_part,
                 disambiguators.get("url_domain", ""),
                 disambiguators.get("industry", ""),
                 disambiguators.get("primary_location", ""),
             ]
         )
     else:
-        key_material = normalized
+        key_material = f"{normalized}|{provider_part}"
     name_hash = generate_hash(key_material)
     return f"{CACHE_VERSION}:{CACHE_PREFIX_COMPANY_RESEARCH}:{name_hash}:{normalized[:30]}"
 
@@ -462,6 +465,7 @@ async def get_cached_company_research(
     company_name: str,
     *,
     disambiguators: Optional[Dict[str, str]] = None,
+    provider: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Get cached company research result.
@@ -469,11 +473,14 @@ async def get_cached_company_research(
     Args:
         company_name: Company name (case-insensitive)
         disambiguators: Optional posting context for cache key (url_domain, industry, location)
+        provider: LLM provider name for cache scoping
 
     Returns:
         Cached research dict or None on miss
     """
-    key = _get_company_research_cache_key(company_name, disambiguators=disambiguators)
+    key = _get_company_research_cache_key(
+        company_name, disambiguators=disambiguators, provider=provider
+    )
     t0 = perf_counter()
     cached = await cache_get(key)
     latency_ms = (perf_counter() - t0) * 1000
@@ -501,6 +508,7 @@ async def cache_company_research(
     research: Dict[str, Any],
     *,
     disambiguators: Optional[Dict[str, str]] = None,
+    provider: Optional[str] = None,
 ) -> bool:
     """
     Cache company research result using the shared 7-day TTL.
@@ -509,11 +517,14 @@ async def cache_company_research(
         company_name: Company name
         research: Research result dict
         disambiguators: Optional posting context for cache key
+        provider: LLM provider name for cache scoping
 
     Returns:
         True if cached successfully
     """
-    key = _get_company_research_cache_key(company_name, disambiguators=disambiguators)
+    key = _get_company_research_cache_key(
+        company_name, disambiguators=disambiguators, provider=provider
+    )
     return await cache_set(key, research, TTL_COMPANY_RESEARCH)
 
 
@@ -820,6 +831,7 @@ async def get_cached_llm_response(
     prompt: str,
     system: Optional[str] = None,
     user_id: Optional[str] = None,
+    provider: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Get cached LLM response.
@@ -829,11 +841,12 @@ async def get_cached_llm_response(
         system: System message (optional)
         user_id: User UUID — provide whenever the prompt contains personal content
                  (resumes, cover letters) to prevent cross-user cache hits.
+        provider: Explicit provider name for cache scoping
 
     Returns:
         Cached LLM response or None
     """
-    key = _get_llm_cache_key(prompt, system, user_id)
+    key = _get_llm_cache_key(prompt, system, user_id, provider=provider)
     t0 = perf_counter()
     cached = await cache_get(key)
     latency_ms = (perf_counter() - t0) * 1000
@@ -858,6 +871,7 @@ async def cache_llm_response(
     response: Dict[str, Any],
     system: Optional[str] = None,
     user_id: Optional[str] = None,
+    provider: Optional[str] = None,
 ) -> bool:
     """
     Cache LLM response.
@@ -867,11 +881,12 @@ async def cache_llm_response(
         response: LLM response data
         system: System message (optional)
         user_id: User UUID — must match the value passed to get_cached_llm_response.
+        provider: Explicit provider name for cache scoping
 
     Returns:
         True if cached successfully
     """
-    key = _get_llm_cache_key(prompt, system, user_id)
+    key = _get_llm_cache_key(prompt, system, user_id, provider=provider)
     return await cache_set(key, response, TTL_LLM_RESPONSE)
 
 

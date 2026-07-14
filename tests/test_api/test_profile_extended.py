@@ -278,17 +278,23 @@ class TestResumeExtended:
         client = await _client_for(uid, email)
         content = b"Jane Doe\nSoftware Engineer\nPython FastAPI PostgreSQL"
         try:
-            with patch("api.profile.parse_resume_from_file", AsyncMock(return_value=MOCK_PARSED_RESUME)), patch(
-                "api.profile.settings"
-            ) as mock_settings:
-                mock_settings.gemini_api_key = DUMMY_GEMINI_API_KEY
-                mock_settings.use_vertex_ai = False
-                mock_settings.user_resume_storage_dir = "/tmp/applypilot-test-resumes"
-                with patch("api.profile.save_resume_bytes", return_value=("rel/path", "sha", "txt")), patch(
-                    "api.profile.invalidate_user_profile", AsyncMock(return_value=None)
-                ):
-                    files = {"resume": ("resume.txt", content, "text/plain")}
-                    resp = await client.post(f"{BASE}/parse-resume", files=files)
+            with patch(
+                "api.profile.parse_resume_from_file",
+                AsyncMock(return_value=MOCK_PARSED_RESUME),
+            ), patch(
+                "config.settings.get_settings",
+                return_value=MagicMock(
+                    use_vertex_ai=True,
+                    gemini_api_key=None,
+                    user_resume_storage_dir="/tmp/applypilot-test-resumes",
+                ),
+            ), patch(
+                "api.profile.save_resume_bytes", return_value=("rel/path", "sha", "txt")
+            ), patch(
+                "api.profile.invalidate_user_profile", AsyncMock(return_value=None)
+            ):
+                files = {"resume": ("resume.txt", content, "text/plain")}
+                resp = await client.post(f"{BASE}/parse-resume", files=files)
             assert resp.status_code == 200, resp.text
             assert resp.json()["success"] is True
         finally:
@@ -301,9 +307,10 @@ class TestResumeExtended:
         uid, email = await _create_user_with_password()
         client = await _client_for(uid, email)
         try:
-            with patch("api.profile.settings") as mock_settings:
-                mock_settings.gemini_api_key = None
-                mock_settings.use_vertex_ai = False
+            with patch(
+                "config.settings.get_settings",
+                return_value=MagicMock(use_vertex_ai=False, gemini_api_key=None),
+            ):
                 files = {"resume": ("resume.txt", b"hello world resume text", "text/plain")}
                 resp = await client.post(f"{BASE}/parse-resume", files=files)
             assert resp.status_code == 422
@@ -381,21 +388,126 @@ class TestApiKeyExtended:
         uid, email = await _create_user_with_password()
         client = await _client_for(uid, email)
         try:
-            with patch("api.profile.encrypt_api_key", return_value="encrypted-test-key"), patch(
-                "api.profile.invalidate_user_profile", AsyncMock(return_value=None)
-            ), patch("api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)):
+            with patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)), patch(
+                "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
+            ):
                 set_resp = await client.post(f"{BASE}/api-key", json={"api_key": self.VALID_KEY})
             assert set_resp.status_code == 200, set_resp.text
 
             status_resp = await client.get(f"{BASE}/api-key/status")
             assert status_resp.status_code == 200
-            assert status_resp.json()["has_user_key"] is True
+            status = status_resp.json()
+            assert status["has_user_key"] is True
+            assert status.get("has_credentials") is True
+            assert status.get("preferred_provider") == "gemini"
+            assert status["providers"]["gemini"]["has_key"] is True
 
             with patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)), patch(
                 "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
             ):
-                del_resp = await client.delete(f"{BASE}/api-key")
+                del_resp = await client.delete(f"{BASE}/api-key?provider=gemini")
             assert del_resp.status_code == 200
+        finally:
+            await client.aclose()
+            app.dependency_overrides.clear()
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_set_openai_api_key(self):
+        uid, email = await _create_user_with_password()
+        client = await _client_for(uid, email)
+        openai_key = "sk-" + ("x" * 40)
+        try:
+            with patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)), patch(
+                "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
+            ):
+                set_resp = await client.post(
+                    f"{BASE}/api-key",
+                    json={"api_key": openai_key, "provider": "openai"},
+                )
+            assert set_resp.status_code == 200, set_resp.text
+            assert set_resp.json().get("provider") == "openai"
+
+            status_resp = await client.get(f"{BASE}/api-key/status")
+            assert status_resp.status_code == 200
+            status = status_resp.json()
+            assert status["preferred_provider"] == "openai"
+            assert status["has_credentials"] is True
+            assert status["providers"]["openai"]["has_key"] is True
+        finally:
+            await client.aclose()
+            app.dependency_overrides.clear()
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_preferred_provider_ollama_ready_without_key(self):
+        uid, email = await _create_user_with_password()
+        client = await _client_for(uid, email)
+        try:
+            patch_resp = await client.patch(
+                f"{BASE}/preferences",
+                json={"preferred_provider": "ollama"},
+            )
+            assert patch_resp.status_code == 200, patch_resp.text
+            assert patch_resp.json().get("preferred_provider") == "ollama"
+
+            status_resp = await client.get(f"{BASE}/api-key/status")
+            assert status_resp.status_code == 200
+            status = status_resp.json()
+            assert status["preferred_provider"] == "ollama"
+            assert status["has_credentials"] is True
+        finally:
+            await client.aclose()
+            app.dependency_overrides.clear()
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_status_not_ready_without_provider(self):
+        uid, email = await _create_user_with_password()
+        client = await _client_for(uid, email)
+        try:
+            with patch(
+                "config.settings.get_settings",
+                return_value=MagicMock(use_vertex_ai=False, gemini_api_key=None),
+            ):
+                status_resp = await client.get(f"{BASE}/api-key/status")
+            assert status_resp.status_code == 200
+            status = status_resp.json()
+            assert status["has_credentials"] is False
+            assert not status.get("preferred_provider")
+        finally:
+            await client.aclose()
+            app.dependency_overrides.clear()
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_switching_provider_clears_preferred_model(self):
+        uid, email = await _create_user_with_password()
+        client = await _client_for(uid, email)
+        try:
+            with patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)), patch(
+                "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
+            ):
+                set_resp = await client.post(
+                    f"{BASE}/api-key",
+                    json={"api_key": self.VALID_KEY, "provider": "gemini"},
+                )
+            assert set_resp.status_code == 200, set_resp.text
+
+            patch_model = await client.patch(
+                f"{BASE}/preferences",
+                json={"preferred_model": "gemini-2.5-flash"},
+            )
+            assert patch_model.status_code == 200, patch_model.text
+            assert patch_model.json().get("preferred_model") == "gemini-2.5-flash"
+
+            switch = await client.patch(
+                f"{BASE}/preferences",
+                json={"preferred_provider": "ollama"},
+            )
+            assert switch.status_code == 200, switch.text
+            assert switch.json().get("preferred_provider") == "ollama"
+            assert switch.json().get("preferred_model") is None
         finally:
             await client.aclose()
             app.dependency_overrides.clear()

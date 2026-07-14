@@ -20,7 +20,7 @@ async def test_parse_resume_surfaces_friendly_quota_message(monkeypatch: pytest.
         client.generate = boom
         return client
 
-    monkeypatch.setattr("utils.resume_parser.get_gemini_client", fake_get_gemini_client)
+    monkeypatch.setattr("utils.resume_parser.get_llm_client", fake_get_gemini_client)
     from utils.resume_parser import parse_resume
 
     with pytest.raises(ValueError) as excinfo:

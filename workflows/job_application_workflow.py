@@ -71,7 +71,7 @@ from agents.company_research import CompanyResearchAgent
 from agents.profile_matching import ProfileMatchingAgent
 from agents.resume_advisor import ResumeAdvisorAgent
 from agents.cover_letter_writer import CoverLetterWriterAgent
-from utils.llm_client import get_gemini_client, user_facing_message_from_llm_exception
+from utils.llm_client import get_llm_client, get_gemini_client, user_facing_message_from_llm_exception  # test-patch alias
 from utils.redis_client import get_redis_client
 from utils.security import (
     sanitize_job_analysis,
@@ -202,7 +202,7 @@ class JobApplicationWorkflow:
 
         # Initialize critical clients - fail fast if they don't work
         try:
-            gemini_client = await get_gemini_client()
+            gemini_client = await get_llm_client()
             logger.info("Gemini client initialized successfully")
         except Exception as e:
             logger.error('Failed to initialize Gemini client: %s', sanitize_log_value(e), exc_info=True)
@@ -420,6 +420,7 @@ class JobApplicationWorkflow:
                 },
                 user_api_key=user_api_key,
                 workflow_preferences=workflow_preferences,
+                llm_provider=user_data.get("llm_provider"),
             )
 
             # Execute the workflow graph
@@ -1450,6 +1451,7 @@ class JobApplicationWorkflow:
                 session_id=doc.session_id,
                 user_profile=restored_user_data,
                 user_api_key=user_api_key,  # Include user API key from parameter
+                llm_provider=restored_user_data.get("llm_provider"),
                 workflow_preferences=restored_prefs,
                 job_input_data=doc.job_input_data or {},
                 job_analysis=doc.job_analysis,

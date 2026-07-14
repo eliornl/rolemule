@@ -25,7 +25,7 @@ from utils.cache import (
 from utils.encryption import decrypt_api_key
 from utils.security import sanitize_text
 from utils.logging_config import sanitize_log_value
-from utils.error_responses import internal_error, rate_limit_error, validation_error
+from utils.error_responses import internal_error, no_api_key_error, rate_limit_error, validation_error
 from models.database import User, JobApplication
 from agents.thank_you_writer import ThankYouWriterAgent
 from agents.rejection_analyzer import RejectionAnalyzerAgent
@@ -245,32 +245,35 @@ def _get_user_uuid(current_user: Dict[str, Any]) -> uuid.UUID:
     return user_id
 
 
-async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
-    """Get decrypted BYOK key when valid for the active LLM provider."""
-    from utils.llm.availability import effective_user_api_key
+async def _resolve_llm(db: AsyncSession, user_id: uuid.UUID):
+    """Return UserLLMContext or raise no_api_key_error."""
+    from utils.llm_context import require_user_llm_context
 
+    _u, ctx, _p = await require_user_llm_context(db, user_id)
+    return ctx
+
+
+async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[str]:
+    """Get decrypted BYOK key for the user's preferred provider (if ready)."""
     try:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if user and user.gemini_api_key_encrypted:
-            return effective_user_api_key(
-                decrypt_api_key(user.gemini_api_key_encrypted)
-            )
+        ctx = await _resolve_llm(db, user_id)
+        return ctx.user_api_key
     except Exception as e:
-        logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
-    
+        from utils.error_responses import APIError
+
+        if isinstance(e, APIError) and getattr(e, "error_code", None) and getattr(e.error_code, "value", e.error_code) == "CFG_6001":
+            return None
+        logger.warning('Failed to resolve user API key: %s', sanitize_log_value(e))
     return None
 
 
 async def _check_api_key_available(db: AsyncSession, user_id: uuid.UUID) -> bool:
-    """Check if credentials are available for the active LLM provider."""
-    from utils.llm.availability import server_has_llm_credentials
-
-    if await _get_user_api_key(db, user_id):
+    """Check if the user has configured provider + credentials."""
+    try:
+        await _resolve_llm(db, user_id)
         return True
-    # Use module-level ``settings`` so tests that patch ``api.tools.settings`` still work
-    return server_has_llm_credentials(settings)
+    except Exception:
+        return False
 
 
 async def _get_application_context(
@@ -343,7 +346,7 @@ async def generate_thank_you_note(
         
         # Check API key availability
         if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
+            raise no_api_key_error()
         
         # Get application context if provided
         company_name = request.company_name
@@ -360,9 +363,13 @@ async def generate_thank_you_note(
             raise validation_error("Company name and job title are required. Provide them directly or via application_id.")
         
         # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        llm_ctx = await _resolve_llm(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
 
         # Build sanitized payload for cache key
         sanitized_payload = {
@@ -385,6 +392,7 @@ async def generate_thank_you_note(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
+            llm_provider=llm_provider,
             )
             await cache_tool_result("thank_you", sanitized_payload, result)
 
@@ -443,7 +451,7 @@ async def analyze_rejection(
         
         # Check API key availability
         if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
+            raise no_api_key_error()
         
         # Get application context if provided
         job_title = request.job_title
@@ -456,9 +464,13 @@ async def analyze_rejection(
                 company_name = company_name or context.get("company_name")
         
         # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        llm_ctx = await _resolve_llm(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
 
         sanitized_payload = {
             "tool": "rejection_analysis",
@@ -477,6 +489,7 @@ async def analyze_rejection(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
+            llm_provider=llm_provider,
             )
             await cache_tool_result("rejection_analysis", sanitized_payload, result)
 
@@ -538,15 +551,19 @@ async def generate_reference_request(
 
         # Check API key availability
         if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
+            raise no_api_key_error()
         
         # Get user's name from current_user if not provided
         user_name = request.user_name or current_user.get("full_name", "")
         
         # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        llm_ctx = await _resolve_llm(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
 
         sanitized_payload = {
             "tool": "reference_request",
@@ -570,6 +587,7 @@ async def generate_reference_request(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
+            llm_provider=llm_provider,
             )
             await cache_tool_result("reference_request", sanitized_payload, result)
 
@@ -867,12 +885,16 @@ async def compare_jobs(
 
         # Check API key availability
         if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
+            raise no_api_key_error()
         
         # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        llm_ctx = await _resolve_llm(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
         
         # Prepare jobs data
         jobs_data = []
@@ -911,6 +933,7 @@ async def compare_jobs(
                 user_context=user_context,
                 user_api_key=user_api_key,
                 model=preferred_model,
+            llm_provider=llm_provider,
             )
             await cache_tool_result("job_comparison", sanitized_payload, result)
 
@@ -1013,12 +1036,16 @@ async def generate_followup(
         
         # Check API key availability
         if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
+            raise no_api_key_error()
         
         # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        llm_ctx = await _resolve_llm(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
         
         # Get user's name from current_user if not provided
         user_name = request.user_name or current_user.get("full_name", "")
@@ -1045,6 +1072,7 @@ async def generate_followup(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
+            llm_provider=llm_provider,
             )
             await cache_tool_result("followup", sanitized_payload, result)
 
@@ -1114,12 +1142,16 @@ async def get_salary_coaching(
         
         # Check API key availability
         if not await _check_api_key_available(db, user_id):
-            raise validation_error("No API key configured. Please add your Gemini API key in Settings.")
+            raise no_api_key_error()
         
         # Get user API key for BYOK
-        user_api_key = await _get_user_api_key(db, user_id)
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        llm_ctx = await _resolve_llm(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
         
         # Get years_experience from profile if not provided
         years_experience = request.years_experience
@@ -1166,6 +1198,7 @@ async def get_salary_coaching(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
+            llm_provider=llm_provider,
             )
             await cache_tool_result("salary_coach", sanitized_payload, result)
 

@@ -180,22 +180,15 @@ When adding a new background task that runs an LLM or long operation:
 
 ## BYOK Check Before LLM Call
 
-Any endpoint that triggers an LLM call must check API key availability first. Use `no_api_key_error()` — **never bare `HTTPException`** — so the frontend can detect `CFG_6001` and show a targeted prompt:
+Any endpoint that triggers an LLM call must resolve the user's provider + credentials first. Use `require_user_llm_context()` / `no_api_key_error()` — **never bare `HTTPException`** — so the frontend can detect `CFG_6001` and show a targeted prompt:
 
 ```python
-from utils.error_responses import no_api_key_error
+from utils.llm_context import require_user_llm_context
 
-# Decrypt user's stored BYOK key if present
-user_api_key = None
-if user and user.gemini_api_key_encrypted:
-    try:
-        user_api_key = decrypt_api_key(user.gemini_api_key_encrypted)
-    except Exception as e:
-        logger.warning(f"Failed to decrypt user API key: {e}")
-
-server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or settings.use_vertex_ai
-if not user_api_key and not server_has_key:
-    raise no_api_key_error()
+llm_ctx = await require_user_llm_context(user, prefs)  # raises CFG_6001 if not ready
+# llm_ctx.provider / llm_ctx.user_api_key / llm_ctx.preferred_model
 ```
+
+Do **not** gate only on `user.gemini_api_key_encrypted` + server `GEMINI_API_KEY` — users may use OpenAI, Anthropic, or Ollama. Vertex (`USE_VERTEX_AI`) is the only admin path that skips personal keys.
 
 The frontend (`ui/src/pages/dashboard-new-application.ts`) reads `error_code` from the 422 response body. When it equals `"CFG_6001"` it skips the generic danger toast and instead shows `showApiKeyAlert()` — a dismissible amber warning banner with a direct link to `/settings?tab=ai-setup`.

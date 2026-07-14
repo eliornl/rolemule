@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from utils.llm_client import get_gemini_client
+from utils.llm_client import get_llm_client, get_gemini_client  # test-patch alias
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.logging_config import get_structured_logger
 
@@ -140,6 +140,7 @@ class HiringManagerAgent:
         previous_score: Optional[float] = None,
         user_api_key: Optional[str] = None,
         model: Optional[str] = None,
+        llm_provider: Optional[str] = None,
     ) -> HiringManagerEvaluation:
         """
         Score a CV against the job description and return structured feedback.
@@ -152,6 +153,7 @@ class HiringManagerAgent:
             previous_score: Score from the previous iteration, if any
             user_api_key: BYOK Gemini API key
             model: Optional BYOK preferred Gemini model from Settings
+            llm_provider: Active provider name for generate() routing
 
         Returns:
             HiringManagerEvaluation with score, strengths, gaps, and action items
@@ -159,7 +161,8 @@ class HiringManagerAgent:
         Raises:
             Exception: On LLM failure after retries
         """
-        self.gemini_client = await get_gemini_client()
+        self._current_llm_provider = llm_provider
+        self.gemini_client = await get_llm_client()
 
         requirements_summary = self._format_requirements(job_analysis)
         previous_context = self._format_previous_context(previous_score)
@@ -182,6 +185,7 @@ class HiringManagerAgent:
             max_tokens=LLM_MAX_TOKENS,
             user_api_key=user_api_key,
             model=model,
+            provider=getattr(self, "_current_llm_provider", None),
         )
 
         duration_ms = (time.monotonic() - start_time) * 1000

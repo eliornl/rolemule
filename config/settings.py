@@ -99,7 +99,7 @@ class Settings(BaseSettings):
         description="OpenAI API key for server-side OpenAI provider",
     )
     openai_model: str = Field(
-        default="gpt-4o-mini",
+        default="gpt-5.6-luna",
         description="Default OpenAI chat model",
     )
 
@@ -109,7 +109,7 @@ class Settings(BaseSettings):
         description="Anthropic API key for server-side Anthropic provider",
     )
     anthropic_model: str = Field(
-        default="claude-sonnet-4-5",
+        default="claude-sonnet-5",
         description="Default Anthropic Messages model",
     )
 
@@ -119,7 +119,7 @@ class Settings(BaseSettings):
         description="Ollama base URL (no trailing path)",
     )
     ollama_model: str = Field(
-        default="llama3.2",
+        default="qwen3",
         description="Default Ollama model tag",
     )
 

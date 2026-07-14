@@ -1,10 +1,10 @@
-"""OpenAI Chat Completions provider (httpx async)."""
+"""OpenAI Chat Completions + Responses (web_search) provider (httpx async)."""
 
 from __future__ import annotations
 
 import logging
 from time import perf_counter
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -23,10 +23,33 @@ logger = logging.getLogger(__name__)
 structured_logger = get_structured_logger(__name__)
 
 _OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
+_OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
+
+
+def _extract_responses_text(data: Dict[str, Any]) -> str:
+    """Pull assistant text from a Responses API payload."""
+    direct = data.get("output_text")
+    if isinstance(direct, str) and direct.strip():
+        return direct
+
+    parts: List[str] = []
+    for item in data.get("output") or []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") == "message":
+            for block in item.get("content") or []:
+                if isinstance(block, dict) and block.get("type") in (
+                    "output_text",
+                    "text",
+                ):
+                    text = block.get("text") or ""
+                    if text:
+                        parts.append(text)
+    return "".join(parts)
 
 
 class OpenAIProvider:
-    """OpenAI Chat Completions adapter."""
+    """OpenAI Chat Completions adapter with optional Responses web_search."""
 
     name: str = "openai"
 
@@ -34,7 +57,7 @@ class OpenAIProvider:
         """Load OpenAI settings."""
         settings = get_settings()
         self.api_key: Optional[str] = getattr(settings, "openai_api_key", None)
-        self.default_model: str = getattr(settings, "openai_model", "gpt-4o-mini")
+        self.default_model: str = getattr(settings, "openai_model", "gpt-5.6-luna")
         self.timeout = DEFAULT_TIMEOUT
         logger.info(
             "[LLM] Ready  model=%s  backend=OpenAI  key=%s",
@@ -53,12 +76,7 @@ class OpenAIProvider:
         user_api_key: Optional[str] = None,
         use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
-        """Call OpenAI chat completions."""
-        if use_google_search_grounding:
-            logger.debug(
-                "Google Search grounding requested but not supported by OpenAI; ignoring"
-            )
-
+        """Call OpenAI chat completions, or Responses + web_search when grounded."""
         effective_key = user_api_key or self.api_key
         if not effective_key:
             raise LLMError(
@@ -67,6 +85,16 @@ class OpenAIProvider:
             )
 
         model_to_use = model or self.default_model
+        if use_google_search_grounding:
+            return await self._generate_with_web_search(
+                prompt=prompt,
+                model=model_to_use,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=effective_key,
+            )
+
         messages: list[Dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -145,6 +173,98 @@ class OpenAIProvider:
             )
             raise LLMError(
                 f"OpenAI generate failed: {e}",
+                original_error=e if isinstance(e, Exception) else None,
+                provider="openai",
+            ) from e
+
+    async def _generate_with_web_search(
+        self,
+        *,
+        prompt: str,
+        model: str,
+        system: Optional[str],
+        temperature: float,
+        max_tokens: int,
+        api_key: str,
+    ) -> Dict[str, Any]:
+        """Use Responses API with hosted web_search tool."""
+        input_items: List[Dict[str, Any]] = []
+        if system:
+            input_items.append({"role": "system", "content": system})
+        input_items.append({"role": "user", "content": prompt})
+
+        payload: Dict[str, Any] = {
+            "model": model,
+            "input": input_items,
+            "tools": [{"type": "web_search"}],
+            "temperature": temperature,
+            "max_output_tokens": max_tokens,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        logger.info(
+            "[LLM] OpenAI Responses+web_search  model=%s  prompt=%s chars",
+            sanitize_log_value(model),
+            sanitize_log_value(len(prompt) + (len(system) if system else 0)),
+        )
+
+        api_start = perf_counter()
+        try:
+            timeout = httpx.Timeout(self.timeout, connect=HTTP_CONNECT_TIMEOUT)
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(
+                    _OPENAI_RESPONSES_URL, json=payload, headers=headers
+                )
+            api_duration_ms = (perf_counter() - api_start) * 1000
+
+            if response.status_code >= 400:
+                body = response.text[:500]
+                raise LLMError(
+                    f"OpenAI Responses failed ({response.status_code}): {body}",
+                    status_code=response.status_code,
+                    provider="openai",
+                )
+
+            data = response.json()
+            text = _extract_responses_text(data)
+            if not text:
+                raise LLMError(
+                    "OpenAI Responses failed: empty output_text",
+                    provider="openai",
+                )
+            logger.info(
+                "[LLM] Done  %sms  response=%s chars",
+                sanitize_log_value(api_duration_ms),
+                sanitize_log_value(len(text)),
+            )
+            structured_logger.log_external_api_call(
+                service="openai",
+                operation="responses.web_search",
+                duration_ms=api_duration_ms,
+                success=True,
+            )
+            return as_generate_result(response=text, model=model)
+
+        except LLMError:
+            raise
+        except Exception as e:
+            structured_logger.log_external_api_call(
+                service="openai",
+                operation="responses.web_search",
+                duration_ms=0,
+                success=False,
+                error=str(e),
+            )
+            logger.error(
+                "Error in OpenAI Responses generate: %s",
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
+            raise LLMError(
+                f"OpenAI Responses generate failed: {e}",
                 original_error=e if isinstance(e, Exception) else None,
                 provider="openai",
             ) from e

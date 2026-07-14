@@ -217,16 +217,17 @@ async def _generate_cv_html_from_markdown(
     cv_markdown: str,
     user_api_key: Optional[str],
     preferred_model: Optional[str] = None,
+    llm_provider: Optional[str] = None,
 ) -> str:
     """
-    Use Gemini to convert markdown CV text to styled HTML for document export.
+    Use the user's LLM to convert markdown CV text to styled HTML for export.
 
     Raises:
         ValueError: When generation is blocked or HTML is unusable
     """
-    from utils.llm_client import get_gemini_client
+    from utils.llm_client import get_llm_client
 
-    gemini_client = await get_gemini_client()
+    gemini_client = await get_llm_client()
     prompt = CV_TO_HTML_PROMPT_TEMPLATE.format(cv_markdown=cv_markdown[:12000])
 
     response = await gemini_client.generate(
@@ -236,6 +237,7 @@ async def _generate_cv_html_from_markdown(
         max_tokens=16000,
         user_api_key=user_api_key,
         model=preferred_model,
+        provider=llm_provider,
     )
 
     if response.get("filtered"):
@@ -263,15 +265,17 @@ async def _markdown_cv_to_odt_via_libreoffice(
     user_api_key: Optional[str],
     soffice_path: str,
     preferred_model: Optional[str] = None,
+    llm_provider: Optional[str] = None,
 ) -> bytes:
     """
-    Convert markdown CV to ODT via Gemini HTML generation + LibreOffice headless.
+    Convert markdown CV to ODT via LLM HTML generation + LibreOffice headless.
 
     Args:
         cv_markdown: Markdown-formatted CV text
-        user_api_key: BYOK Gemini API key, or None to use the server key
+        user_api_key: BYOK API key, or None (Vertex / Ollama)
         soffice_path: Path to the ``soffice`` binary
-        preferred_model: Optional BYOK preferred Gemini model from Settings
+        preferred_model: Optional preferred model from Settings
+        llm_provider: Explicit provider for generate() routing
 
     Returns:
         ODT file contents as bytes
@@ -280,7 +284,10 @@ async def _markdown_cv_to_odt_via_libreoffice(
         ValueError: If LibreOffice conversion fails
     """
     html_content = await _generate_cv_html_from_markdown(
-        cv_markdown, user_api_key, preferred_model=preferred_model
+        cv_markdown,
+        user_api_key,
+        preferred_model=preferred_model,
+        llm_provider=llm_provider,
     )
 
     tmpdir = tempfile.mkdtemp(prefix="cvo_odt_")
@@ -332,6 +339,7 @@ async def _export_optimized_cv_file(
     cv_markdown: str,
     user_api_key: Optional[str],
     preferred_model: Optional[str] = None,
+    llm_provider: Optional[str] = None,
 ) -> tuple[bytes, str, str]:
     """
     Export optimized CV markdown to a downloadable document.
@@ -340,7 +348,7 @@ async def _export_optimized_cv_file(
         Tuple of (file bytes, MIME type, filename)
 
     Priority:
-        1. Gemini HTML + LibreOffice → ``.odt`` (Docker / production)
+        1. LLM HTML + LibreOffice → ``.odt`` (Docker / production)
         2. Structured Word export → ``.docx`` (local dev without LibreOffice)
     """
     loop = asyncio.get_event_loop()
@@ -349,7 +357,11 @@ async def _export_optimized_cv_file(
     if soffice_path:
         try:
             odt_bytes = await _markdown_cv_to_odt_via_libreoffice(
-                cv_markdown, user_api_key, soffice_path, preferred_model=preferred_model
+                cv_markdown,
+                user_api_key,
+                soffice_path,
+                preferred_model=preferred_model,
+                llm_provider=llm_provider,
             )
             return (
                 odt_bytes,
@@ -371,7 +383,11 @@ async def _export_optimized_cv_file(
     )
 
 
-async def _markdown_cv_to_odt(cv_markdown: str, user_api_key: Optional[str]) -> bytes:
+async def _markdown_cv_to_odt(
+    cv_markdown: str,
+    user_api_key: Optional[str],
+    llm_provider: Optional[str] = None,
+) -> bytes:
     """
     Legacy helper — prefer ``_export_optimized_cv_file`` for new code.
 
@@ -383,13 +399,18 @@ async def _markdown_cv_to_odt(cv_markdown: str, user_api_key: Optional[str]) -> 
     if soffice_path:
         try:
             return await _markdown_cv_to_odt_via_libreoffice(
-                cv_markdown, user_api_key, soffice_path
+                cv_markdown,
+                user_api_key,
+                soffice_path,
+                llm_provider=llm_provider,
             )
         except ValueError as exc:
             logger.warning('LibreOffice ODT path failed (%s) — trying HTML→ODT fallback', sanitize_log_value(exc))
 
     try:
-        html_content = await _generate_cv_html_from_markdown(cv_markdown, user_api_key)
+        html_content = await _generate_cv_html_from_markdown(
+            cv_markdown, user_api_key, llm_provider=llm_provider
+        )
         return await loop.run_in_executor(
             None, lambda: html_cv_to_odt_bytes(html_content)
         )
@@ -444,17 +465,17 @@ async def _get_user_api_key(db: AsyncSession, user_id: uuid.UUID) -> Optional[st
         Decrypted API key string, or None if not set
     """
     try:
-        from utils.llm.availability import effective_user_api_key
+        from utils.llm_context import require_user_llm_context
 
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if user and user.gemini_api_key_encrypted:
-            return effective_user_api_key(
-                decrypt_api_key(user.gemini_api_key_encrypted)
-            )
+        _u, ctx, _p = await require_user_llm_context(db, user_id)
+        return ctx.user_api_key
     except Exception as e:
+        from utils.error_responses import APIError
+
+        if isinstance(e, APIError) and getattr(e, "error_code", None) and getattr(e.error_code, "value", e.error_code) == "CFG_6001":
+            return None
         logger.warning(
-            "Failed to decrypt user API key for user %s: %s",
+            "Failed to resolve user API key for user %s: %s",
             sanitize_log_value(user_id),
             sanitize_log_value(e),
         )
@@ -515,21 +536,30 @@ async def start_cv_optimization(
                 f"Rate limit exceeded. Maximum {RATE_LIMIT_CV_OPTIMIZER} optimization runs per hour."
             )
 
-        # Resolve API key: prefer BYOK (Gemini), fall back to server credentials
-        from utils.llm.availability import server_has_llm_credentials
+        # Resolve API key via per-user provider preference
+        from utils.llm_context import require_user_llm_context
 
-        user_api_key = await _get_user_api_key(db, user_id)
-        if (
-            not user_api_key
-            and not server_has_llm_credentials(settings)
-        ):
-            raise no_api_key_error(
-                "No AI API key is configured. "
-                "Please add your API key in Settings → AI Setup, or configure a server LLM key."
+        try:
+            _u, llm_ctx, _p = await require_user_llm_context(db, user_id)
+            user_api_key = llm_ctx.user_api_key
+            llm_provider = llm_ctx.provider
+        except APIError:
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to resolve LLM context for CV optimizer: %s",
+                sanitize_log_value(str(e)),
+                exc_info=True,
             )
+            raise internal_error("Failed to start CV optimization")
 
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+        preferred_model = await load_preferred_model(
+            db,
+            user_id,
+            user_api_key,
+            has_credentials=True,
+        )
 
         # Load workflow session
         result = await db.execute(
@@ -605,6 +635,7 @@ async def start_cv_optimization(
             user_api_key=user_api_key,
             config=config,
             preferred_model=preferred_model,
+            llm_provider=llm_provider,
         )
 
         logger.info('Started CV optimization for session %s user=%s max_iter=%d threshold=%.1f', sanitize_log_value(session_id), sanitize_log_value(user_id), config.max_iterations, config.score_threshold)
@@ -785,9 +816,15 @@ async def download_optimized_cv_odt(
                 f"Rate limit exceeded. Maximum {RATE_LIMIT_CV_OPTIMIZER_DOWNLOAD} CV downloads per hour."
             )
 
-        user_api_key = await _get_user_api_key(db, user_id)
+        from utils.llm_context import require_user_llm_context
         from utils.llm_preferences import load_preferred_model
-        preferred_model = await load_preferred_model(db, user_id, user_api_key)
+
+        _u, llm_ctx, _p = await require_user_llm_context(db, user_id)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+        preferred_model = await load_preferred_model(
+            db, user_id, user_api_key, has_credentials=True
+        )
 
         # Verify ownership first, then serve optimization data from cache
         result = await db.execute(
@@ -815,7 +852,10 @@ async def download_optimized_cv_odt(
             raise not_found_error("Optimized CV text not found in result")
 
         file_bytes, media_type, filename = await _export_optimized_cv_file(
-            cv_markdown, user_api_key, preferred_model=preferred_model
+            cv_markdown,
+            user_api_key,
+            preferred_model=preferred_model,
+            llm_provider=llm_provider,
         )
 
         buffer = io.BytesIO(file_bytes)
@@ -915,6 +955,7 @@ async def _run_cv_optimization_background(
     user_api_key: Optional[str] = None,
     config: Optional[OptimizationConfig] = None,
     preferred_model: Optional[str] = None,
+    llm_provider: Optional[str] = None,
 ) -> None:
     """
     Background task that runs the full CV optimization loop.
@@ -996,6 +1037,7 @@ async def _run_cv_optimization_background(
             broadcast_iteration_fn=_broadcast_iteration,
             user_profile=user_data,
             model=preferred_model,
+            llm_provider=llm_provider,
         )
 
         result_dict = sanitize_llm_output(optimization_result.to_dict())

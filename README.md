@@ -25,7 +25,7 @@ Paste a job description — or pull it from any job site with the Chrome extensi
 
 Also includes a dashboard to track every application. And tools for everything around it: interview prep with mock sessions, salary negotiation, job comparison, follow-ups, thank you notes, and references.
 
-Runs on your machine. No subscriptions, no data stored on our servers — bring your own Gemini key by default, or point the server at OpenAI, Anthropic, or local Ollama via `LLM_PROVIDER`.
+Runs on your machine. No subscriptions — each user picks Gemini, OpenAI, Anthropic, or local Ollama in **Settings → AI Setup** and brings their own key (Ollama needs none).
 
 *Here's what a completed application looks like:*
 
@@ -209,7 +209,7 @@ INFO:     Application startup complete.
 ```
 
 Open **http://localhost:8000** in your browser and create your account.
-During profile setup you'll be prompted to add your Gemini API key (default provider) — or you can add it later in **Settings → AI Setup**. Admins can switch the server to OpenAI, Anthropic, or Ollama with `LLM_PROVIDER` (see [Environment Variables](#environment-variables)).
+During profile setup you can add a Gemini API key, or configure any provider later in **Settings → AI Setup** (Gemini / OpenAI / Anthropic / Ollama).
 
 ---
 
@@ -257,18 +257,18 @@ Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** (shel
 
 ## AI Provider / API Key
 
-**Default provider is Gemini** (Google AI Studio). Users add a Gemini key in profile setup or **Settings → AI Setup**. BYOK in the UI is Gemini-only today.
+Each user **must** pick an AI provider in **Settings → AI Setup** (`gemini`, `openai`, `anthropic`, or `ollama`) and add a BYOK API key for cloud providers. Ollama needs no key. Model is optional (system default or pick from the provider list).
 
-1. Go to [aistudio.google.com/api-keys](https://aistudio.google.com/api-keys)
-2. Sign in with your Google account
-3. Click **Create API key** — copy the entire key string (Google may show different formats over time).
-4. Paste it in ApplyPilot — you'll be prompted during **profile setup**, or add it later via **Settings → AI Setup**
+1. Open **Settings → AI Setup**
+2. Select a provider
+3. Paste your API key (Gemini / OpenAI / Anthropic) — or choose Ollama for local inference
+4. Optionally pick a preferred model
 
-**For personal use** that's all — no `.env` editing needed. Each user stores their own key, encrypted in the database.
+**Vertex AI (self-hosted admins):** set `USE_VERTEX_AI=true` so users do not need a personal key (Gemini path).
 
-**For multi-user hosting:** add `GEMINI_API_KEY=<your key>` to `.env` to set a shared server-side key so users don't need to provide their own.
+**`LLM_PROVIDER` / server API keys** are for health checks and admin fallback only — they are **not** used as a substitute for user BYOK on generate paths (except Vertex).
 
-**Other providers (server admin):** set `LLM_PROVIDER` to `openai`, `anthropic`, or `ollama` and the matching server env vars (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `OLLAMA_BASE_URL` / `OLLAMA_MODEL`). See [`.env.local.example`](.env.local.example) and `.cursor/rules/llm-integration.mdc`.
+See [`.env.local.example`](.env.local.example) and `.cursor/rules/llm-integration.mdc`.
 
 ---
 
@@ -289,7 +289,7 @@ The extension appears in your Chrome toolbar. Browse jobs naturally. When you fi
 
 - **Local-first** — PostgreSQL, Redis, and the app all run on your machine. One command to start, no external services required.
 - **Full profile system** — work experience, skills, career preferences; agents use your profile in every output.
-- **BYOK AI keys** — each user adds their own Gemini key via Settings, or the admin sets a server-wide key / switches `LLM_PROVIDER`.
+- **BYOK AI keys** — each user picks a provider and adds their own key via Settings (or uses Ollama / Vertex admin mode).
 - **Google OAuth** — optional "Continue with Google" alongside standard email/password.
 - **Multi-user ready** — JWT auth, encrypted key storage, rate limiting per user, soft delete.
 - **No analytics by default** — PostHog is disabled unless you explicitly enable it in `.env`.
@@ -341,7 +341,7 @@ POSTHOG_HOST=https://us.i.posthog.com   # or your self-hosted instance
 
 ### Vertex AI (server admins)
 
-Use this if you have a Google Cloud project and want to use Vertex AI instead of a direct Gemini API key. End users are not affected — they still add their own Google AI Studio key via Settings.
+Use this if you have a Google Cloud project and want to use Vertex AI instead of per-user BYOK. End users skip personal keys when Vertex is enabled — otherwise they pick a provider and add their own key in **Settings → AI Setup**.
 
 ```bash
 USE_VERTEX_AI=true
@@ -402,15 +402,15 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 | `ENCRYPTION_KEY` | Auto-generated | Encrypts stored API keys |
 | `DATABASE_URL` | Set automatically | PostgreSQL connection |
 | `REDIS_URL` | Set automatically | Redis connection |
-| `LLM_PROVIDER` | `gemini` | Active LLM backend: `gemini` \| `openai` \| `anthropic` \| `ollama` |
-| `GEMINI_API_KEY` | _(empty)_ | Server-wide Gemini key when `LLM_PROVIDER=gemini` — users can also add their own via **Settings → AI Setup** |
-| `GEMINI_MODEL` | `gemini-3.5-flash` | Default Gemini model — users can change this in **Settings → AI Setup** (BYOK) |
-| `OPENAI_API_KEY` | _(empty)_ | Required when `LLM_PROVIDER=openai` |
-| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI chat model |
-| `ANTHROPIC_API_KEY` | _(empty)_ | Required when `LLM_PROVIDER=anthropic` |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-5` | Anthropic Messages model |
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama host when `LLM_PROVIDER=ollama` |
-| `OLLAMA_MODEL` | `llama3.2` | Local Ollama model name |
+| `LLM_PROVIDER` | `gemini` | Health/admin fallback provider only (`gemini` \| `openai` \| `anthropic` \| `ollama`) — users pick via **Settings → AI Setup** |
+| `GEMINI_API_KEY` | _(empty)_ | Server Gemini key for health/admin; users add BYOK in Settings |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | Default Gemini model (overridable per user when BYOK) |
+| `OPENAI_API_KEY` | _(empty)_ | Server OpenAI key for health/admin; users add BYOK in Settings |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | Default OpenAI model |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Server Anthropic key for health/admin; users add BYOK in Settings |
+| `ANTHROPIC_MODEL` | `claude-sonnet-5` | Default Anthropic model |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama host when user selects Ollama |
+| `OLLAMA_MODEL` | `qwen3` | Default Ollama model |
 | `BASE_URL` | `http://localhost:8000` | Used in password-reset and verification email links |
 | `DISABLE_EMAIL_VERIFICATION` | `true` | Set `false` when SMTP is configured |
 | `GOOGLE_CLIENT_ID` | _(empty)_ | Enables "Continue with Google" |

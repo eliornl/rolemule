@@ -316,7 +316,7 @@ def not_implemented_error(
 
 
 def no_api_key_error(
-    message: str = "No API key configured. Please add your Gemini API key in Settings.",
+    message: str = "No API key configured. Choose a provider and add your API key in Settings → AI Setup.",
 ) -> APIError:
     """Create no-API-key (422) error with a dedicated code so the frontend can show a targeted prompt."""
     return APIError(

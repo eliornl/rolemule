@@ -787,24 +787,14 @@ async def start_workflow(
             select(User).where(User.id == user_id)
         )
         user = user_result.scalar_one_or_none()
-        
-        user_api_key = None
-        if user and user.gemini_api_key_encrypted:
-            try:
-                user_api_key = decrypt_api_key(user.gemini_api_key_encrypted)
-            except Exception as e:
-                logger.warning('Failed to decrypt user API key: %s', sanitize_log_value(e))
-                # Continue without user key - will use server default if available
 
-        # Check if we have credentials for the active LLM provider
-        from utils.llm.availability import (
-            effective_user_api_key,
-            llm_credentials_available,
+        from utils.llm_context import require_user_llm_context
+
+        _user, llm_ctx, prefs_row = await require_user_llm_context(
+            db, user_id, user=user
         )
-
-        if not llm_credentials_available(user_api_key):
-            raise no_api_key_error()
-        user_api_key = effective_user_api_key(user_api_key)
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
 
         # Prepare input data for workflow
         user_data = user_profile.to_dict()
@@ -816,15 +806,10 @@ async def start_workflow(
         })
 
         # Load workflow preferences and inject under the key the workflow reads
-        prefs_result = await db.execute(
-            select(UserWorkflowPreferences).where(
-                UserWorkflowPreferences.user_id == user_id
-            )
-        )
-        prefs_row = prefs_result.scalar_one_or_none()
         user_data["application_preferences"] = (
             prefs_row.to_dict() if prefs_row else {}
         )
+        user_data["llm_provider"] = llm_provider
 
         # Get extension-specific metadata (JSON body takes priority; Form fields are the
         # extension path where request is None)
@@ -1247,19 +1232,19 @@ async def regenerate_cover_letter(
             select(User).where(User.id == user_id)
         )
         user_record = user_result.scalar_one_or_none()
-        user_api_key = None
-        if user_record and user_record.gemini_api_key_encrypted:
-            from utils.encryption import decrypt_api_key
-            from utils.llm.availability import effective_user_api_key
-            user_api_key = effective_user_api_key(
-                decrypt_api_key(user_record.gemini_api_key_encrypted)
-            )
+        from utils.llm_context import require_user_llm_context
+        _u, llm_ctx, _prefs = await require_user_llm_context(
+            db, user_record.id if user_record else workflow_session.user_id,
+            user=user_record,
+        )
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
 
         # Build minimal workflow state for the cover letter agent
         from agents.cover_letter_writer import CoverLetterWriterAgent
-        from utils.llm_client import get_gemini_client
+        from utils.llm_client import get_llm_client
 
-        gemini_client = await get_gemini_client()
+        gemini_client = await get_llm_client()
         agent = CoverLetterWriterAgent(gemini_client)
 
         state = {
@@ -1269,6 +1254,7 @@ async def regenerate_cover_letter(
             "company_research": workflow_session.company_research,
             "session_id": session_id,
             "user_api_key": user_api_key,
+            "llm_provider": llm_provider,
             "cover_letter": None,
             "error_messages": [],
             "warning_messages": [],
@@ -1357,18 +1343,18 @@ async def regenerate_resume(
 
         user_result = await db.execute(select(User).where(User.id == user_id))
         user_record = user_result.scalar_one_or_none()
-        user_api_key = None
-        if user_record and user_record.gemini_api_key_encrypted:
-            from utils.encryption import decrypt_api_key
-            from utils.llm.availability import effective_user_api_key
-            user_api_key = effective_user_api_key(
-                decrypt_api_key(user_record.gemini_api_key_encrypted)
-            )
+        from utils.llm_context import require_user_llm_context
+        _u, llm_ctx, _prefs = await require_user_llm_context(
+            db, user_record.id if user_record else workflow_session.user_id,
+            user=user_record,
+        )
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
 
         from agents.resume_advisor import ResumeAdvisorAgent
-        from utils.llm_client import get_gemini_client
+        from utils.llm_client import get_llm_client
 
-        gemini_client = await get_gemini_client()
+        gemini_client = await get_llm_client()
         agent = ResumeAdvisorAgent(gemini_client)
 
         state = {
@@ -1378,6 +1364,7 @@ async def regenerate_resume(
             "company_research": workflow_session.company_research,
             "session_id": session_id,
             "user_api_key": user_api_key,
+            "llm_provider": llm_provider,
             "resume_recommendations": None,
             "error_messages": [],
             "warning_messages": [],
@@ -1469,18 +1456,18 @@ async def generate_interview_prep(
         # Get user's API key if available
         user_result = await db.execute(select(User).where(User.id == user_id))
         user_record = user_result.scalar_one_or_none()
-        user_api_key = None
-        if user_record and user_record.gemini_api_key_encrypted:
-            from utils.encryption import decrypt_api_key
-            from utils.llm.availability import effective_user_api_key
-            user_api_key = effective_user_api_key(
-                decrypt_api_key(user_record.gemini_api_key_encrypted)
-            )
+        from utils.llm_context import require_user_llm_context
+        _u, llm_ctx, _prefs = await require_user_llm_context(
+            db, user_record.id if user_record else workflow_session.user_id,
+            user=user_record,
+        )
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
 
-        from utils.llm_client import get_gemini_client
+        from utils.llm_client import get_llm_client
         import json
 
-        gemini_client = await get_gemini_client()
+        gemini_client = await get_llm_client()
 
         job = workflow_session.job_analysis or {}
         company = workflow_session.company_research or {}
@@ -1560,6 +1547,7 @@ Generate 4-6 interview stages, 8-10 likely questions with personalized suggested
                 temperature=0.7,
                 max_tokens=16000,
                 user_api_key=user_api_key,
+                provider=llm_provider,
             ),
             timeout=180.0,
         )
@@ -1938,22 +1926,27 @@ async def _continue_workflow_background(session_id: str, user_id: Optional[str] 
             # Notify clients that the workflow is resuming
             await broadcast_workflow_resumed(ws_user_id, session_id)
 
-            # Get user's API key if available (BYOK mode)
+            # Resolve per-user LLM credentials (BYOK / Ollama / Vertex)
             user_api_key = None
             if user_id:
-                user_result = await db.execute(
-                    select(User).where(User.id == uuid.UUID(user_id))
-                )
-                user = user_result.scalar_one_or_none()
-                
-                if user and user.gemini_api_key_encrypted:
-                    try:
-                        from utils.llm.availability import effective_user_api_key
-                        user_api_key = effective_user_api_key(
-                            decrypt_api_key(user.gemini_api_key_encrypted)
-                        )
-                    except Exception as e:
-                        logger.warning('Failed to decrypt user API key for continuation: %s', sanitize_log_value(e))
+                try:
+                    from utils.llm_context import require_user_llm_context
+                    user_result = await db.execute(
+                        select(User).where(User.id == uuid.UUID(user_id))
+                    )
+                    user = user_result.scalar_one_or_none()
+                    _u, llm_ctx, _p = await require_user_llm_context(
+                        db, uuid.UUID(user_id), user=user
+                    )
+                    user_api_key = llm_ctx.user_api_key
+                    if workflow_session.user_data is None:
+                        workflow_session.user_data = {}
+                    workflow_session.user_data["llm_provider"] = llm_ctx.provider
+                except Exception as e:
+                    logger.warning(
+                        "Failed to resolve LLM context for continuation: %s",
+                        sanitize_log_value(e),
+                    )
 
             # Initialize workflow
             workflow = JobApplicationWorkflow(db)
@@ -2076,14 +2069,21 @@ async def _generate_documents_background(
                     select(User).where(User.id == uuid.UUID(user_id))
                 )
                 user = user_result.scalar_one_or_none()
-                if user and user.gemini_api_key_encrypted:
+                if user:
                     try:
-                        from utils.llm.availability import effective_user_api_key
-                        user_api_key = effective_user_api_key(
-                            decrypt_api_key(user.gemini_api_key_encrypted)
+                        from utils.llm_context import require_user_llm_context
+                        _u, llm_ctx, _p = await require_user_llm_context(
+                            db, user.id, user=user
                         )
+                        user_api_key = llm_ctx.user_api_key
+                        if workflow_session.user_data is None:
+                            workflow_session.user_data = {}
+                        workflow_session.user_data["llm_provider"] = llm_ctx.provider
                     except Exception as e:
-                        logger.warning('Failed to decrypt API key for document generation: %s', sanitize_log_value(e))
+                        logger.warning(
+                            "Failed to resolve LLM context for document generation: %s",
+                            sanitize_log_value(e),
+                        )
 
             workflow = JobApplicationWorkflow(db)
 

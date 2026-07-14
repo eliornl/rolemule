@@ -1,4 +1,4 @@
-"""Anthropic Messages API provider (httpx async)."""
+"""Anthropic Messages API provider with optional web_search tool (httpx async)."""
 
 from __future__ import annotations
 
@@ -24,6 +24,11 @@ structured_logger = get_structured_logger(__name__)
 
 _ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 _ANTHROPIC_VERSION = "2023-06-01"
+_WEB_SEARCH_TOOL = {
+    "type": "web_search_20250305",
+    "name": "web_search",
+    "max_uses": 5,
+}
 
 
 class AnthropicProvider:
@@ -36,7 +41,7 @@ class AnthropicProvider:
         settings = get_settings()
         self.api_key: Optional[str] = getattr(settings, "anthropic_api_key", None)
         self.default_model: str = getattr(
-            settings, "anthropic_model", "claude-sonnet-4-5"
+            settings, "anthropic_model", "claude-sonnet-5"
         )
         self.timeout = DEFAULT_TIMEOUT
         logger.info(
@@ -56,12 +61,7 @@ class AnthropicProvider:
         user_api_key: Optional[str] = None,
         use_google_search_grounding: bool = False,
     ) -> Dict[str, Any]:
-        """Call Anthropic messages API."""
-        if use_google_search_grounding:
-            logger.debug(
-                "Google Search grounding requested but not supported by Anthropic; ignoring"
-            )
-
+        """Call Anthropic messages API (optional server-side web_search)."""
         effective_key = user_api_key or self.api_key
         if not effective_key:
             raise LLMError(
@@ -78,6 +78,8 @@ class AnthropicProvider:
         }
         if system:
             payload["system"] = system
+        if use_google_search_grounding:
+            payload["tools"] = [_WEB_SEARCH_TOOL]
 
         headers = {
             "x-api-key": effective_key,
@@ -85,11 +87,13 @@ class AnthropicProvider:
             "Content-Type": "application/json",
         }
 
+        op_name = "messages.web_search" if use_google_search_grounding else "messages"
         logger.info(
-            "[LLM] Anthropic  model=%s  prompt=%s chars  temp=%s",
+            "[LLM] Anthropic  model=%s  prompt=%s chars  temp=%s  grounding=%s",
             sanitize_log_value(model_to_use),
             sanitize_log_value(len(prompt) + (len(system) if system else 0)),
             sanitize_log_value(temperature),
+            sanitize_log_value(use_google_search_grounding),
         )
 
         api_start = perf_counter()
@@ -124,7 +128,7 @@ class AnthropicProvider:
             )
             structured_logger.log_external_api_call(
                 service="anthropic",
-                operation="messages",
+                operation=op_name,
                 duration_ms=api_duration_ms,
                 success=True,
             )
@@ -135,7 +139,7 @@ class AnthropicProvider:
         except Exception as e:
             structured_logger.log_external_api_call(
                 service="anthropic",
-                operation="messages",
+                operation=op_name,
                 duration_ms=0,
                 success=False,
                 error=str(e),

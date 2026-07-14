@@ -11,7 +11,7 @@ from utils.llm.providers.ollama import OllamaProvider
 def _settings(**overrides):
     base = dict(
         ollama_base_url="http://127.0.0.1:11434",
-        ollama_model="llama3.2",
+        ollama_model="qwen3",
     )
     base.update(overrides)
     return MagicMock(**base)
@@ -38,7 +38,7 @@ async def test_ollama_generate_success() -> None:
         provider = OllamaProvider()
         result = await provider.generate(prompt="hi", system="sys")
         assert result["response"] == "hello from ollama"
-        assert result["model"] == "llama3.2"
+        assert result["model"] == "qwen3"
 
 
 @pytest.mark.asyncio

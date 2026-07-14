@@ -32,29 +32,29 @@ DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
-# LLM — provider selection (default gemini)
+# LLM — provider selection (health/admin fallback; users pick via Settings BYOK)
 # LLM_PROVIDER=gemini   # gemini | openai | anthropic | ollama
-# Optional server-side Gemini key; Google rotates key formats (not only the legacy AIza… shape).
-GEMINI_API_KEY=<your Gemini API key>
+# Optional server-side Gemini key (health/admin only under per-user BYOK)
+# GEMINI_API_KEY=<your Gemini API key>
 GEMINI_MODEL=gemini-3.5-flash
 
-# LLM — Vertex AI (optional Gemini backend, server-admin only)
+# LLM — Vertex AI (optional Gemini backend, server-admin only — skips user BYOK)
 # USE_VERTEX_AI=true
 # VERTEX_AI_PROJECT=your-gcp-project
 # IMPORTANT: gemini-3-* models ONLY work with VERTEX_AI_LOCATION=global
 # VERTEX_AI_LOCATION=global
 
-# LLM — OpenAI (when LLM_PROVIDER=openai)
+# LLM — OpenAI (user BYOK in Settings; server key for health/admin)
 # OPENAI_API_KEY=
-# OPENAI_MODEL=gpt-4o-mini
+# OPENAI_MODEL=gpt-5.6-luna
 
-# LLM — Anthropic (when LLM_PROVIDER=anthropic)
+# LLM — Anthropic (user BYOK in Settings; server key for health/admin)
 # ANTHROPIC_API_KEY=
-# ANTHROPIC_MODEL=claude-sonnet-4-5
+# ANTHROPIC_MODEL=claude-sonnet-5
 
-# LLM — Ollama local/self-hosted (when LLM_PROVIDER=ollama)
+# LLM — Ollama local/self-hosted (preferred_provider=ollama needs no user key)
 # OLLAMA_BASE_URL=http://127.0.0.1:11434
-# OLLAMA_MODEL=llama3.2
+# OLLAMA_MODEL=qwen3
 
 # Google OAuth (optional)
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
@@ -103,19 +103,27 @@ from config.settings import clear_settings_cache
 clear_settings_cache()
 ```
 
-## BYOK — Google Gemini / AI Studio keys
+## BYOK — multi-provider user keys (Settings → AI Setup)
 
-**Users bring their own Google Gemini / Google AI Studio API keys** via Settings → AI Setup. Multi-provider BYOK (OpenAI/Anthropic user keys) is not in the Settings UI yet — non-Gemini providers use **server env keys** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or local Ollama).
+Users **must** pick `preferred_provider` (`gemini` | `openai` | `anthropic` | `ollama`) and add a BYOK key for cloud providers. Ollama needs no key. There is no user-facing way to use Vertex AI — `USE_VERTEX_AI` is server-admin only (skips personal keys).
+
+| Provider | Stored column | Format helper | Key page |
+|----------|---------------|---------------|----------|
+| Gemini | `users.gemini_api_key_encrypted` | `utils/gemini_api_key_format.py` | https://aistudio.google.com/app/apikey |
+| OpenAI | `users.openai_api_key_encrypted` | `utils/openai_api_key_format.py` | https://platform.openai.com/api-keys |
+| Anthropic | `users.anthropic_api_key_encrypted` | `utils/anthropic_api_key_format.py` | https://console.anthropic.com/settings/keys |
+| Ollama | _(none)_ | — | local `ollama pull` |
 
 Gate helpers live in `utils/llm/availability.py`:
-- `server_has_llm_credentials()` — True when the **active** `LLM_PROVIDER` has server credentials
-- `effective_user_api_key(gemini_key)` — returns the BYOK key only when `LLM_PROVIDER=gemini` (never send a Gemini key to OpenAI/Anthropic)
+- `resolve_user_llm_context(user, prefs)` — `{provider, user_api_key, preferred_model, ready, reason}`
+- `require_user_llm_context()` — raises `no_api_key_error()` (`CFG_6001`) when not ready
+- User readiness is **not** “server `GEMINI_API_KEY` alone”; server keys are health/admin only (except Vertex)
 
-There is no user-facing way to use Vertex AI — `USE_VERTEX_AI` is server-admin only.
+Model allowlists and defaults: `utils/llm/models.py` (Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3`).
 
-**Format validation** is intentionally loose: `utils/gemini_api_key_format.validate_gemini_api_key()` (length bounds, single line, no whitespace, URL-safe / base64-style characters). The same helper validates optional `GEMINI_API_KEY` in `config/settings.py` and user keys in `api/profile.py`. Google may issue new key shapes over time; real validity is determined when the API is called.
+**Format validation** for Gemini is intentionally loose (`validate_gemini_api_key()` — length bounds, single line, no whitespace). OpenAI/Anthropic helpers enforce their usual prefixes (`sk-` / `sk-ant-`). Real validity is confirmed on validate/save against the provider API.
 
-Do **not** reintroduce an `AIza`-only or overly strict allowlist without a concrete breakage report — it will reject valid keys again.
+Do **not** reintroduce an `AIza`-only Gemini allowlist without a concrete breakage report.
 
 ## Startup Validators (enforced at settings load)
 `config/settings.py` uses `@field_validator` to enforce these at startup — a bad value raises `ValueError` before the app starts:

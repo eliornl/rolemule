@@ -59,14 +59,23 @@ class ProfileResource:
     def api_key_status(self) -> Dict[str, Any]:
         return self._client.get_json(f"{self._prefix}/api-key/status")
 
-    def api_key_set(self, api_key: str) -> Dict[str, Any]:
-        return self._client.post_json(f"{self._prefix}/api-key", json={"api_key": api_key})
+    def api_key_set(self, api_key: str, provider: str = "gemini") -> Dict[str, Any]:
+        return self._client.post_json(
+            f"{self._prefix}/api-key",
+            json={"api_key": api_key, "provider": provider},
+        )
 
-    def api_key_delete(self) -> Dict[str, Any]:
-        return self._client.delete_json(f"{self._prefix}/api-key")
+    def api_key_delete(self, provider: str = "gemini") -> Dict[str, Any]:
+        return self._client.delete_json(
+            f"{self._prefix}/api-key",
+            params={"provider": provider},
+        )
 
-    def api_key_validate(self, api_key: str) -> Dict[str, Any]:
-        return self._client.post_json(f"{self._prefix}/api-key/validate", json={"api_key": api_key})
+    def api_key_validate(self, api_key: str, provider: str = "gemini") -> Dict[str, Any]:
+        return self._client.post_json(
+            f"{self._prefix}/api-key/validate",
+            json={"api_key": api_key, "provider": provider},
+        )
 
     def workflow_preferences_show(self) -> Dict[str, Any]:
         return self._client.get_json(f"{self._prefix}/preferences")

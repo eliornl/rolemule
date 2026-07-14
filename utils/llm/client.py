@@ -38,39 +38,66 @@ class LLMClient:
     """
     Unified async LLM client.
 
-    Wraps a single LLMProvider with Redis response caching and tenacity retries.
+    Caches provider instances by name and routes each generate() call.
     Gemini-specific private helpers remain for backward-compatible unit tests.
     """
 
     def __init__(self, provider: Optional[LLMProvider] = None) -> None:
         """
-        Initialize the client with a provider (or settings.llm_provider default).
+        Initialize the client with an optional default provider.
 
         Args:
-            provider: Optional pre-built provider; otherwise created from settings
+            provider: Optional pre-built default provider; otherwise created
+                from settings.llm_provider (health/admin fallback)
         """
         settings = get_settings()
         provider_name = normalize_provider_name(
             getattr(settings, "llm_provider", None)
         )
+        self._providers: Dict[str, LLMProvider] = {}
         self._provider: LLMProvider = provider or create_provider(provider_name)
+        self._providers[getattr(self._provider, "name", provider_name)] = (
+            self._provider
+        )
         self.timeout = DEFAULT_TIMEOUT
+        self._sync_compat_attrs(self._provider)
 
-        # Gemini compat attributes (used by health helpers / older tests)
-        if isinstance(self._provider, GeminiProvider):
-            self.use_vertex_ai = self._provider.use_vertex_ai
-            self.vertex_project = self._provider.vertex_project
-            self.vertex_location = self._provider.vertex_location
-            self.api_key = self._provider.api_key
+    def _sync_compat_attrs(self, provider: LLMProvider) -> None:
+        """Update Gemini-compat attributes from the given provider."""
+        if isinstance(provider, GeminiProvider):
+            self.use_vertex_ai = provider.use_vertex_ai
+            self.vertex_project = provider.vertex_project
+            self.vertex_location = provider.vertex_location
+            self.api_key = provider.api_key
         else:
             self.use_vertex_ai = False
             self.vertex_project = None
             self.vertex_location = None
-            self.api_key = getattr(self._provider, "api_key", None)
+            self.api_key = getattr(provider, "api_key", None)
+
+    def _get_provider(self, provider: Optional[str] = None) -> LLMProvider:
+        """
+        Resolve a provider instance by name (cached).
+
+        Args:
+            provider: Explicit provider name; None → default ``self._provider``
+
+        Returns:
+            LLMProvider instance
+        """
+        if not provider:
+            return self._provider
+        name = normalize_provider_name(provider)
+        existing = self._providers.get(name)
+        if existing is not None:
+            return existing
+        created = create_provider(name)
+        self._providers[name] = created
+        return created
 
     @property
     def provider_name(self) -> str:
-        """Active provider name."""
+        """Default (admin/health) provider name."""
         return getattr(self._provider, "name", "unknown")
 
     async def generate(
@@ -84,6 +111,7 @@ class LLMClient:
         user_api_key: Optional[str] = None,
         user_id: Optional[str] = None,
         use_google_search_grounding: bool = False,
+        provider: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a response with optional caching.
@@ -97,7 +125,8 @@ class LLMClient:
             use_cache: When True, use Redis LLM response cache
             user_api_key: Optional BYOK key
             user_id: Scopes cache key for personal prompts
-            use_google_search_grounding: Gemini-only Google Search tool
+            use_google_search_grounding: Web-search / Google grounding flag
+            provider: Explicit provider name (required for per-user routing)
 
         Returns:
             Normalized generate result dict
@@ -105,12 +134,16 @@ class LLMClient:
         Raises:
             LLMError: On upstream failure after retries
         """
+        cache_provider = None
+        if provider:
+            cache_provider = normalize_provider_name(provider)
+
         if use_cache:
             try:
                 from utils.cache import get_cached_llm_response
 
                 cached_response = await get_cached_llm_response(
-                    prompt, system, user_id
+                    prompt, system, user_id, provider=cache_provider
                 )
                 if cached_response:
                     logger.info("LLM response served from cache")
@@ -130,13 +163,16 @@ class LLMClient:
             max_tokens=max_tokens,
             user_api_key=user_api_key,
             use_google_search_grounding=use_google_search_grounding,
+            provider=provider,
         )
 
         if use_cache and result:
             try:
                 from utils.cache import cache_llm_response
 
-                await cache_llm_response(prompt, result, system, user_id)
+                await cache_llm_response(
+                    prompt, result, system, user_id, provider=cache_provider
+                )
             except Exception as cache_error:
                 logger.warning(
                     "Failed to cache LLM response: %s",
@@ -161,31 +197,41 @@ class LLMClient:
         max_tokens: int = DEFAULT_MAX_TOKENS,
         user_api_key: Optional[str] = None,
         use_google_search_grounding: bool = False,
+        provider: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Retry wrapper around the active provider."""
-        # Gemini: keep Vertex vs AI Studio routing inside the provider.
-        # Tests patch LLMClient._generate_with_vertex_ai / _generate_with_google_ai.
-        if isinstance(self._provider, GeminiProvider):
-            if self.use_vertex_ai:
-                return await self._generate_with_vertex_ai(
+        """Retry wrapper around the selected provider."""
+        selected = self._get_provider(provider)
+
+        # Gemini: keep Vertex vs AI Studio routing; tests patch facade helpers.
+        if isinstance(selected, GeminiProvider):
+            # Temporarily sync compat attrs so patched helpers see Vertex flags
+            prev = self._provider
+            self._provider = selected
+            self._sync_compat_attrs(selected)
+            try:
+                if self.use_vertex_ai:
+                    return await self._generate_with_vertex_ai(
+                        prompt=prompt,
+                        model=model,
+                        system=system,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        use_google_search_grounding=use_google_search_grounding,
+                    )
+                return await self._generate_with_google_ai(
                     prompt=prompt,
                     model=model,
                     system=system,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    user_api_key=user_api_key,
                     use_google_search_grounding=use_google_search_grounding,
                 )
-            return await self._generate_with_google_ai(
-                prompt=prompt,
-                model=model,
-                system=system,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                user_api_key=user_api_key,
-                use_google_search_grounding=use_google_search_grounding,
-            )
+            finally:
+                self._provider = prev
+                self._sync_compat_attrs(prev)
 
-        return await self._provider.generate(
+        return await selected.generate(
             prompt,
             model=model,
             system=system,
@@ -221,7 +267,7 @@ class LLMClient:
         return await self._provider._generate_with_google_ai(**kwargs)
 
     async def health_check(self) -> bool:
-        """Delegate health check to the active provider."""
+        """Delegate health check to the default provider."""
         return await self._provider.health_check()
 
 

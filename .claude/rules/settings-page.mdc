@@ -25,53 +25,41 @@ Tab switching is handled by `showSection(sectionName)` via delegated click on `.
 
 ## AI Setup Tab (`apiKeysSection`)
 
-Three mutually exclusive API key state cards (shown/hidden by `updateApiKeyStatusUI()`):
+**Required flow:** select provider (`preferredProviderSelect`) → PATCH `preferred_provider` → add BYOK for Gemini/OpenAI/Anthropic (Ollama needs no key) → optional model for the active provider.
 
-| Card ID | Shown when |
-|---------|-----------|
-| `serverKeyNotice` | `server_has_key && !has_user_key` |
-| `byokNotice` | `!server_has_key && !has_user_key` — prompts user to add their own key |
-| `userKeyNotice` | `has_user_key` — shows masked key preview + Remove button |
+| Card / control ID | Shown when |
+|-------------------|-----------|
+| `providerSelectorCard` | Always (required pick) |
+| `serverKeyNotice` | `use_vertex_ai` — Vertex admin mode; no personal key |
+| `ollamaNotice` | `preferred_provider === 'ollama'` |
+| `byokNotice` | Cloud provider selected **and** no stored key for that provider — **hidden when no provider is selected** |
+| `userKeyNotice` | Active cloud provider has a stored key |
+| `modelSelectorCard` | Credentials ready (key saved / Ollama) and not Vertex |
 
-**`userKeyNotice` has two visual states** depending on `use_vertex_ai`:
-- `use_vertex_ai=false`: cyan icon, subtitle `Active: XXXX…xxxx` (first 4 and last 4 of key), normal card border — key is being used
-- `use_vertex_ai=true`: amber icon (`account-icon--amber`), amber card border (`account-card--warning`), subtitle explains key is stored but not used because the server handles AI internally — user can safely remove it
+**Layout:** provider / BYOK / model cards use `.account-card.ai-setup-card` — compact header + `.ai-setup-card-controls` (border-top, ends right after the dropdown or key row). Icons use `.account-icon--amber` for provider / BYOK / model.
 
-**Backend note:** `server_has_key` in the API response is `True` when either `settings.gemini_api_key` is set **OR** `use_vertex_ai=True`. Both mean the user never needs their own key.
+**Saved indicator:** `#providerSavedIndicator` / `#modelSavedIndicator` sit **inline next to the card title** (not under or inside the dropdown). Fade via `.save-indicator` opacity like Preferences.
 
-**BYOK input form** (`byokNotice` card): separated from the header row by `border-top` + `pt-3 mt-1` on the `<form>`. Uses `input-group` (not `input-group-sm`). "Get API Key" button links to `https://aistudio.google.com/api-keys`.
+**API status** (`GET /api/v1/profile/api-key/status`): `preferred_provider`, `has_credentials`, `providers.{gemini|openai|anthropic|ollama}`, `models` per provider (from `utils/llm/models.py`), `use_vertex_ai` / `server_has_key` (Vertex-only for user gates).
 
-**Model selector card** (`modelSelectorCard`):
-- Shown **only** when `has_user_key === true` **AND** `use_vertex_ai === false`
-- Hidden when the server uses Vertex AI (model is locked server-side)
-- Populated by `loadModelPreference()` on show; saved by debounced `saveModelPreference()` (600 ms)
-- "Saved ✓" indicator: `modelSavedIndicator` fades in on success
-- Options are grouped by Gemini generation using `<optgroup>`
+**Key CRUD:** `POST /api-key` `{ provider, api_key }` (also activates that provider); `DELETE /api-key?provider=`; `POST /api-key/validate`. Ollama rejects key ops.
 
-**Currently supported models**:
-```html
-<optgroup label="Gemini 3">
-  <option value="gemini-3.5-flash">Best speed &amp; quality balance (recommended)</option>
-  <option value="gemini-3.1-pro-preview">Most capable, advanced reasoning</option>
-  <option value="gemini-3.1-flash-lite">Fastest &amp; lightest, lowest quota usage</option>
-</optgroup>
-<optgroup label="Gemini 2.5 (stable)">
-  <option value="gemini-2.5-flash">Fast &amp; efficient</option>
-  <option value="gemini-2.5-pro">Highly capable</option>
-</optgroup>
-```
-**Dead models (do not re-add):** `gemini-3-flash-preview` (superseded by GA `gemini-3.5-flash`), `gemini-3.1-flash-lite-preview` (shut down 2026-05-25; use GA `gemini-3.1-flash-lite`), `gemini-3-pro-preview` (shut down 2026-03-26; redirects to `gemini-3.1-pro-preview`), `gemini-2.0-flash` / `gemini-2.0-flash-lite` (shut down 2026-06-01), `gemini-1.5-flash`, `gemini-1.5-pro` (not found / unsupported in v1beta).
+**BYOK form** (`byokNotice`): provider-specific subtitle + Get API Key link (`PROVIDER_KEY_LINKS` in `ui/src/dashboard-settings/api-keys.ts`). Input id remains `geminiApiKey` for DOM stability.
 
-`GET /api/v1/profile/api-key/status` response shape:
-```json
-{
-  "has_user_key": bool,
-  "has_api_key": bool,
-  "server_has_key": bool,
-  "use_vertex_ai": bool,
-  "key_preview": "ABCD...wxyz" | null
-}
-```
+**Model selector:** options from status `models[preferred_provider]` via `populateModelSelect()` with friendly labels (`MODEL_LABELS` in preferences.ts / `utils/llm/models.py`). Switching `preferred_provider` clears `preferred_model`.
+
+### Model allowlists (`utils/llm/models.py`)
+
+| Provider | Default | Allowed ids |
+|----------|---------|-------------|
+| Gemini | `gemini-3.5-flash` | `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, `gemini-2.5-flash`, `gemini-2.5-pro` |
+| OpenAI | `gpt-5.6-luna` | `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4-mini` |
+| Anthropic | `claude-sonnet-5` | `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5`, `claude-fable-5`, `claude-sonnet-4-6` |
+| Ollama | `qwen3` | `qwen3`, `llama3.3`, `gemma3`, `mistral`, `deepseek-r1`, `phi4`, `gemma4`, `llama3.2` |
+
+Do not re-add dead Gemini ids (`gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `gemini-3-pro-preview`, `gemini-2.0-*`, `gemini-1.5-*`) or retired OpenAI/Anthropic names (`gpt-4o*`, `claude-sonnet-4-5` as primary, etc.).
+
+**API key links:** Gemini → `https://aistudio.google.com/app/apikey`; OpenAI → `https://platform.openai.com/api-keys`; Anthropic → `https://console.anthropic.com/settings/keys`.
 
 ---
 
@@ -109,9 +97,12 @@ Response shape:
   "auto_generate_documents": false,
   "cover_letter_tone": "professional",
   "resume_length": "concise",
-  "preferred_model": null
+  "preferred_model": null,
+  "preferred_provider": null
 }
 ```
+
+Switching `preferred_provider` clears `preferred_model`. Model must pass `is_valid_model_for_provider()` in `utils/llm/models.py`.
 
 ---
 
@@ -169,8 +160,8 @@ Apply to the `.account-icon` div. The variant sets both the background and the i
 |-------|---------|
 | `.account-icon--cyan` | Default actions (profile edit, download, preferences, password) |
 | `.account-icon--green` | Success/ready states (resume upload, server key active, help) |
-| `.account-icon--purple` | AI/model features (preferred model, cover letter tone) |
-| `.account-icon--amber` | Warning/setup-required states (BYOK notice, resume advice) |
+| `.account-icon--purple` | Preferences tone/length style cards |
+| `.account-icon--amber` | AI Setup (provider, BYOK, model) + warning/setup-required states |
 | `.account-icon--red` | Destructive / danger zone |
 | `.account-icon--google` | Google OAuth section |
 
@@ -195,8 +186,9 @@ Apply to the `.account-icon` div. The variant sets both the background and the i
 | `.account-title--red` | Red title text (e.g. "Danger Zone") |
 | `.account-card--danger` | Red border on the danger zone card |
 | `.account-card--warning` | Amber border — used when user key is stored but not in use (Vertex AI mode) |
-| `.save-indicator` | Fade-in "Saved ✓" badge (`opacity: 0`, transitions to 1 via JS) |
-| `.save-indicator--mt` | Same + `margin-top: 0.5rem` (for model saved indicator) |
+| `.save-indicator` | Fade-in "Saved ✓" badge (`opacity: 0`, transitions to 1 via JS); AI Setup places it **inline next to the card title** |
+| `.save-indicator--mt` | Same + `margin-top: 0.5rem` (Preferences / legacy below-control placement) |
+| `.ai-setup-card` / `.ai-setup-card-header` / `.ai-setup-card-controls` | Compact AI Setup cards — control section ends right after dropdown/key row |
 | `.section-divider-row` | Header row with bottom border separator; child `.section-title` auto-loses its own border |
 | `.threshold-display` | Large bold accent-colored percentage display |
 | `.text-muted-xs` | Small muted helper text (`0.78rem`, `var(--text-muted)`) |

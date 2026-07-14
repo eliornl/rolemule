@@ -30,11 +30,11 @@ def _gemini_settings(**overrides):
         gemini_model="gemini-2.5-flash",
         gemini_api_key=DUMMY_GEMINI_API_KEY,
         openai_api_key=None,
-        openai_model="gpt-4o-mini",
+        openai_model="gpt-5.6-luna",
         anthropic_api_key=None,
-        anthropic_model="claude-sonnet-4-5",
+        anthropic_model="claude-sonnet-5",
         ollama_base_url="http://127.0.0.1:11434",
-        ollama_model="llama3.2",
+        ollama_model="qwen3",
     )
     base.update(overrides)
     return MagicMock(**base)

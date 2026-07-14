@@ -9,6 +9,33 @@ import { el, inputEl, selectEl } from './dom';
 import { notify } from './notify';
 import type { ApplicationPreferences } from './types';
 
+/** Human-readable labels — keep in sync with utils/llm/models.py MODEL_LABELS */
+const MODEL_LABELS: Record<string, string> = {
+  'gemini-3.5-flash': 'Gemini 3.5 Flash — best speed & quality (recommended)',
+  'gemini-3.1-flash-lite': 'Gemini 3.1 Flash-Lite — fastest & lightest',
+  'gemini-3.1-pro-preview': 'Gemini 3.1 Pro (preview) — most capable',
+  'gemini-2.5-flash': 'Gemini 2.5 Flash — fast & efficient',
+  'gemini-2.5-pro': 'Gemini 2.5 Pro — deep reasoning',
+  'gpt-5.6-luna': 'GPT-5.6 Luna — cost-efficient high volume (recommended)',
+  'gpt-5.6-terra': 'GPT-5.6 Terra — balanced intelligence & cost',
+  'gpt-5.6-sol': 'GPT-5.6 Sol — flagship reasoning & coding',
+  'gpt-5.5': 'GPT-5.5 — frontier professional work',
+  'gpt-5.4-mini': 'GPT-5.4 mini — fast high-volume mini',
+  'claude-sonnet-5': 'Claude Sonnet 5 — best speed & intelligence (recommended)',
+  'claude-opus-4-8': 'Claude Opus 4.8 — complex agentic & enterprise',
+  'claude-haiku-4-5': 'Claude Haiku 4.5 — fastest near-frontier',
+  'claude-fable-5': 'Claude Fable 5 — highest capability agents',
+  'claude-sonnet-4-6': 'Claude Sonnet 4.6 — previous Sonnet generation',
+  qwen3: 'Qwen 3 — strong local general & tools (recommended)',
+  'llama3.3': 'Llama 3.3 — Meta instruction baseline',
+  gemma3: 'Gemma 3 — Google multilingual / multimodal',
+  mistral: 'Mistral — fast lightweight chat',
+  'deepseek-r1': 'DeepSeek-R1 — open reasoning',
+  phi4: 'Phi-4 — compact high quality',
+  gemma4: 'Gemma 4 — newest Google open family',
+  'llama3.2': 'Llama 3.2 — small / edge',
+};
+
 function showPrefsSaved(): void {
   const indicator = el('prefsSavedIndicator');
   if (!indicator) return;
@@ -109,10 +136,27 @@ export async function loadModelPreference(): Promise<void> {
     if (!res.ok) return;
     const data = (await res.json()) as ApplicationPreferences;
     const sel = selectEl('preferredModelSelect');
-    if (sel && data.preferred_model) sel.value = data.preferred_model;
+    if (sel) sel.value = data.preferred_model || '';
   } catch (err) {
     console.error('Error loading model preference:', err);
   }
+}
+
+export function populateModelSelect(
+  models: string[],
+  selected: string | null | undefined,
+): void {
+  const sel = selectEl('preferredModelSelect');
+  if (!sel) return;
+  const current = selected ?? sel.value;
+  sel.innerHTML = '<option value="">System default</option>';
+  for (const model of models) {
+    const opt = document.createElement('option');
+    opt.value = model;
+    opt.textContent = MODEL_LABELS[model] || model;
+    sel.appendChild(opt);
+  }
+  if (current) sel.value = current;
 }
 
 export async function saveModelPreference(): Promise<void> {
@@ -125,7 +169,9 @@ export async function saveModelPreference(): Promise<void> {
         Authorization: `Bearer ${getAuthToken()}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ preferred_model: sel.value }),
+      body: JSON.stringify({
+        preferred_model: sel.value ? sel.value : null,
+      }),
     });
     if (res.ok) {
       const indicator = el('modelSavedIndicator');

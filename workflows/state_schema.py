@@ -444,6 +444,9 @@ class WorkflowState(TypedDict):
     # This is the decrypted API key for LLM calls, passed through the workflow
     user_api_key: Optional[str]
 
+    # Resolved per-user LLM provider (gemini|openai|anthropic|ollama)
+    llm_provider: Optional[str]
+
     # Per-user workflow preferences (derived from UserProfile.application_preferences)
     # Keys: workflow_gate_threshold (float), auto_generate_documents (bool)
     workflow_preferences: Optional[Dict[str, Any]]
@@ -486,6 +489,7 @@ def create_initial_state(
     job_input_data: JobInputData,
     user_api_key: Optional[str] = None,
     workflow_preferences: Optional[Dict[str, Any]] = None,
+    llm_provider: Optional[str] = None,
 ) -> WorkflowState:
     """
     Create initial workflow state for a new job application workflow session.
@@ -500,6 +504,8 @@ def create_initial_state(
         user_profile: User profile data containing all relevant information
         job_input_data: Job input data containing method, content, and metadata
         user_api_key: Optional decrypted user API key for LLM calls (BYOK mode)
+        workflow_preferences: Optional per-user preference dict
+        llm_provider: Resolved provider name for generate() routing
 
     Returns:
         Fully initialized WorkflowState ready for agent processing
@@ -524,6 +530,8 @@ def create_initial_state(
         user_profile=user_profile_dict,
         # User API key (BYOK)
         user_api_key=user_api_key,
+        # Per-user LLM provider
+        llm_provider=llm_provider,
         # Per-user workflow preferences
         workflow_preferences=workflow_preferences or {},
         # Job input data

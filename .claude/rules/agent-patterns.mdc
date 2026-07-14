@@ -147,13 +147,17 @@ error_msg = str(exc)
 ```python
 # In workflow agents (state-based)
 self._current_user_api_key = state.get("user_api_key")
+self._current_llm_provider = state.get("llm_provider")
 
-# Pass to every generate() call
-response = await self.gemini_client.generate(
+# Pass provider + key to every generate() call
+response = await self.llm_client.generate(
     prompt=prompt,
     user_api_key=self._current_user_api_key,
+    provider=self._current_llm_provider,
 )
 ```
+
+Users resolve credentials via `resolve_user_llm_context` / `require_user_llm_context` (preferred_provider + BYOK, or Ollama / Vertex). Never rely on server `LLM_PROVIDER` for user generate paths.
 
 ## User Workflow Preferences in Agents
 Workflow agents can read per-user preferences from `state["workflow_preferences"]` (a `Dict[str, Any]` injected at workflow start from `UserWorkflowPreferences.to_dict()`). Always use `.get()` with a safe default — the dict may be empty or missing.

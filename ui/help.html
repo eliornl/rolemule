@@ -356,7 +356,7 @@
                 <a href="#api-key" class="quick-link-card">
                     <i class="fas fa-key"></i>
                     <h3>API Key Setup</h3>
-                    <p>Set up your own Gemini API key — takes 2 minutes.</p>
+                    <p>Set up your AI provider and API key — takes a few minutes.</p>
                 </a>
                 <a href="#extension" class="quick-link-card">
                     <i class="fas fa-puzzle-piece"></i>
@@ -412,7 +412,7 @@
                             <ol>
                                 <li><strong>Create an account</strong> — Sign up with email/password or continue with Google</li>
                                 <li><strong>Complete your profile</strong> — Upload your resume to auto-fill your experience, education, and skills, or fill it in manually. Either way, review and adjust to make sure everything is accurate. The more complete your profile, the more personalized the AI output will be</li>
-                                <li><strong>Add your Gemini API key</strong> — You'll be prompted during profile setup when you upload your resume, or you can add it later in <strong>Settings → AI Setup</strong>. See the <a href="#api-key">API Key Setup</a> section below for instructions</li>
+                                <li><strong>Choose an AI provider and add an API key</strong> — In <strong>Settings → AI Setup</strong>, pick Gemini, OpenAI, Anthropic, or local Ollama (no key). See the <a href="#api-key">API Key Setup</a> section below</li>
                                 <li><strong>Analyze your first job</strong> — Click <strong>New Application</strong> on the dashboard, paste a job description, and hit Analyze</li>
                             </ol>
                             <p><strong>Tip:</strong> A complete profile is essential — the AI uses your experience, education, and skills to personalize every output. Make sure everything looks right before your first analysis.</p>
@@ -425,7 +425,7 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            <p>Yes — the ApplyPilot platform itself is completely free and open source. To power the AI features, you bring your own <strong>Google Gemini API key</strong> and pay Google directly for usage. In practice, a single job analysis costs well under $0.01, so personal use costs are negligible.</p>
+                            <p>Yes — the ApplyPilot platform itself is completely free and open source. To power the AI features, you bring your own API key for <strong>Gemini, OpenAI, or Anthropic</strong> (or use local <strong>Ollama</strong> with no key) and pay the provider directly for usage. In practice, a single job analysis costs well under $0.01 on cloud providers, so personal use costs are negligible.</p>
                         </div>
                     </div>
 
@@ -453,28 +453,33 @@
 
                     <div class="faq-item">
                         <div class="faq-question">
-                            How do I get a Gemini API key?
+                            How do I set up an AI provider and API key?
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
                             <ol>
-                                <li>Go to <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">aistudio.google.com/api-keys</a></li>
-                                <li>Sign in with any Google account</li>
-                                <li>Click <strong>"Create API Key"</strong> and select or create a project</li>
-                                <li>Copy the key that appears</li>
-                                <li>Paste it in ApplyPilot — either during <strong>profile setup</strong> when prompted, or later in <strong>Settings → AI Setup</strong></li>
+                                <li>Open <strong>Settings → AI Setup</strong></li>
+                                <li>Select a provider: <strong>Google Gemini</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or <strong>Ollama (local)</strong></li>
+                                <li>For cloud providers, use <strong>Get API Key</strong> to open the provider’s console, create a key, paste it, and click <strong>Save</strong></li>
+                                <li>Optionally pick a preferred model for that provider</li>
                             </ol>
-                            <p class="mt-3"><strong>Important:</strong> Your API key is like a password — keep it private and never share it. If you believe it has been compromised, revoke it immediately in Google AI Studio and generate a new one.</p>
+                            <p class="mt-3"><strong>Key pages:</strong>
+                                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> ·
+                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI</a> ·
+                                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic</a>.
+                                For Ollama, pull a model on the server (e.g. <code>ollama pull qwen3</code>) — no API key needed.
+                            </p>
+                            <p class="mt-3"><strong>Important:</strong> Your API key is like a password — keep it private and never share it. If it may be compromised, revoke it in the provider console and save a new one in ApplyPilot.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <div class="faq-question">
-                            Is the Gemini API free?
+                            How much does AI usage cost?
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            <p>A full job analysis costs well under $0.01. You would need to analyze hundreds of jobs per day to incur meaningful charges.</p>
+                            <p>A full job analysis typically costs well under $0.01 on cloud providers. You would need to analyze hundreds of jobs per day to incur meaningful charges. Local Ollama has no per-token API bill.</p>
                         </div>
                     </div>
 
@@ -489,7 +494,7 @@
                                 <li><strong>Encrypted at rest</strong> using Fernet symmetric encryption before being written to the database</li>
                                 <li><strong>Never returned</strong> in API responses — you can set a new key but cannot read back the stored one</li>
                                 <li><strong>Never logged</strong> in application logs or error traces</li>
-                                <li><strong>Used only</strong> to call Google's Gemini API on your behalf — we make no other use of it</li>
+                                <li><strong>Used only</strong> to call your chosen AI provider on your behalf — we make no other use of it</li>
                                 <li><strong>Deletable</strong> at any time from Settings → AI Setup</li>
                             </ul>
                         </div>
@@ -553,7 +558,7 @@
                             <p>You can configure max iterations (2–7) and the score threshold (7.0–9.5) before starting. When you click <strong>Start Optimization</strong>, the setup panel hides and progress appears. Results include the optimized CV, cover letter, gap analysis (skills that could not be fixed by rephrasing alone), and a full iteration history. Copy buttons and <strong>Download CV</strong> are available when complete.</p>
                             <p><strong>Download CV</strong> runs on the ApplyPilot server — you do not need LibreOffice on your computer. Docker deployments return a formatted <code>.odt</code> file (Gemini HTML → layout normalizer → LibreOffice). Local dev without LibreOffice returns a Word <code>.docx</code> with proper bullets and section layout. Rate limits and quota errors show as toasts, not as a markdown file download.</p>
                             <p>If the loop stops early due to API quota, the best CV reached is saved; a banner explains what happened and the cover letter section shows an empty state if it could not be generated.</p>
-                            <p>Requires a Gemini API key (Settings → AI Setup) unless your instance operator provides a server key. Rate limit: <strong>10 optimization runs per hour</strong>, <strong>10 CV downloads per hour</strong>.</p>
+                            <p>Requires an AI provider configured in Settings → AI Setup (or Vertex AI if your operator enabled it). Rate limit: <strong>10 optimization runs per hour</strong>, <strong>10 CV downloads per hour</strong>.</p>
                         </div>
                     </div>
 
@@ -713,12 +718,12 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            This means you haven't added a Gemini API key yet — it's required before you can run any analysis.
+                            This means you haven’t chosen a provider and added credentials yet — required before you can run any analysis (unless the operator enabled Vertex AI).
                             <ol>
                                 <li>Go to <strong>Settings → AI Setup</strong></li>
-                                <li>Paste your Gemini API key and click Save</li>
+                                <li>Select a provider, add your API key (or pick Ollama), and click Save</li>
                             </ol>
-                            <p>If you don't have a key yet, see the <a href="#api-key">API Key Setup</a> section above.</p>
+                            <p>If you don’t have a key yet, see the <a href="#api-key">API Key Setup</a> section above.</p>
                         </div>
                     </div>
 
@@ -743,7 +748,7 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            <p>ApplyPilot enforces per-user rate limits to prevent accidental runaway usage of your Gemini API quota. The error message will tell you exactly how long to wait before trying again.</p>
+                            <p>ApplyPilot enforces per-user rate limits to prevent accidental runaway usage of your AI provider quota. The error message will tell you exactly how long to wait before trying again.</p>
                             <ul>
                                 <li><strong>Job analyses:</strong> 10 per hour</li>
                                 <li><strong>Career Tools:</strong> 10 per hour</li>
@@ -834,7 +839,7 @@
                                 <li><strong>Account information</strong> — Email address and name (from registration or Google OAuth)</li>
                                 <li><strong>Profile data</strong> — Work experience, education, skills, and career preferences that you enter</li>
                                 <li><strong>Job application data</strong> — The job postings you analyze and the AI-generated content produced for them</li>
-                                <li><strong>API key</strong> — Stored encrypted; used only to call Google's Gemini API on your behalf</li>
+                                <li><strong>API key</strong> — Stored encrypted; used only to call your chosen AI provider on your behalf</li>
                             </ul>
                             <p>Your data is not sold, used for advertising, or shared with third parties beyond what's required to operate the application. Read the full <a href="/privacy">Privacy Policy</a> for details.</p>
                         </div>

@@ -661,7 +661,7 @@ cd e2e && npx playwright test tests/onboarding.spec.ts
 ### 7.2 Must-preserve behaviors
 
 - [ ] Settings auto-save pattern (no surprise full-page reloads)
-- [ ] BYOK / Vertex messaging: users bring Gemini API keys; Vertex is server-only
+- [ ] BYOK / Vertex messaging: users pick Gemini/OpenAI/Anthropic/Ollama in Settings → AI Setup; cloud providers need BYOK; Vertex is server-only
 - [ ] Career tools copy-button pattern and empty/error states
 - [ ] Interview prep generate/complete/mobile layouts
 - [ ] Array fields always treated as arrays in renderers (avoid `.map` on strings)
