@@ -18,7 +18,7 @@ from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from agents.hiring_manager import HiringManagerAgent, HiringManagerEvaluation
-from utils.llm_client import get_llm_client, get_gemini_client, is_llm_quota_or_rate_limit_exception  # test-patch alias
+from utils.llm_client import get_gemini_client, is_llm_quota_or_rate_limit_exception  # noqa: F401  # test-patch alias
 from utils.logging_config import get_structured_logger
 from utils.logging_config import sanitize_log_value
 
@@ -424,7 +424,7 @@ class CVOptimizerAgent:
             Revised CV as markdown text. Falls back to the original on error or invalid revision.
         """
         self._current_llm_provider = llm_provider
-        self.gemini_client = await get_llm_client()
+        self.gemini_client = await get_gemini_client()
         user_profile = user_profile or {}
 
         gaps_text = "\n".join(f"- {g}" for g in evaluation.gaps)
@@ -518,7 +518,7 @@ class CoverLetterFinalizer:
             Cover letter as plain text. Returns empty string on failure.
         """
         self._current_llm_provider = llm_provider
-        self.gemini_client = await get_llm_client()
+        self.gemini_client = await get_gemini_client()
 
         job_title = job_analysis.get("job_title") or "the advertised position"
         company_name = job_analysis.get("company_name") or "your organization"

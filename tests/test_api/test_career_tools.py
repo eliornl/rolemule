@@ -110,11 +110,24 @@ SALARY_RESULT = {
 # Patch helpers
 # ---------------------------------------------------------------------------
 
+def _ready_llm_ctx():
+    """Ready UserLLMContext for tests (Ollama — no BYOK key)."""
+    from utils.llm.availability import UserLLMContext
+
+    return UserLLMContext(
+        provider="ollama",
+        user_api_key=None,
+        preferred_model=None,
+        ready=True,
+    )
+
+
 def _api_key_patches():
-    """Context managers that make the server think an API key is available."""
+    """Context managers that make the server think LLM credentials are available."""
     return [
         patch("api.tools._check_api_key_available", AsyncMock(return_value=True)),
         patch("api.tools._get_user_api_key", AsyncMock(return_value=None)),
+        patch("api.tools._resolve_llm", AsyncMock(return_value=_ready_llm_ctx())),
         patch("api.tools.get_cached_tool_result", AsyncMock(return_value=None)),
         patch("api.tools.cache_tool_result", AsyncMock(return_value=None)),
     ]

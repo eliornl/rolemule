@@ -187,9 +187,11 @@ class TestExtensionAutofillMap:
 
     @pytest.mark.asyncio
     async def test_no_api_key_CFG_6001(self, authed_client):
-        with (
-            patch("api.extension_autofill._get_user_api_key", AsyncMock(return_value=None)),
-            patch("api.extension_autofill._server_has_llm", return_value=False),
+        from utils.error_responses import no_api_key_error
+
+        with patch(
+            "utils.llm_context.require_user_llm_context",
+            AsyncMock(side_effect=no_api_key_error()),
         ):
             resp = await authed_client.post(f"{BASE}/autofill/map", json=_single_field_body())
         assert resp.status_code == 422
@@ -198,10 +200,24 @@ class TestExtensionAutofillMap:
     @pytest.mark.asyncio
     async def test_user_not_found_404(self, authed_client):
         """JWT user id has no DB row — rare after account deletion."""
-        with (
-            patch("api.extension_autofill._get_user_api_key", AsyncMock(return_value=None)),
-            patch("api.extension_autofill._server_has_llm", return_value=True),
-            patch("api.extension_autofill.get_cached_tool_result", AsyncMock(return_value=None)),
+        from models.database import User
+        from sqlalchemy import delete
+        from tests.test_api.conftest import _NullSessionLocal
+
+        token = authed_client.headers["Authorization"].split(" ", 1)[1]
+        sec = get_security_settings()
+        payload = jwt.decode(
+            token,
+            sec.jwt_config["secret_key"],
+            algorithms=[sec.jwt_config["algorithm"]],
+        )
+        uid = uuid.UUID(payload["sub"])
+        async with _NullSessionLocal() as session:
+            await session.execute(delete(User).where(User.id == uid))
+            await session.commit()
+
+        with patch(
+            "api.extension_autofill.get_cached_tool_result", AsyncMock(return_value=None)
         ):
             resp = await authed_client.post(f"{BASE}/autofill/map", json=_single_field_body())
         assert resp.status_code == 404

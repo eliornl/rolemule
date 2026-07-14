@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
-from utils.llm_client import get_llm_client, get_gemini_client  # test-patch alias
+from utils.llm_client import get_gemini_client  # noqa: F401  # test-patch alias
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.logging_config import get_structured_logger
 
@@ -326,7 +326,7 @@ class InterviewPrepAgent:
         
         self._current_user_api_key = user_api_key
         self._current_llm_provider = llm_provider
-        self.gemini_client = await get_llm_client()
+        self.gemini_client = await get_gemini_client()
         
         try:
             # Format inputs for LLM

@@ -69,14 +69,11 @@ from models.database import (
     WorkflowSession,
     UserProfile,
     User,
-    UserWorkflowPreferences,
 )
-from utils.encryption import decrypt_api_key
 from utils.error_responses import (
     APIError,
     ErrorCode,
     internal_error,
-    no_api_key_error,
     not_found_error,
     rate_limit_error,
     unauthorized_error,
@@ -1242,9 +1239,9 @@ async def regenerate_cover_letter(
 
         # Build minimal workflow state for the cover letter agent
         from agents.cover_letter_writer import CoverLetterWriterAgent
-        from utils.llm_client import get_llm_client
+        from utils.llm_client import get_gemini_client
 
-        gemini_client = await get_llm_client()
+        gemini_client = await get_gemini_client()
         agent = CoverLetterWriterAgent(gemini_client)
 
         state = {
@@ -1352,9 +1349,9 @@ async def regenerate_resume(
         llm_provider = llm_ctx.provider
 
         from agents.resume_advisor import ResumeAdvisorAgent
-        from utils.llm_client import get_llm_client
+        from utils.llm_client import get_gemini_client
 
-        gemini_client = await get_llm_client()
+        gemini_client = await get_gemini_client()
         agent = ResumeAdvisorAgent(gemini_client)
 
         state = {
@@ -1464,10 +1461,10 @@ async def generate_interview_prep(
         user_api_key = llm_ctx.user_api_key
         llm_provider = llm_ctx.provider
 
-        from utils.llm_client import get_llm_client
+        from utils.llm_client import get_gemini_client
         import json
 
-        gemini_client = await get_llm_client()
+        gemini_client = await get_gemini_client()
 
         job = workflow_session.job_analysis or {}
         company = workflow_session.company_research or {}

@@ -22,11 +22,10 @@ from utils.cache import (
     get_cached_tool_result,
     cache_tool_result,
 )
-from utils.encryption import decrypt_api_key
 from utils.security import sanitize_text
 from utils.logging_config import sanitize_log_value
 from utils.error_responses import internal_error, no_api_key_error, rate_limit_error, validation_error
-from models.database import User, JobApplication
+from models.database import JobApplication
 from agents.thank_you_writer import ThankYouWriterAgent
 from agents.rejection_analyzer import RejectionAnalyzerAgent
 from agents.reference_request_writer import ReferenceRequestWriterAgent
@@ -392,7 +391,7 @@ async def generate_thank_you_note(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
-            llm_provider=llm_provider,
+                llm_provider=llm_provider,
             )
             await cache_tool_result("thank_you", sanitized_payload, result)
 
@@ -489,7 +488,7 @@ async def analyze_rejection(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
-            llm_provider=llm_provider,
+                llm_provider=llm_provider,
             )
             await cache_tool_result("rejection_analysis", sanitized_payload, result)
 
@@ -587,7 +586,7 @@ async def generate_reference_request(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
-            llm_provider=llm_provider,
+                llm_provider=llm_provider,
             )
             await cache_tool_result("reference_request", sanitized_payload, result)
 
@@ -933,7 +932,7 @@ async def compare_jobs(
                 user_context=user_context,
                 user_api_key=user_api_key,
                 model=preferred_model,
-            llm_provider=llm_provider,
+                llm_provider=llm_provider,
             )
             await cache_tool_result("job_comparison", sanitized_payload, result)
 
@@ -1072,7 +1071,7 @@ async def generate_followup(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
-            llm_provider=llm_provider,
+                llm_provider=llm_provider,
             )
             await cache_tool_result("followup", sanitized_payload, result)
 
@@ -1198,7 +1197,7 @@ async def get_salary_coaching(
                 **{k: v for k, v in sanitized_payload.items() if k != "tool"},
                 user_api_key=user_api_key,
                 model=preferred_model,
-            llm_provider=llm_provider,
+                llm_provider=llm_provider,
             )
             await cache_tool_result("salary_coach", sanitized_payload, result)
 

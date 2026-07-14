@@ -26,10 +26,9 @@ from utils.cache import (
     clear_interview_prep_generating,
     check_rate_limit,
 )
-from utils.encryption import decrypt_api_key
 from utils.security import sanitize_llm_output
-from utils.error_responses import APIError, ErrorCode, internal_error, no_api_key_error, not_found_error, rate_limit_error, validation_error
-from models.database import WorkflowSession, User
+from utils.error_responses import APIError, ErrorCode, internal_error, not_found_error, rate_limit_error, validation_error
+from models.database import WorkflowSession
 from agents.interview_prep import InterviewPrepAgent
 from api.websocket import (
     broadcast_interview_prep_started,

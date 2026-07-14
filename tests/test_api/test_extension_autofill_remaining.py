@@ -46,6 +46,15 @@ async def _seed_user_with_profile() -> tuple[uuid.UUID, str]:
                 profile_completed=True,
             )
         )
+        from models.database import UserWorkflowPreferences
+
+        db.add(
+            UserWorkflowPreferences(
+                id=uuid.uuid4(),
+                user_id=uid,
+                preferred_provider="ollama",
+            )
+        )
         db.add(
             UserProfile(
                 id=uuid.uuid4(),
@@ -74,27 +83,22 @@ async def _cleanup(uid: uuid.UUID) -> None:
 class TestExtensionAutofillDirectHandlers:
     @pytest.mark.asyncio
     async def test_get_user_api_key_decrypts(self) -> None:
+        from utils.llm.availability import UserLLMContext
+
         uid = uuid.uuid4()
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key="sk-test",
+            preferred_model=None,
+            ready=True,
+        )
         async with _NullSessionLocal() as db:
-            db.add(
-                User(
-                    id=uid,
-                    email=f"k_{uid.hex[:8]}@example.com",
-                    password_hash="$2b$12$placeholder",
-                    auth_method="local",
-                    full_name="Key User",
-                    gemini_api_key_encrypted="enc",
-                )
-            )
-            await db.commit()
-            with patch("api.extension_autofill.decrypt_api_key", return_value="sk-test"):
+            with patch(
+                "utils.llm_context.require_user_llm_context",
+                AsyncMock(return_value=(MagicMock(), ctx, None)),
+            ):
                 key = await _get_user_api_key(db, uid)
         assert key == "sk-test"
-        async with _NullSessionLocal() as db:
-            from sqlalchemy import delete
-
-            await db.execute(delete(User).where(User.id == uid))
-            await db.commit()
 
     def test_sanitize_field_dict_all_optional_fields(self) -> None:
         field = AutofillFieldIn(

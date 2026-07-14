@@ -80,3 +80,45 @@ async def test_openai_health_check_no_key() -> None:
     ):
         provider = OpenAIProvider()
         assert await provider.health_check() is True
+
+
+@pytest.mark.asyncio
+async def test_openai_transport_error_raises() -> None:
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(side_effect=RuntimeError("network down"))
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        provider = OpenAIProvider()
+        with pytest.raises(LLMError, match="network down"):
+            await provider.generate(prompt="hi")
+
+
+@pytest.mark.asyncio
+async def test_openai_health_check_paths() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        assert await OpenAIProvider().health_check() is True
+
+    mock_response.status_code = 429
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        assert await OpenAIProvider().health_check() is True
+
+    mock_client.get = AsyncMock(side_effect=RuntimeError("down"))
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        assert await OpenAIProvider().health_check() is False

@@ -100,9 +100,14 @@ class TestStartCvOptimization:
 
     @pytest.mark.asyncio
     async def test_no_byok_key_returns_422_cfg6001(self, authed_client):
+        from utils.error_responses import no_api_key_error
+
         with (
             patch("api.cv_optimizer.check_rate_limit", AsyncMock(return_value=(True, 60))),
-            patch("api.cv_optimizer._get_user_api_key", AsyncMock(return_value=None)),
+            patch(
+                "utils.llm_context.require_user_llm_context",
+                AsyncMock(side_effect=no_api_key_error()),
+            ),
         ):
             resp = await authed_client.post(f"{BASE}/{SESSION_ID}/start")
         assert resp.status_code == 422

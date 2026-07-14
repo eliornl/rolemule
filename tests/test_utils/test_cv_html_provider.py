@@ -17,7 +17,7 @@ async def test_cv_html_generate_passes_provider() -> None:
         }
     )
     with patch(
-        "utils.llm_client.get_llm_client", AsyncMock(return_value=mock_client)
+        "utils.llm_client.get_gemini_client", AsyncMock(return_value=mock_client)
     ), patch(
         "api.cv_optimizer.normalize_cv_export_html",
         side_effect=lambda html: html,

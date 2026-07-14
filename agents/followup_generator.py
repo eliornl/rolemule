@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-from utils.llm_client import get_llm_client, get_gemini_client  # test-patch alias
+from utils.llm_client import get_gemini_client  # noqa: F401  # test-patch alias
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.logging_config import get_structured_logger, sanitize_log_value
 
@@ -196,7 +196,7 @@ class FollowUpGeneratorAgent:
         
         try:
             # Initialize Gemini client
-            self.gemini_client = await get_llm_client()
+            self.gemini_client = await get_gemini_client()
             
             # Format inputs
             contact_role_str = f"({contact_role})" if contact_role else ""

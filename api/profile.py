@@ -35,11 +35,10 @@ from utils.cache import (
 )
 from utils.encryption import (
     encrypt_api_key,
-    decrypt_api_key,
 )
 from utils.gemini_api_key_format import validate_gemini_api_key
 from utils.logging_config import get_structured_logger, mask_email, sanitize_log_value
-from utils.error_responses import APIError, ErrorCode, internal_error, no_api_key_error, not_found_error, not_implemented_error, rate_limit_error, validation_error
+from utils.error_responses import APIError, ErrorCode, internal_error, not_found_error, not_implemented_error, rate_limit_error, validation_error
 from models.database import User, UserProfile as UserProfileModel, JobApplication, WorkflowSession, UserWorkflowPreferences, UserResumeAsset
 
 logger = logging.getLogger(__name__)
@@ -2234,7 +2233,6 @@ _PREFERENCE_DEFAULTS: Dict[str, Any] = {
 _VALID_COVER_LETTER_TONES = {"professional", "conversational", "enthusiastic"}
 _VALID_RESUME_LENGTHS = {"concise", "detailed"}
 # Kept for backward-compatible imports/tests; prefer utils.llm.models
-from utils.llm.models import VALID_GEMINI_MODELS as _VALID_MODELS  # noqa: E402
 
 
 class ApplicationPreferencesRequest(BaseModel):

@@ -174,7 +174,7 @@ def test_profile_api_key_status_server_key(invoke, write_credentials) -> None:
     with patch("cli.commands.profile.require_client", return_value=mock_client):
         result = invoke("profile", "api-key", "status")
     assert result.exit_code == 0
-    assert "server" in result.output.lower()
+    assert "vertex" in result.output.lower()
 
 
 @pytest.mark.parametrize("tool", ["thank-you", "followup", "salary-coach", "rejection-analysis", "reference-request", "job-comparison"])

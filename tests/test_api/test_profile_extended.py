@@ -15,10 +15,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import AsyncClient
 from passlib.context import CryptContext
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 
 from main import app
-from models.database import AuthMethod, JobApplication, User, UserProfile, UserResumeAsset, WorkflowSession
+from models.database import AuthMethod, JobApplication, User, UserProfile, UserResumeAsset, UserWorkflowPreferences, WorkflowSession
 from tests.test_api.conftest import _NullSessionLocal, _make_test_jwt
 from tests.gemini_test_keys import DUMMY_GEMINI_API_KEY
 from utils.auth import get_current_user, get_current_user_with_complete_profile
@@ -92,6 +92,13 @@ async def _create_user_with_password(
                 profile_completed=False,
                 profile_completion_percentage=0,
                 email_verified=True,
+            )
+        )
+        session.add(
+            UserWorkflowPreferences(
+                id=uuid.uuid4(),
+                user_id=uid,
+                preferred_provider="ollama",
             )
         )
         await session.commit()
@@ -307,12 +314,15 @@ class TestResumeExtended:
         uid, email = await _create_user_with_password()
         client = await _client_for(uid, email)
         try:
-            with patch(
-                "config.settings.get_settings",
-                return_value=MagicMock(use_vertex_ai=False, gemini_api_key=None),
-            ):
-                files = {"resume": ("resume.txt", b"hello world resume text", "text/plain")}
-                resp = await client.post(f"{BASE}/parse-resume", files=files)
+            async with _NullSessionLocal() as session:
+                await session.execute(
+                    update(UserWorkflowPreferences)
+                    .where(UserWorkflowPreferences.user_id == uid)
+                    .values(preferred_provider=None)
+                )
+                await session.commit()
+            files = {"resume": ("resume.txt", b"hello world resume text", "text/plain")}
+            resp = await client.post(f"{BASE}/parse-resume", files=files)
             assert resp.status_code == 422
             assert resp.json().get("error_code") == "CFG_6001"
         finally:
@@ -466,11 +476,14 @@ class TestApiKeyExtended:
         uid, email = await _create_user_with_password()
         client = await _client_for(uid, email)
         try:
-            with patch(
-                "config.settings.get_settings",
-                return_value=MagicMock(use_vertex_ai=False, gemini_api_key=None),
-            ):
-                status_resp = await client.get(f"{BASE}/api-key/status")
+            async with _NullSessionLocal() as session:
+                await session.execute(
+                    update(UserWorkflowPreferences)
+                    .where(UserWorkflowPreferences.user_id == uid)
+                    .values(preferred_provider=None)
+                )
+                await session.commit()
+            status_resp = await client.get(f"{BASE}/api-key/status")
             assert status_resp.status_code == 200
             status = status_resp.json()
             assert status["has_credentials"] is False

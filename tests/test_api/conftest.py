@@ -36,7 +36,7 @@ from main import app
 from config.settings import get_security_settings, get_settings
 from utils.cache import RateLimitResult
 from utils.database import get_database
-from models.database import User, AuthMethod
+from models.database import User, AuthMethod, UserWorkflowPreferences
 
 
 # ---------------------------------------------------------------------------
@@ -100,20 +100,62 @@ async def api_client() -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
 
+async def _seed_llm_ready_user(
+    uid: uuid.UUID,
+    email: str,
+    *,
+    full_name: str,
+    profile_completed: bool,
+    profile_completion_percentage: int,
+) -> None:
+    """Insert User + Ollama prefs so LLM gates pass without BYOK."""
+    async with _NullSessionLocal() as session:
+        session.add(
+            User(
+                id=uid,
+                email=email,
+                password_hash="$2b$12$placeholder",
+                auth_method=AuthMethod.LOCAL.value,
+                full_name=full_name,
+                profile_completed=profile_completed,
+                profile_completion_percentage=profile_completion_percentage,
+            )
+        )
+        session.add(
+            UserWorkflowPreferences(
+                id=uuid.uuid4(),
+                user_id=uid,
+                preferred_provider="ollama",
+            )
+        )
+        await session.commit()
+
+
 @pytest_asyncio.fixture
 async def authed_client() -> AsyncGenerator[AsyncClient, None]:
     """
     AsyncClient that bypasses authentication via FastAPI dependency_overrides.
-    A random user dict is returned by get_current_user — no real DB row needed.
-    Suitable for tests that check auth guards, input validation, and tool output
-    but do NOT need the user to exist in the users table.
+
+    Creates a real User row plus ``preferred_provider=ollama`` so LLM-gated
+    endpoints (tools, CV optimizer, autofill, workflow) pass CFG_6001 without
+    a BYOK key. Tests that need CFG_6001 should patch the gate helper or clear
+    prefs; tests that need a missing user should delete the row.
     """
     from utils.auth import get_current_user, get_current_user_with_complete_profile
 
-    uid = str(uuid.uuid4())
+    uid = uuid.uuid4()
+    email = f"mock_{uid.hex[:8]}@example.com"
+    await _seed_llm_ready_user(
+        uid,
+        email,
+        full_name="Mock Test User",
+        profile_completed=True,
+        profile_completion_percentage=100,
+    )
+
     mock_user = {
-        "id": uid,
-        "email": f"mock_{uid[:8]}@example.com",
+        "id": str(uid),
+        "email": email,
         "full_name": "Mock Test User",
         "auth_method": "local",
         "profile_completed": True,
@@ -131,12 +173,15 @@ async def authed_client() -> AsyncGenerator[AsyncClient, None]:
         async with AsyncClient(
             transport=transport,
             base_url="http://localhost",
-            headers={"Authorization": f"Bearer {_make_test_jwt(uid, mock_user['email'])}"},
+            headers={"Authorization": f"Bearer {_make_test_jwt(str(uid), email)}"},
         ) as ac:
             yield ac
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         app.dependency_overrides.pop(get_current_user_with_complete_profile, None)
+        async with _NullSessionLocal() as session:
+            await session.execute(delete(User).where(User.id == uid))
+            await session.commit()
 
 
 @pytest_asyncio.fixture
@@ -145,25 +190,20 @@ async def authed_client_with_user() -> AsyncGenerator[AsyncClient, None]:
     AsyncClient backed by a real User row in the test database.
     Use this for endpoints that INSERT or SELECT from user-owned rows
     (profile, workflow history, etc.) where FK constraints must be satisfied.
+
+    Seeds ``preferred_provider=ollama`` so LLM gates pass without BYOK.
     """
     from utils.auth import get_current_user, get_current_user_with_complete_profile
 
     uid = uuid.uuid4()
     email = f"realuser_{uid.hex[:8]}@example.com"
-
-    # Create user in DB
-    async with _NullSessionLocal() as session:
-        user = User(
-            id=uid,
-            email=email,
-            password_hash="$2b$12$placeholder",
-            auth_method=AuthMethod.LOCAL.value,
-            full_name="Real Test User",
-            profile_completed=False,
-            profile_completion_percentage=0,
-        )
-        session.add(user)
-        await session.commit()
+    await _seed_llm_ready_user(
+        uid,
+        email,
+        full_name="Real Test User",
+        profile_completed=False,
+        profile_completion_percentage=0,
+    )
 
     now = datetime.now(timezone.utc)
     user_dict = {
@@ -199,7 +239,7 @@ async def authed_client_with_user() -> AsyncGenerator[AsyncClient, None]:
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         app.dependency_overrides.pop(get_current_user_with_complete_profile, None)
-        # Cleanup: delete the real user
+        # Cleanup: delete the real user (prefs cascade)
         async with _NullSessionLocal() as session:
             await session.execute(delete(User).where(User.id == uid))
             await session.commit()

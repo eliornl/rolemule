@@ -71,7 +71,7 @@ from agents.company_research import CompanyResearchAgent
 from agents.profile_matching import ProfileMatchingAgent
 from agents.resume_advisor import ResumeAdvisorAgent
 from agents.cover_letter_writer import CoverLetterWriterAgent
-from utils.llm_client import get_llm_client, get_gemini_client, user_facing_message_from_llm_exception  # test-patch alias
+from utils.llm_client import get_gemini_client, user_facing_message_from_llm_exception  # noqa: F401  # test-patch alias
 from utils.redis_client import get_redis_client
 from utils.security import (
     sanitize_job_analysis,
@@ -202,7 +202,7 @@ class JobApplicationWorkflow:
 
         # Initialize critical clients - fail fast if they don't work
         try:
-            gemini_client = await get_llm_client()
+            gemini_client = await get_gemini_client()
             logger.info("Gemini client initialized successfully")
         except Exception as e:
             logger.error('Failed to initialize Gemini client: %s', sanitize_log_value(e), exc_info=True)

@@ -36,45 +36,59 @@ class TestToolsHelpers:
 
     @pytest.mark.asyncio
     async def test_get_user_api_key_decrypts(self) -> None:
+        from utils.llm.availability import UserLLMContext
+
         uid = uuid.uuid4()
-        user = MagicMock()
-        user.gemini_api_key_encrypted = b"enc"
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = user
         mock_db = AsyncMock()
-        mock_db.execute = AsyncMock(return_value=mock_result)
-        with patch("api.tools.decrypt_api_key", return_value="sk-test"):
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key="sk-test",
+            preferred_model=None,
+            ready=True,
+        )
+        with patch("api.tools._resolve_llm", AsyncMock(return_value=ctx)):
             key = await _get_user_api_key(mock_db, uid)
         assert key == "sk-test"
 
     @pytest.mark.asyncio
     async def test_get_user_api_key_decrypt_failure(self) -> None:
+        from utils.error_responses import no_api_key_error
+
         uid = uuid.uuid4()
-        user = MagicMock()
-        user.gemini_api_key_encrypted = b"enc"
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = user
         mock_db = AsyncMock()
-        mock_db.execute = AsyncMock(return_value=mock_result)
-        with patch("api.tools.decrypt_api_key", side_effect=RuntimeError("bad key")):
+        with patch(
+            "api.tools._resolve_llm",
+            AsyncMock(side_effect=no_api_key_error()),
+        ):
             assert await _get_user_api_key(mock_db, uid) is None
 
     @pytest.mark.asyncio
     async def test_check_api_key_available_user_key(self) -> None:
+        from utils.llm.availability import UserLLMContext
+
         mock_db = AsyncMock()
-        with patch("api.tools._get_user_api_key", AsyncMock(return_value="user-key")):
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key="user-key",
+            preferred_model=None,
+            ready=True,
+        )
+        with patch("api.tools._resolve_llm", AsyncMock(return_value=ctx)):
             assert await _check_api_key_available(mock_db, uuid.uuid4()) is True
 
     @pytest.mark.asyncio
     async def test_check_api_key_available_server_vertex(self) -> None:
+        from utils.llm.availability import UserLLMContext
+
         mock_db = AsyncMock()
-        settings = MagicMock()
-        settings.gemini_api_key = None
-        settings.use_vertex_ai = True
-        with (
-            patch("api.tools._get_user_api_key", AsyncMock(return_value=None)),
-            patch("api.tools.settings", settings),
-        ):
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key=None,
+            preferred_model=None,
+            ready=True,
+            reason=None,
+        )
+        with patch("api.tools._resolve_llm", AsyncMock(return_value=ctx)):
             assert await _check_api_key_available(mock_db, uuid.uuid4()) is True
 
     @pytest.mark.asyncio
@@ -119,7 +133,7 @@ class TestToolsEndpointCoverage:
                 },
             )
         assert resp.status_code == 422
-        assert resp.json().get("error_code") == "VAL_2001"
+        assert resp.json().get("error_code") == "CFG_6001"
 
     @pytest.mark.asyncio
     async def test_job_comparison_with_user_context(self, authed_client) -> None:
@@ -129,6 +143,7 @@ class TestToolsEndpointCoverage:
             patches[1],
             patches[2],
             patches[3],
+            patches[4],
             patch("agents.job_comparison.JobComparisonAgent.compare", AsyncMock(return_value=JOB_COMPARISON_RESULT)),
         ):
             resp = await authed_client.post(

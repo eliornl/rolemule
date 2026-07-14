@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from utils.llm_client import get_llm_client, get_gemini_client  # test-patch alias
+from utils.llm_client import get_gemini_client  # noqa: F401  # test-patch alias
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.logging_config import get_structured_logger
 
@@ -162,7 +162,7 @@ class HiringManagerAgent:
             Exception: On LLM failure after retries
         """
         self._current_llm_provider = llm_provider
-        self.gemini_client = await get_llm_client()
+        self.gemini_client = await get_gemini_client()
 
         requirements_summary = self._format_requirements(job_analysis)
         previous_context = self._format_previous_context(previous_score)

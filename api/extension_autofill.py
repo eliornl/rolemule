@@ -47,16 +47,18 @@ from utils.cache import (
     get_cached_tool_result,
 )
 from utils.database import get_database
-from utils.encryption import decrypt_api_key
 from utils.error_responses import (
     ErrorCode,
     external_service_error,
     internal_error,
-    no_api_key_error,
     not_found_error,
     rate_limit_error,
 )
-from utils.llm_client import GeminiError, get_llm_client, get_gemini_client, user_facing_message_from_llm_exception
+from utils.llm_client import (
+    GeminiError,
+    get_gemini_client,
+    user_facing_message_from_llm_exception,
+)
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.security import sanitize_text
 from utils.logging_config import sanitize_log_value
@@ -467,7 +469,7 @@ async def map_form_fields_to_profile(
     user_prompt = _build_user_prompt(fields_compact, profile_bundle, extras_clean, page_url_clean)
 
     try:
-        client = await get_llm_client()
+        client = await get_gemini_client()
         # Tool-level Redis cache (get_cached_tool_result) is sufficient; avoid a second
         # LLM-response cache layer that can drift from this endpoint's validation rules.
         gen = await client.generate(

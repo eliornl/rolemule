@@ -62,3 +62,62 @@ async def test_openai_grounding_uses_responses_api() -> None:
     assert url.endswith("/v1/responses")
     assert payload["tools"] == [{"type": "web_search"}]
     assert call_kwargs[1]["headers"]["Authorization"] == "Bearer sk-user-key-1234567890"
+
+
+@pytest.mark.asyncio
+async def test_openai_grounding_http_error() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.text = "fail"
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        from utils.llm.errors import LLMError
+
+        provider = OpenAIProvider()
+        with pytest.raises(LLMError, match="Responses failed"):
+            await provider.generate(prompt="hi", use_google_search_grounding=True)
+
+
+@pytest.mark.asyncio
+async def test_openai_grounding_empty_text() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json = MagicMock(return_value={"output_text": ""})
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        from utils.llm.errors import LLMError
+
+        provider = OpenAIProvider()
+        with pytest.raises(LLMError, match="empty"):
+            await provider.generate(prompt="hi", use_google_search_grounding=True)
+
+
+@pytest.mark.asyncio
+async def test_openai_grounding_transport_error() -> None:
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(side_effect=RuntimeError("net"))
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.openai.get_settings", return_value=_settings()
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        from utils.llm.errors import LLMError
+
+        provider = OpenAIProvider()
+        with pytest.raises(LLMError, match="net"):
+            await provider.generate(prompt="hi", use_google_search_grounding=True)

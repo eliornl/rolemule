@@ -62,3 +62,80 @@ async def test_anthropic_health_check_no_key() -> None:
     ):
         provider = AnthropicProvider()
         assert await provider.health_check() is True
+
+
+@pytest.mark.asyncio
+async def test_anthropic_http_error_raises() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.text = "boom"
+
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.anthropic.get_settings", return_value=_settings()
+    ), patch(
+        "utils.llm.providers.anthropic.httpx.AsyncClient", return_value=mock_client
+    ):
+        provider = AnthropicProvider()
+        with pytest.raises(LLMError, match="500"):
+            await provider.generate(prompt="hi")
+
+
+@pytest.mark.asyncio
+async def test_anthropic_transport_error_raises() -> None:
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(side_effect=RuntimeError("network down"))
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.anthropic.get_settings", return_value=_settings()
+    ), patch(
+        "utils.llm.providers.anthropic.httpx.AsyncClient", return_value=mock_client
+    ):
+        provider = AnthropicProvider()
+        with pytest.raises(LLMError, match="network down"):
+            await provider.generate(prompt="hi")
+
+
+@pytest.mark.asyncio
+async def test_anthropic_health_check_ok_and_429() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.anthropic.get_settings", return_value=_settings()
+    ), patch(
+        "utils.llm.providers.anthropic.httpx.AsyncClient", return_value=mock_client
+    ):
+        assert await AnthropicProvider().health_check() is True
+
+    mock_response.status_code = 429
+    with patch(
+        "utils.llm.providers.anthropic.get_settings", return_value=_settings()
+    ), patch(
+        "utils.llm.providers.anthropic.httpx.AsyncClient", return_value=mock_client
+    ):
+        assert await AnthropicProvider().health_check() is True
+
+
+@pytest.mark.asyncio
+async def test_anthropic_health_check_exception() -> None:
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(side_effect=RuntimeError("down"))
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    with patch(
+        "utils.llm.providers.anthropic.get_settings", return_value=_settings()
+    ), patch(
+        "utils.llm.providers.anthropic.httpx.AsyncClient", return_value=mock_client
+    ):
+        assert await AnthropicProvider().health_check() is False

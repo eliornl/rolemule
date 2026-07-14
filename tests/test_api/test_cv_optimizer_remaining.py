@@ -51,6 +51,15 @@ async def _seed_user_and_session(
                 full_name="CVO User",
             )
         )
+        from models.database import UserWorkflowPreferences
+
+        db.add(
+            UserWorkflowPreferences(
+                id=uuid.uuid4(),
+                user_id=uid,
+                preferred_provider="ollama",
+            )
+        )
         db.add(
             WorkflowSession(
                 id=uuid.uuid4(),

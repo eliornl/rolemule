@@ -20,8 +20,11 @@ export interface OnboardingCompletionRecord {
 
 export interface ApiKeyStatusResponse {
   has_user_key?: boolean;
+  has_api_key?: boolean;
+  has_credentials?: boolean;
   server_has_key?: boolean;
   use_vertex_ai?: boolean;
+  preferred_provider?: string | null;
 }
 
 export interface ApplicationStatsOverview {

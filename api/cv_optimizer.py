@@ -39,7 +39,7 @@ from api.websocket import (
     broadcast_cv_optimization_started,
 )
 from config.settings import get_settings
-from models.database import WorkflowSession, User, WorkflowStatusEnum
+from models.database import WorkflowSession, WorkflowStatusEnum
 from utils.auth import get_current_user
 from utils.llm_client import (
     is_llm_quota_or_rate_limit_exception,
@@ -56,7 +56,6 @@ from utils.cache import (
 )
 from utils.database import get_database, get_session
 from utils.logging_config import sanitize_log_value
-from utils.encryption import decrypt_api_key
 from utils.security import sanitize_llm_output
 from utils.cv_html_normalize import normalize_cv_export_html
 from utils.cv_docx_export import markdown_cv_to_docx_bytes
@@ -67,7 +66,6 @@ from utils.error_responses import (
     ErrorCode,
     internal_error,
     not_found_error,
-    no_api_key_error,
     rate_limit_error,
     validation_error,
 )
@@ -225,9 +223,9 @@ async def _generate_cv_html_from_markdown(
     Raises:
         ValueError: When generation is blocked or HTML is unusable
     """
-    from utils.llm_client import get_llm_client
+    from utils.llm_client import get_gemini_client
 
-    gemini_client = await get_llm_client()
+    gemini_client = await get_gemini_client()
     prompt = CV_TO_HTML_PROMPT_TEMPLATE.format(cv_markdown=cv_markdown[:12000])
 
     response = await gemini_client.generate(

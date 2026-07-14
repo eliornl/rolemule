@@ -18,6 +18,17 @@ from tests.test_api.test_career_tools import (
     SALARY_RESULT,
 )
 from utils.error_responses import APIError
+from utils.llm.availability import UserLLMContext
+
+
+def _ready_llm_ctx():
+    return UserLLMContext(
+        provider="ollama",
+        user_api_key=None,
+        preferred_model=None,
+        ready=True,
+    )
+
 
 
 def _user(uid: uuid.UUID, email: str) -> dict:
@@ -55,6 +66,8 @@ class TestToolsDirectHandlers:
                 patch("api.tools._check_rate_limit_and_get_headers", AsyncMock(return_value={})),
                 patch("api.tools._check_api_key_available", AsyncMock(return_value=True)),
                 patch("api.tools._get_user_api_key", AsyncMock(return_value=None)),
+                patch("api.tools._resolve_llm", AsyncMock(return_value=_ready_llm_ctx())),
+                patch("utils.llm_preferences.load_preferred_model", AsyncMock(return_value=None)),
                 patch("api.tools.get_cached_tool_result", AsyncMock(return_value=None)),
                 patch("api.tools.cache_tool_result", AsyncMock(return_value=None)),
                 patch("api.tools._get_user_uuid", return_value=uid),
@@ -116,6 +129,8 @@ class TestToolsDirectHandlers:
                     patch("api.tools._check_rate_limit_and_get_headers", AsyncMock(return_value={})),
                     patch("api.tools._check_api_key_available", AsyncMock(return_value=True)),
                     patch("api.tools._get_user_api_key", AsyncMock(return_value=None)),
+                patch("api.tools._resolve_llm", AsyncMock(return_value=_ready_llm_ctx())),
+                patch("utils.llm_preferences.load_preferred_model", AsyncMock(return_value=None)),
                     patch("api.tools.get_cached_tool_result", AsyncMock(return_value=None)),
                     patch("api.tools.cache_tool_result", AsyncMock(return_value=None)),
                     patch(
@@ -157,6 +172,8 @@ class TestToolsDirectHandlers:
             patch("api.tools._check_rate_limit_and_get_headers", AsyncMock(return_value={})),
             patch("api.tools._check_api_key_available", AsyncMock(return_value=True)),
             patch("api.tools._get_user_api_key", AsyncMock(return_value=None)),
+                patch("api.tools._resolve_llm", AsyncMock(return_value=_ready_llm_ctx())),
+                patch("utils.llm_preferences.load_preferred_model", AsyncMock(return_value=None)),
             patch("api.tools.get_cached_tool_result", AsyncMock(return_value=SALARY_RESULT)),
             patch("api.tools._get_user_uuid", return_value=uid),
         ):
@@ -185,6 +202,8 @@ class TestToolsDirectHandlers:
             patch("api.tools._check_rate_limit_and_get_headers", AsyncMock(return_value={})),
             patch("api.tools._check_api_key_available", AsyncMock(return_value=True)),
             patch("api.tools._get_user_api_key", AsyncMock(return_value=None)),
+                patch("api.tools._resolve_llm", AsyncMock(return_value=_ready_llm_ctx())),
+                patch("utils.llm_preferences.load_preferred_model", AsyncMock(return_value=None)),
             patch("api.tools.get_cached_tool_result", AsyncMock(return_value=None)),
             patch("api.tools._get_user_uuid", return_value=uid),
             patch(

@@ -46,6 +46,7 @@ from models.database import (
     JobApplication,
     User,
     UserProfile,
+    UserWorkflowPreferences,
     WorkflowSession,
 )
 from tests.test_api.conftest import _NullSessionLocal
@@ -89,7 +90,29 @@ async def _ensure_user(uid: uuid.UUID, email: Optional[str] = None) -> None:
                     profile_completion_percentage=100,
                 )
             )
-            await session.commit()
+        prefs = await session.execute(
+            select(UserWorkflowPreferences).where(UserWorkflowPreferences.user_id == uid)
+        )
+        if prefs.scalar_one_or_none() is None:
+            session.add(
+                UserWorkflowPreferences(
+                    id=uuid.uuid4(),
+                    user_id=uid,
+                    preferred_provider="ollama",
+                )
+            )
+        await session.commit()
+
+
+async def _clear_llm_prefs(uid: uuid.UUID) -> None:
+    """Clear preferred_provider so LLM gates raise CFG_6001."""
+    async with _NullSessionLocal() as session:
+        await session.execute(
+            update(UserWorkflowPreferences)
+            .where(UserWorkflowPreferences.user_id == uid)
+            .values(preferred_provider=None)
+        )
+        await session.commit()
 
 
 async def _setup_complete_user(
@@ -412,6 +435,7 @@ class TestWorkflowFileUploadStart:
         )
         uid = uuid.UUID(payload["sub"])
         await _setup_complete_user(uid)
+        await _clear_llm_prefs(uid)
         await _override_complete_user(app, uid, payload.get("email", "wf@example.com"))
 
         with patch("utils.redis_client.get_redis_client", AsyncMock(return_value=None)), \

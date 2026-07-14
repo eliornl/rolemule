@@ -397,7 +397,7 @@ class TestStartWorkflowDirect:
             await db.commit()
         with patch("utils.redis_client.get_redis_client", AsyncMock(return_value=None)), \
              patch("config.settings.get_settings", return_value=_mock_settings()), \
-             patch("api.workflow.decrypt_api_key", side_effect=ValueError("bad key")), \
+             patch("utils.encryption.decrypt_api_key", side_effect=ValueError("bad key")), \
              patch("api.workflow._execute_workflow_background", new_callable=AsyncMock):
             async with _NullSessionLocal() as db:
                 result = await start_workflow(
@@ -420,14 +420,26 @@ class TestStartWorkflowDirect:
     async def test_start_with_workflow_preferences(self, wf_user_bundle):
         uid, email, user_dict = wf_user_bundle
         async with _NullSessionLocal() as db:
-            db.add(
-                UserWorkflowPreferences(
-                    id=uuid.uuid4(),
-                    user_id=uid,
-                    workflow_gate_threshold=0.6,
-                    auto_generate_documents=True,
+            existing = await db.execute(
+                select(UserWorkflowPreferences).where(
+                    UserWorkflowPreferences.user_id == uid
                 )
             )
+            prefs = existing.scalar_one_or_none()
+            if prefs is None:
+                db.add(
+                    UserWorkflowPreferences(
+                        id=uuid.uuid4(),
+                        user_id=uid,
+                        workflow_gate_threshold=0.6,
+                        auto_generate_documents=True,
+                        preferred_provider="ollama",
+                    )
+                )
+            else:
+                prefs.workflow_gate_threshold = 0.6
+                prefs.auto_generate_documents = True
+                prefs.preferred_provider = "ollama"
             await db.commit()
         with patch("utils.redis_client.get_redis_client", AsyncMock(return_value=None)), \
              patch("config.settings.get_settings", return_value=_mock_settings()), \
@@ -978,7 +990,7 @@ class TestBackgroundTasksCoverage:
         mock_wf = MagicMock()
         mock_wf.continue_workflow_after_gate = AsyncMock(return_value=final)
         with patch("api.workflow.get_session", self._session_ctx()), \
-             patch("api.workflow.decrypt_api_key", side_effect=ValueError("bad")), \
+             patch("utils.encryption.decrypt_api_key", side_effect=ValueError("bad")), \
              patch("api.workflow.JobApplicationWorkflow", return_value=mock_wf), \
              patch("api.workflow.broadcast_workflow_resumed", AsyncMock()), \
              patch("api.workflow._update_workflow_session_with_state", AsyncMock()), \
@@ -1247,6 +1259,9 @@ class TestWorkflowFinalLineCoverage:
     @pytest.mark.asyncio
     async def test_start_no_api_key(self, wf_user_bundle):
         uid, _, user_dict = wf_user_bundle
+        from tests.test_api.test_workflow_extended import _clear_llm_prefs
+
+        await _clear_llm_prefs(uid)
         with patch("utils.redis_client.get_redis_client", AsyncMock(return_value=None)), \
              patch(
                  "config.settings.get_settings",
@@ -2444,7 +2459,7 @@ class TestWorkflowBranchCompletion:
                 yield s
 
         with patch("api.workflow.get_session", _ctx), \
-             patch("api.workflow.decrypt_api_key", side_effect=ValueError("bad")), \
+             patch("utils.encryption.decrypt_api_key", side_effect=ValueError("bad")), \
              patch("api.workflow.JobApplicationWorkflow", return_value=mock_wf), \
              patch("api.workflow.broadcast_document_generation_started", AsyncMock()), \
              patch("api.workflow._update_workflow_session_with_state", AsyncMock(side_effect=RuntimeError("s"))), \
