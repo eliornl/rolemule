@@ -18,6 +18,12 @@ import pytest
 import httpx
 from typing import Dict, Any, Optional
 
+from tests.live_server_helpers import (
+    ensure_llm_ready,
+    skip_unless_llm_ok,
+    skip_unless_real_gemini,
+)
+
 
 # =============================================================================
 # CONFIGURATION
@@ -126,6 +132,7 @@ VALID_CAREER_PREFERENCES = {
     "work_arrangements": ["Remote", "Hybrid"],
     "willing_to_relocate": False,
     "requires_visa_sponsorship": False,
+    "work_authorization": "has_work_authorization",
     "has_security_clearance": False,
     "max_travel_preference": "25",
 }
@@ -159,7 +166,7 @@ def authenticated_user_with_profile(http_client: httpx.Client, unique_email: str
             "email": unique_email,
             "password": "SecurePass123!",
             "confirm_password": "SecurePass123!",
-            "full_name": "E2E Test User",
+            "full_name": "End to End Test User",
         },
     )
     assert register_response.status_code == 200, f"Registration failed: {register_response.text}"
@@ -182,6 +189,13 @@ def authenticated_user_with_profile(http_client: httpx.Client, unique_email: str
         json=VALID_WORK_EXPERIENCE,
     )
     assert work_exp_response.status_code == 200, f"Work experience failed: {work_exp_response.text}"
+
+    education_response = http_client.put(
+        "/api/v1/profile/education",
+        headers=headers,
+        json={"education": []},
+    )
+    assert education_response.status_code == 200, f"Education failed: {education_response.text}"
     
     # Complete profile - Skills
     skills_response = http_client.put(
@@ -198,15 +212,20 @@ def authenticated_user_with_profile(http_client: httpx.Client, unique_email: str
         json=VALID_CAREER_PREFERENCES,
     )
     assert prefs_response.status_code == 200, f"Career prefs failed: {prefs_response.text}"
+
+    complete_response = http_client.post(
+        "/api/v1/profile/complete",
+        headers=headers,
+    )
+    assert complete_response.status_code == 200, f"Complete failed: {complete_response.text}"
     
     return headers
 
 
 @pytest.fixture
 def user_with_api_key(http_client: httpx.Client, authenticated_user_with_profile: Dict[str, str]):
-    """User with complete profile and API key configured."""
-    # Note: This assumes either server has GEMINI_API_KEY or user adds their own
-    # For CI, the server should have the key configured
+    """User with complete profile and BYOK Gemini key configured."""
+    ensure_llm_ready(http_client, authenticated_user_with_profile)
     return authenticated_user_with_profile
 
 
@@ -280,21 +299,18 @@ class TestWorkflowE2E:
         6. Resume Advisor and Cover Letter Writer run in parallel
         7. Workflow completes successfully
         """
+        skip_unless_real_gemini()
         # Start workflow
         start_response = http_client.post(
             "/api/v1/workflow/start",
             headers=user_with_api_key,
-            json={"job_text": GOOD_MATCH_JOB_TEXT},
+            data={"job_text": GOOD_MATCH_JOB_TEXT},
         )
         
+        skip_unless_llm_ok(start_response)
         if start_response.status_code == 429:
             pytest.skip("Rate limited - skipping E2E test")
-        
-        if start_response.status_code == 400:
-            error_detail = start_response.json().get("detail", "")
-            if "API key" in error_detail:
-                pytest.skip("No API key configured - skipping E2E test")
-        
+
         assert start_response.status_code == 200, f"Start failed: {start_response.text}"
         
         session_id = start_response.json()["session_id"]
@@ -355,21 +371,18 @@ class TestWorkflowE2E:
         4. Gate decision: STOP (awaiting_confirmation)
         5. Workflow pauses for user confirmation
         """
+        skip_unless_real_gemini()
         # Start workflow
         start_response = http_client.post(
             "/api/v1/workflow/start",
             headers=user_with_api_key,
-            json={"job_text": POOR_MATCH_JOB_TEXT},
+            data={"job_text": POOR_MATCH_JOB_TEXT},
         )
         
+        skip_unless_llm_ok(start_response)
         if start_response.status_code == 429:
             pytest.skip("Rate limited - skipping E2E test")
-        
-        if start_response.status_code == 400:
-            error_detail = start_response.json().get("detail", "")
-            if "API key" in error_detail:
-                pytest.skip("No API key configured - skipping E2E test")
-        
+
         assert start_response.status_code == 200, f"Start failed: {start_response.text}"
         
         session_id = start_response.json()["session_id"]
@@ -421,11 +434,12 @@ class TestWorkflowE2E:
         2. Calls continue endpoint
         3. Verifies workflow completes
         """
+        skip_unless_real_gemini()
         # Start workflow with poor match job to trigger gate
         start_response = http_client.post(
             "/api/v1/workflow/start",
             headers=user_with_api_key,
-            json={"job_text": POOR_MATCH_JOB_TEXT},
+            data={"job_text": POOR_MATCH_JOB_TEXT},
         )
         
         if start_response.status_code == 429:
@@ -492,13 +506,14 @@ class TestWorkflowTiming:
         self, http_client: httpx.Client, user_with_api_key: Dict[str, str]
     ):
         """Test that workflow completes within reasonable time."""
+        skip_unless_real_gemini()
         start_time = time.time()
         
         # Start workflow
         start_response = http_client.post(
             "/api/v1/workflow/start",
             headers=user_with_api_key,
-            json={"job_text": GOOD_MATCH_JOB_TEXT},
+            data={"job_text": GOOD_MATCH_JOB_TEXT},
         )
         
         if start_response.status_code != 200:
@@ -532,6 +547,7 @@ class TestWorkflowErrorHandling:
         self, http_client: httpx.Client, user_with_api_key: Dict[str, str]
     ):
         """Test workflow handles minimal but valid job text."""
+        skip_unless_real_gemini()
         minimal_job = """
         Software Engineer
         Company: TestCorp
@@ -541,14 +557,14 @@ class TestWorkflowErrorHandling:
         start_response = http_client.post(
             "/api/v1/workflow/start",
             headers=user_with_api_key,
-            json={"job_text": minimal_job},
+            data={"job_text": minimal_job},
         )
         
         if start_response.status_code == 429:
             pytest.skip("Rate limited")
         
         # Should either start successfully or return validation error
-        assert start_response.status_code in [200, 400]
+        assert start_response.status_code in [200, 400, 422]
         
         if start_response.status_code == 200:
             session_id = start_response.json()["session_id"]

@@ -130,6 +130,7 @@ def valid_career_preferences() -> Dict[str, Any]:
         "work_arrangements": ["Remote", "Hybrid"],
         "willing_to_relocate": False,
         "requires_visa_sponsorship": False,
+        "work_authorization": "has_work_authorization",
         "has_security_clearance": False,
         "max_travel_preference": "25",
     }
@@ -643,8 +644,8 @@ class TestSkillsQualifications:
         self, http_client: httpx.Client, authenticated_user: Dict[str, str]
     ):
         """Test update with too many skills fails."""
-        # Create 21 skills (exceeds MAX_SKILLS_ITEMS = 20)
-        many_skills = [f"Skill{i}" for i in range(21)]
+        # Create 51 skills (exceeds MAX_SKILLS_ITEMS = 50)
+        many_skills = [f"Skill{i}" for i in range(51)]
         
         response = http_client.put(
             "/api/v1/profile/skills-qualifications",
@@ -937,6 +938,11 @@ class TestProfileCompletion:
             json=valid_work_experience,
         )
         http_client.put(
+            "/api/v1/profile/education",
+            headers=authenticated_user,
+            json={"education": []},
+        )
+        http_client.put(
             "/api/v1/profile/skills-qualifications",
             headers=authenticated_user,
             json=valid_skills,
@@ -1219,14 +1225,14 @@ Python, JavaScript, AWS, Docker, PostgreSQL, FastAPI, React, Git
         )
         
         # File format should be accepted - may succeed (200) or fail due to:
-        # - No API key configured (400 with "No API key available")
-        # - LLM service unavailable (500, 503)
-        assert response.status_code in [200, 400, 500, 503]
+        # - No API key / CFG_6001 (422)
+        # - Insufficient extractable text / LLM errors (400, 422, 500, 503)
+        assert response.status_code in [200, 400, 422, 500, 503]
         
         data = response.json()
         
-        # If 400, should NOT be format error (format is valid)
-        if response.status_code == 400:
+        # If client error, should NOT be format error (format is valid)
+        if response.status_code in [400, 422]:
             assert "unsupported file format" not in data.get("message", "").lower()
         
         if response.status_code == 200:
@@ -1250,7 +1256,7 @@ Python, JavaScript, AWS, Docker, PostgreSQL, FastAPI, React, Git
             files=files,
         )
         
-        assert response.status_code == 400
+        assert response.status_code in [400, 422]
         data = response.json()
         # Error response uses 'message' field
         assert "unsupported file format" in data.get("message", "").lower()
@@ -1269,7 +1275,7 @@ Python, JavaScript, AWS, Docker, PostgreSQL, FastAPI, React, Git
             files=files,
         )
         
-        assert response.status_code == 400
+        assert response.status_code in [400, 422]
         data = response.json()
         # Error response uses 'message' field
         assert "empty" in data.get("message", "").lower()
@@ -1352,7 +1358,7 @@ Python, JavaScript, AWS, Docker, PostgreSQL, FastAPI, React, Git
             files=files,
         )
         
-        assert response.status_code == 400
+        assert response.status_code in [400, 422]
         data = response.json()
         # Error response uses 'message' field
         assert "unsupported file format" in data.get("message", "").lower()
@@ -1372,7 +1378,7 @@ Python, JavaScript, AWS, Docker, PostgreSQL, FastAPI, React, Git
             files=files,
         )
         
-        assert response.status_code == 400
+        assert response.status_code in [400, 422]
         data = response.json()
         # Error response uses 'message' field
         assert "unsupported file format" in data.get("message", "").lower()
@@ -1435,9 +1441,9 @@ Python, JavaScript, AWS, Docker, PostgreSQL, FastAPI, React, Git
         )
         
         # Single file format should be accepted - may fail on API key or LLM
-        assert response.status_code in [200, 400, 500, 503]
+        assert response.status_code in [200, 400, 422, 500, 503]
         
-        # If 400, should NOT be format-related
-        if response.status_code == 400:
+        # If client error, should NOT be format-related
+        if response.status_code in [400, 422]:
             data = response.json()
             assert "unsupported file format" not in data.get("message", "").lower()

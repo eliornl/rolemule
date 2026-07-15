@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from time import perf_counter
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
 
@@ -173,6 +174,132 @@ class OpenAIProvider:
             )
             raise LLMError(
                 f"OpenAI generate failed: {e}",
+                original_error=e if isinstance(e, Exception) else None,
+                provider="openai",
+            ) from e
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        *,
+        model: Optional[str] = None,
+        system: Optional[str] = None,
+        temperature: float = DEFAULT_TEMPERATURE,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        user_api_key: Optional[str] = None,
+        use_google_search_grounding: bool = False,
+    ) -> AsyncIterator[str]:
+        """Stream Chat Completions deltas (grounding falls back to non-stream)."""
+        if use_google_search_grounding:
+            # Responses+web_search streaming is out of scope; emit full text once
+            full = await self.generate(
+                prompt,
+                model=model,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                user_api_key=user_api_key,
+                use_google_search_grounding=True,
+            )
+            text = full.get("response") or ""
+            if text:
+                yield text
+            return
+
+        effective_key = user_api_key or self.api_key
+        if not effective_key:
+            raise LLMError(
+                "No API key available. Configure OPENAI_API_KEY or provide a user key.",
+                provider="openai",
+            )
+        model_to_use = model or self.default_model
+        messages: list[Dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        payload = {
+            "model": model_to_use,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        headers = {
+            "Authorization": f"Bearer {effective_key}",
+            "Content-Type": "application/json",
+        }
+        logger.info(
+            "[LLM] OpenAI stream  model=%s  prompt=%s chars",
+            sanitize_log_value(model_to_use),
+            sanitize_log_value(len(prompt) + (len(system) if system else 0)),
+        )
+        api_start = perf_counter()
+        total_chars = 0
+        try:
+            timeout = httpx.Timeout(self.timeout, connect=HTTP_CONNECT_TIMEOUT)
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                async with client.stream(
+                    "POST", _OPENAI_CHAT_URL, json=payload, headers=headers
+                ) as response:
+                    if response.status_code >= 400:
+                        body = (await response.aread()).decode("utf-8", errors="replace")[
+                            :500
+                        ]
+                        raise LLMError(
+                            f"OpenAI stream failed ({response.status_code}): {body}",
+                            status_code=response.status_code,
+                            provider="openai",
+                        )
+                    async for line in response.aiter_lines():
+                        if not line or not line.startswith("data:"):
+                            continue
+                        data_str = line[5:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                        except json.JSONDecodeError:
+                            logger.debug(
+                                "OpenAI stream skip bad JSON: %s",
+                                sanitize_log_value(data_str[:80]),
+                            )
+                            continue
+                        choices = data.get("choices") or []
+                        if not choices:
+                            continue
+                        delta = (choices[0].get("delta") or {}).get("content") or ""
+                        if delta:
+                            total_chars += len(delta)
+                            yield delta
+            api_duration_ms = (perf_counter() - api_start) * 1000
+            logger.info(
+                "[LLM] Done stream  %sms  response=%s chars",
+                sanitize_log_value(api_duration_ms),
+                sanitize_log_value(total_chars),
+            )
+            structured_logger.log_external_api_call(
+                service="openai",
+                operation="chat.completions.stream",
+                duration_ms=api_duration_ms,
+                success=True,
+            )
+        except LLMError:
+            raise
+        except Exception as e:
+            structured_logger.log_external_api_call(
+                service="openai",
+                operation="chat.completions.stream",
+                duration_ms=0,
+                success=False,
+                error=str(e),
+            )
+            logger.error(
+                "Error in OpenAI stream: %s",
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
+            raise LLMError(
+                f"OpenAI stream failed: {e}",
                 original_error=e if isinstance(e, Exception) else None,
                 provider="openai",
             ) from e

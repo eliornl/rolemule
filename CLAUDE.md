@@ -18,20 +18,21 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/codeql-security-scanning.mdc` | CodeQL CI, log sanitization, secret scanning test keys, Pydantic `field_validator`, extension entity decode |
 | `.claude/rules/security-middleware.mdc` | middleware, CORS, CSP, `.is-hidden`, maintenance mode |
 | `.claude/rules/settings-and-env.mdc` | env vars, `get_settings()`, `.env`, `ENCRYPTION_KEY` |
-| `.claude/rules/llm-integration.mdc` | Multi-provider LLM (`get_llm_client`), per-user BYOK (Gemini/OpenAI/Anthropic/Ollama), model allowlists in `utils/llm/models.py`, grounding, **`CFG_6001`**, **`DEFAULT_MAX_TOKENS` (16k)** |
-| `.claude/rules/agent-patterns.mdc` | workflow agents (**any agent failure fails the workflow**), standalone interview prep + CV optimizer, `workflow_preferences`, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
-| `.claude/rules/interview-prep-feature.mdc` | interview prep agent, background task, Redis lock, rate limit |
+| `.claude/rules/llm-integration.mdc` | Multi-provider LLM (`get_llm_client`), per-user BYOK (Gemini/OpenAI/Anthropic/Ollama), model allowlists in `utils/llm/models.py`, grounding, **`CFG_6001`**, **`DEFAULT_MAX_TOKENS` (16k)**, **`generate_stream` / `SpeakFieldStreamer`** |
+| `.claude/rules/agent-patterns.mdc` | workflow agents (**any agent failure fails the workflow**), standalone interview prep + CV optimizer + Practice Interview, `workflow_preferences`, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
+| `.claude/rules/interview-prep-feature.mdc` | interview prep agent, background task, Redis lock, rate limit (static Interview tab — not Practice Interview) |
+| `.claude/rules/mock-interview-feature.mdc` | Practice Interview (HR/Pro/Manager), duration timer, browser STT/TTS, BYOK, speak streaming / `speak_delta`, ws-guard |
 | `.claude/rules/cv-optimizer-feature.mdc` | CV Optimizer loop, API, cache, WebSocket, application detail tab |
 | `.claude/rules/career-tools.mdc` | 6 career tool agents, endpoints, rate limits, output schemas, copy button |
 | `.claude/rules/caching-redis.mdc` | cache TTLs, Redis helpers, **job-analysis key (up to 50k chars of text)**, rate limiting, auth-specific keys |
-| `.claude/rules/websocket-patterns.mdc` | WebSocket endpoints, connection limits, broadcast helpers |
+| `.claude/rules/websocket-patterns.mdc` | WebSocket endpoints, connection limits, broadcast helpers, mock interview `speak_delta` + client session filter |
 | `.claude/rules/logging-patterns.mdc` | `StructuredLogger`, **`sanitize_log_value()` / `mask_email()`**, redaction, `exc_info=True`, bulk-script safety |
 | `.claude/rules/google-oauth.mdc` | OAuth flow, CSRF state in Redis, exchange-code pattern, open-redirect |
 | `.claude/rules/email-and-misc-utils.mdc` | Gmail SMTP, resume parser, BYOK encryption |
 | `.claude/rules/frontend-js-strict.mdc` | any `ui/src/**/*.ts` — TypeScript strict, null safety, event delegation, no `style=` attrs |
 | `.claude/rules/landing-page.mdc` | `index.html`, landing page sections, screenshot showcase |
 | `.claude/rules/dashboard-home.mdc` | dashboard app list, **`workflow_sessions` join (hide workflow-failed)**, **funnel stats formula**, search/filter/sort, **single-flight `loadApplications`**, **EXISTS pagination**, toasts (`notifyReady` **`c:`/`f:`** keys, duplicate headline), **`isPlaceholderCompanyName` / Unknown employer**, card CSS, session storage |
-| `.claude/rules/ui-application-detail.mdc` | application detail page, 8-tab layout (Optimize CV), **View posting link**, **`additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown / About this opportunity**, company research notices (`research_quality` / staffing), CSS classes |
+| `.claude/rules/ui-application-detail.mdc` | application detail page, **9-tab** layout (Optimize CV + Practice Interview), **View posting link**, **`additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown / About this opportunity**, company research notices (`research_quality` / staffing), CSS classes |
 | `.claude/rules/accessibility.mdc` | any template — WCAG 2.1 AA, heading hierarchy, landmarks, aria |
 | `.claude/rules/analytics-consent-onboarding.mdc` | PostHog, cookie consent, onboarding tour |
 | `.claude/rules/chrome-extension.mdc` | anything inside `extension/` — **popup vs service-worker submit paths**, **`source_url` → `job_url`**, **`extractPageContent` / split-view detail root**, dev/prod toggle, autofill, `InputMethod.EXTENSION` |
@@ -40,7 +41,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/frontend-build-pipeline.mdc` | Vite+TS page entries + esbuild CSS, `asset_url()`, manifest, `make build-frontend` |
 | `.claude/rules/cli.mdc` | ApplyPilot CLI — Typer commands, `applypilot_client`, `tests/test_cli/`, docs |
 | `.claude/rules/mobile-responsive.mdc` | breakpoints, navbar collapse, scrollable tab bars, mobile utilities |
-| `.claude/rules/unit-testing.mdc` | ~300 agent + ~1,050 API + **364** CLI + **6** ASGI CLI integration tests; writing or running tests in `tests/test_agents/`, `tests/test_api/`, or `tests/test_cli/` |
+| `.claude/rules/unit-testing.mdc` | ~300 agent + ~1,050 API + **364** CLI + **6** ASGI CLI integration tests; `live_server_helpers`; ASGITransport (not TestClient) for CLI ASGI; cov ≥97% includes root `test_cv_*` |
 | `.claude/rules/e2e-testing.mdc` | ~1,380 Playwright specs; CI smoke-only (`e2e-smoke`); `setupAuth`, `page.route()`, JWT/cookie-consent setup |
 
 ---

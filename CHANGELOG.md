@@ -31,6 +31,15 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 ### Added
 
+#### Practice Interview (mock interview)
+
+Timed conversational practice on the application detail page (**9th tab**, after Optimize CV). Styles: **HR** / **Pro** / **Manager**; durations **10 / 15 / 20** minutes. Uses the user’s BYOK LLM; browser Web Speech STT + `speechSynthesis` TTS (typed fallback). API: **`/api/v1/mock-interview`** (`start`, `turn`, `finish`, `abort`, `GET`, `status`). Persists to **`workflow_sessions.mock_interview`** (migration **`20260714_026`**). Redis turn lock + WS events (`mock_interview_*`, including **`mock_interview_speak_delta`**). Real LLM token streaming via **`LLMClient.generate_stream`** + **`SpeakFieldStreamer`** (`utils/llm/speak_stream.py`); UI shows *Interviewer is typing…* until the first delta; TTS from final HTTP speak only; debrief non-streaming. Frontend: **`ui/src/mock-interview/`** (incl. **`ws-guard.ts`**), **`js/mock-interview.js`**. Tests: **`tests/test_agents/test_mock_interview.py`**, **`tests/test_api/test_mock_interview.py`**, **`tests/test_utils/test_llm_streaming.py`**, **`tests/test_utils/test_speak_stream.py`**. Rules: **`mock-interview-feature.mdc`**. English only in v1 (no server audio upload).
+
+#### Live-server + CLI ASGI test hardening
+
+- **`tests/live_server_helpers.py`** — `ensure_llm_ready`, `skip_unless_llm_ok`, `skip_unless_real_gemini` so live LLM tests skip cleanly without a real `GEMINI_API_KEY`.
+- Live interview-prep fixtures complete profile correctly (education + `POST /profile/complete` + work authorization) and skip early without a real Gemini key.
+- CLI ASGI bridge uses session-loop **`httpx.ASGITransport`** (not Starlette `TestClient`) to avoid event-loop mismatch after `tests/test_api`.
 #### Multi-provider BYOK (Settings → AI Setup)
 
 - Users **must** pick `preferred_provider` (`gemini` | `openai` | `anthropic` | `ollama`) and add a BYOK key for cloud providers; Ollama needs no key. Vertex (`USE_VERTEX_AI`) remains the admin no-key escape hatch.

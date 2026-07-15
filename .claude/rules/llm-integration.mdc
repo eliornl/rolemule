@@ -10,14 +10,15 @@ alwaysApply: false
 
 ```
 utils/llm/
-  client.py          # LLMClient facade (cache + retry + route by provider=)
+  client.py          # LLMClient facade (cache + retry + route by provider=); generate + generate_stream
   availability.py    # resolve_user_llm_context / CFG_6001 readiness
   registry.py        # provider name → factory
+  speak_stream.py    # SpeakFieldStreamer — progressive JSON "speak" extraction
   providers/
-    gemini.py        # Google AI Studio + optional Vertex + Google Search grounding
-    openai.py        # Chat Completions + Responses web_search when grounded
-    anthropic.py     # Messages API + web_search server tool when grounded
-    ollama.py        # Local /api/chat (no tools / no key)
+    gemini.py        # Google AI Studio + optional Vertex + Google Search grounding (+ stream)
+    openai.py        # Chat Completions + Responses web_search when grounded (+ stream)
+    anthropic.py     # Messages API + web_search server tool when grounded (+ stream)
+    ollama.py        # Local /api/chat (no tools / no key) (+ stream)
 utils/llm_client.py  # backward-compatible re-exports
 utils/llm_context.py # require_user_llm_context() for API gates
 ```
@@ -41,6 +42,32 @@ text = response.get("response", "")
 ```
 
 Stable response shape: `{ "response": str, "done": bool, "model"?: str, "filtered"?: bool, "from_cache"?: bool }`.
+
+## Streaming (`generate_stream`)
+
+Use for progressive UI (Practice Interview interviewer `speak`). **Not** cached and **not** retried like `generate()`.
+
+```python
+async for chunk in llm.generate_stream(
+    prompt=prompt,
+    system=system_message,
+    temperature=0.55,
+    max_tokens=16000,
+    user_api_key=user_api_key,
+    provider=llm_provider,
+    model=user_model,
+):
+    # chunk is a text delta (str)
+    ...
+```
+
+Providers implement `generate_stream` on Gemini / OpenAI / Anthropic / Ollama. On stream failure, callers should fall back to non-stream `generate()`.
+
+### Progressive JSON `"speak"` extraction
+
+`utils/llm/speak_stream.py` — `SpeakFieldStreamer` extracts the `"speak"` string value from a streaming JSON object as tokens arrive (including split `\uXXXX` / trailing `\` across chunks). Used by `MockInterviewAgent.open_session` / `next_turn` with `on_speak_delta` → WS `mock_interview_speak_delta`. **Debrief stays non-streaming.**
+
+Tests: `tests/test_utils/test_llm_streaming.py`, `tests/test_utils/test_speak_stream.py` (if present).
 
 ## Per-user provider + BYOK (product model)
 

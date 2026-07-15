@@ -10,6 +10,7 @@ Welcome to ApplyPilot! This guide walks you through every feature so you can get
 - [Creating Applications](#creating-applications)
 - [Chrome Extension](#chrome-extension)
 - [Interview Preparation](#interview-preparation)
+- [Practice Interview](#practice-interview)
 - [CV Optimization](#cv-optimization)
 - [Career Tools](#career-tools)
 - [Settings](#settings)
@@ -205,9 +206,11 @@ After submitting, five AI agents run across four steps with a gate check mid-way
 
 The **CV Optimizer** also runs on demand from the **Optimize CV** tab after the workflow completes. See [CV Optimization](#cv-optimization).
 
+The **Practice Interview** tab runs a timed conversational mock interview (HR / Pro / Manager) using your API key. See [Practice Interview](#practice-interview).
+
 ### Viewing Results
 
-The application details page opens with an **8-tab layout**. When a posting URL was saved (for example from the Chrome extension), the page header shows a **View posting** link that opens the original listing in a new tab. If the job lists multiple office locations, the header location line shows them separated by **|** (primary city first, then additional offices).
+The application details page opens with a **9-tab layout**. When a posting URL was saved (for example from the Chrome extension), the page header shows a **View posting** link that opens the original listing in a new tab. If the job lists multiple office locations, the header location line shows them separated by **|** (primary city first, then additional offices).
 
 | Tab | Content |
 |-----|---------|
@@ -219,6 +222,7 @@ The application details page opens with an **8-tab layout**. When a posting URL 
 | **Resume** | 4 sub-tabs: Overview, Experience, Keywords & ATS, Summary |
 | **Interview** | 3 sub-tabs: Process, Questions, Preparation |
 | **Optimize CV** | Iterative AI CV optimization loop — optimized CV, cover letter, gap analysis |
+| **Practice Interview** | Timed conversational practice (HR / Pro / Manager) with voice or typed answers |
 
 The **Cover Letter** tab has a **Copy** button. The Cover Letter, Resume, and Interview tabs each have a **Regenerate** button (rate limited to 5/hour).
 
@@ -302,6 +306,28 @@ Content is organized across the three sub-tabs:
 **Questions** — behavioral questions with STAR answer frameworks built from your profile, technical and role-specific questions, company-specific questions, and smart questions to ask the interviewer
 
 **Preparation** — quick reference card (elevator pitch, key selling points, salary discussion), how to address employer concerns, logistics (dress code, what to bring, virtual interview tips), a day-before checklist, and confidence boosters
+
+---
+
+## Practice Interview
+
+Practice a timed conversational mock interview grounded in this application's job analysis, company research, and your profile. Uses your own API key (Settings → AI Setup).
+
+### Accessing Practice Interview
+
+1. Open a completed application's detail page
+2. Click the **Practice Interview** tab (after Optimize CV)
+3. Choose style (**HR**, **Pro**, or **Manager**) and length (**10**, **15**, or **20** minutes)
+4. Optionally enable **STAR coach** (follow-ups when Situation / Action / Result is missing)
+5. Click **Start Practice Interview**
+6. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
+7. While the interviewer is composing, you may see **Interviewer is typing…** as the question streams in; speech plays when the full line is ready
+8. Use **Replay** to hear the last question again; **End early** confirms then scores you; **Abort** ends with no score
+9. Watch **topic coverage** and mid-session tips; when time is low the interviewer wraps up; finish for a full debrief
+
+Optional interview prep content from the Interview tab is used when available to steer questions. Practice Interview is a live conversation — different from the static **Interview** tab guide.
+
+Voice uses free browser APIs (no audio uploaded to ApplyPilot). The mic pauses while the interviewer is speaking so it does not capture TTS. Typed answers always work if mic/speech is unavailable.
 
 ---
 

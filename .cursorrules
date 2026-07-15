@@ -18,20 +18,21 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `codeql-security-scanning.mdc` | CodeQL CI, `sanitize_log_value()` / `mask_email()` logging, query-filters, secret scanning test keys, Pydantic `field_validator`, extension entity decode |
 | `security-middleware.mdc` | Middleware stack, CORS explicit headers, no wildcard origins, maintenance mode, **CSP nonce-based style-src** (no `'unsafe-inline'`), `.is-hidden` / CSS utility class reference |
 | `settings-and-env.mdc` | All env vars, `get_settings()`, `ENCRYPTION_KEY` requirement, `.env` commit rules |
-| `llm-integration.mdc` | Multi-provider LLM (`get_llm_client`), per-user BYOK (Gemini/OpenAI/Anthropic/Ollama), model allowlists in `utils/llm/models.py`, grounding, `CFG_6001`, `asyncio.wait_for()`, JSON parsing |
-| `agent-patterns.mdc` | 5 workflow agents + 2 standalone on-demand agents (interview prep, CV optimizer loop) + 6 career tool agents, **any workflow agent failure fails the run**, workflow_preferences injection, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
-| `interview-prep-feature.mdc` | Standalone agent, background task, Redis atomic lock, rate limit |
+| `llm-integration.mdc` | Multi-provider LLM (`get_llm_client`), per-user BYOK (Gemini/OpenAI/Anthropic/Ollama), model allowlists in `utils/llm/models.py`, grounding, `CFG_6001`, `asyncio.wait_for()`, **`generate_stream` / `SpeakFieldStreamer`**, JSON parsing |
+| `agent-patterns.mdc` | 5 workflow agents + standalone on-demand (interview prep, CV optimizer, Practice Interview) + 6 career tools, **any workflow agent failure fails the run**, workflow_preferences injection, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
+| `interview-prep-feature.mdc` | Standalone agent, background task, Redis atomic lock, rate limit (static Interview tab — not Practice Interview) |
 | `cv-optimizer-feature.mdc` | CV Optimizer loop — hiring manager + reviser agents, `cv_optimization` JSONB, ownership-before-cache, WebSocket iteration events, Optimize CV tab |
+| `mock-interview-feature.mdc` | Practice Interview — HR/Pro/Manager, duration minutes, browser STT/TTS, BYOK, speak streaming / `speak_delta`, `ws-guard`, `mock_interview` JSONB |
 | `career-tools.mdc` | 6 tools, endpoints, rate limits, agent implementation pattern, output JSON schemas, copy button pattern, no-placeholder rules, UI CSS classes |
 | `caching-redis.mdc` | Cache TTLs, helpers, rate limiting, auth-specific Redis keys |
-| `websocket-patterns.mdc` | Endpoints, connection limits, broadcast helpers, WS-only JWT query-param exception |
+| `websocket-patterns.mdc` | Endpoints, connection limits, broadcast helpers, WS-only JWT query-param exception, mock interview `speak_delta` + client session filter |
 | `logging-patterns.mdc` | StructuredLogger, **`sanitize_log_value()` / `mask_email()`**, request context, sensitive data redaction, `exc_info=True` requirement, bulk-script safety |
 | `google-oauth.mdc` | 3-step OAuth flow, CSRF state in Redis, exchange-code pattern, open-redirect prevention |
 | `email-and-misc-utils.mdc` | Gmail SMTP, resume parser, BYOK encryption |
 | `frontend-js-strict.mdc` | TypeScript strict mode, null safety, anti-patterns table, event bus, **no `style=` HTML attributes** |
 | `landing-page.mdc` | Landing page sections, **screenshot showcase** (`.ss-tabs`, `.ss-panel`, `ssActivateTab`), screenshot file locations, update workflow |
 | `dashboard-home.mdc` | Dashboard application list — **list/stats join `workflow_sessions` (hide workflow-failed)**, **funnel stats (Applied card + response rate formula)**, search/filter/sort, toasts (`notifyReady` **`c:`/`f:`** dedupe keys, `formatWorkflowFailureDetail`, duplicate headline), **`isPlaceholderCompanyName` / `displayCompanyNameOrUnknown` (Unknown employer label)**, card CSS, auth guard, **EXISTS pagination / Load More dedupe** |
-| `ui-application-detail.mdc` | 8-tab layout (includes Optimize CV), sub-tab patterns (Resume + Interview), cover letter card, **`ui/src/pages/cv-optimizer.ts`**, **`View posting` / `additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown employer / About this opportunity**, company research notices (`research_quality` / staffing), all CSS classes |
+| `ui-application-detail.mdc` | **9-tab** layout (Optimize CV + Practice Interview), sub-tab patterns (Resume + Interview), cover letter card, **`ui/src/pages/cv-optimizer.ts`**, **`ui/src/pages/mock-interview.ts`**, **`View posting` / `additional_locations`**, render functions, **`isPlaceholderCompanyName` / Unknown employer / About this opportunity**, company research notices (`research_quality` / staffing), all CSS classes |
 | `accessibility.mdc` | WCAG 2.1 AA, heading hierarchy, landmarks, aria-label rules |
 | `analytics-consent-onboarding.mdc` | PostHog, cookie consent API, onboarding tour |
 | `chrome-extension.mdc` | Extension structure, **popup vs service-worker submit paths**, **`source_url` → `job_url`**, **dev/prod `IS_DEV` URL toggle**, popup design system, icon generation, landing-page mockup sync, **`extractPageContent` split-view / detail-pane root** (`popup.js` + `service-worker.js`), form autofill, `InputMethod.EXTENSION` |
@@ -40,7 +41,7 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `frontend-build-pipeline.mdc` | Vite+TS page entries + esbuild CSS, `asset_url()`, manifest, CI/Docker, `make build-frontend` |
 | `cli.mdc` | ApplyPilot CLI — Typer commands, applypilot_client, tests, docs |
 | `mobile-responsive.mdc` | Breakpoints, navbar collapse (`navbar-expand-xl` landing / `navbar-expand-lg` dashboard), scrollable tab bars, `app.css` global mobile utilities, per-page patterns |
-| `unit-testing.mdc` | ~300 agent unit tests + ~1,050 API integration tests + **364** CLI mocked tests + **6** ASGI CLI integration tests (`tests/test_api/`, `tests/test_cli/`); NullPool engine; `authed_client` vs `authed_client_with_user`; LLM mock pattern; rate-limit 429 override; status code quirks (422 vs 400); `asyncio_default_fixture_loop_scope=session` |
+| `unit-testing.mdc` | ~300 agent unit tests + ~1,050 API integration tests + **364** CLI mocked tests + **6** ASGI CLI integration tests; `live_server_helpers`; ASGITransport (not TestClient) for CLI ASGI; cov ≥97% includes root `test_cv_*`; NullPool; `asyncio_default_fixture_loop_scope=session` |
 | `e2e-testing.mdc` | ~1,380 Playwright tests; CI runs **smoke only** (`e2e-smoke` / `@smoke`); full suite is local/optional; `setupAuth` + `page.route()` patterns; JWT/cookie-consent setup |
 
 ---

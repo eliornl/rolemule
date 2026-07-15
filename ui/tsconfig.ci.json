@@ -40,6 +40,8 @@
     "src/profile-setup/**/*.ts",
     "src/pages/cv-optimizer.ts",
     "src/cv-optimizer/**/*.ts",
+    "src/pages/mock-interview.ts",
+    "src/mock-interview/**/*.ts",
     "src/pages/dashboard-settings.ts",
     "src/dashboard-settings/**/*.ts",
     "src/pages/dashboard-tools.ts",

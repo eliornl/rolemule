@@ -388,7 +388,7 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            ApplyPilot is an AI-powered job search companion that turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get eight tabs of AI-generated insights:
+                            ApplyPilot is an AI-powered job search companion that turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get nine tabs of AI-generated insights:
                             <ul>
                                 <li><strong>Company</strong> — Culture, funding stage, interview culture, and insider tips</li>
                                 <li><strong>Your Fit</strong> — A match score with a breakdown of strengths and gaps</li>
@@ -398,6 +398,7 @@
                                 <li><strong>Resume</strong> — Personalized recommendations to optimize your resume for this role</li>
                                 <li><strong>Interview Prep</strong> — Predicted questions, STAR answer frameworks, and process tips</li>
                                 <li><strong>Optimize CV</strong> — Iterative AI loop that scores and rewrites your CV for the role, then produces an optimized CV and cover letter</li>
+                                <li><strong>Practice Interview</strong> — Timed conversational mock interview (HR / Pro / Manager) with voice or typed answers</li>
                             </ul>
                             Beyond job analysis, ApplyPilot also includes six <strong>Career Tools</strong> for follow-up emails, salary negotiation, thank you notes, job comparison, reference requests, and rejection analysis.
                         </div>
@@ -520,7 +521,7 @@
                                 <li><strong>Cover Letter Writer</strong> — Generates a tailored cover letter using your actual experience and the company's priorities</li>
                                 <li><strong>Resume Advisor</strong> — Identifies gaps and suggests targeted, high-impact changes to your resume</li>
                             </ol>
-                            <p>The full pipeline takes about 30 seconds. <strong>Interview Prep</strong> and <strong>CV Optimization</strong> can be generated separately on demand from within any completed application.</p>
+                            <p>The full pipeline takes about 30 seconds. <strong>Interview Prep</strong>, <strong>CV Optimization</strong>, and <strong>Practice Interview</strong> can be run separately on demand from within any completed application.</p>
                         </div>
                     </div>
 
@@ -575,6 +576,24 @@
                                 <li><strong>Preparation</strong> — A tailored checklist of what to review, practice, and prepare before your interview</li>
                             </ul>
                             <p>You can regenerate Interview Prep if you want a fresh set of questions or if your preparation evolves.</p>
+                            <p>This is different from <strong>Practice Interview</strong> (the next tab), which is a live timed conversation — not a static Q&amp;A guide.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does Practice Interview work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Practice Interview is a timed conversational mock interview on the <strong>Practice Interview</strong> tab (after Optimize CV). It uses your own API key from Settings → AI Setup.</p>
+                            <ol>
+                                <li>Choose a style — <strong>HR</strong>, <strong>Pro</strong>, or <strong>Manager</strong> — and a duration of <strong>10</strong>, <strong>15</strong>, or <strong>20</strong> minutes</li>
+                                <li>Answer by voice (browser speech recognition) or typing; the interviewer speaks back with browser text-to-speech</li>
+                                <li>While the AI is composing its next line, you may see <em>Interviewer is typing…</em> as the question streams in</li>
+                                <li>When time runs out (or you end early), you get a scored debrief with strengths and improvements</li>
+                            </ol>
+                            <p>English only for now. No audio is uploaded to the server — speech stays in your browser. Requires an AI provider in Settings → AI Setup. Rate limits: <strong>10 starts / hour</strong>, <strong>40 turns / hour</strong>, <strong>10 finishes / hour</strong>.</p>
                         </div>
                     </div>
 
@@ -755,6 +774,7 @@
                                 <li><strong>Cover Letter / Resume regeneration:</strong> 5 per hour per application</li>
                                 <li><strong>Interview Prep generation:</strong> 5 per hour</li>
                                 <li><strong>CV Optimization:</strong> 10 runs per hour, 10 CV downloads per hour</li>
+                                <li><strong>Practice Interview:</strong> 10 starts / hour, 40 turns / hour, 10 finishes / hour</li>
                             </ul>
                             <p>Limits reset on a rolling hourly basis. If you are the instance operator and want to adjust these limits, they are configurable in the backend rate-limit settings.</p>
                         </div>

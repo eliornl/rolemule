@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from time import perf_counter
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 from urllib.parse import urljoin
 
 import httpx
@@ -138,6 +139,110 @@ class OllamaProvider:
             )
             raise LLMError(
                 f"Ollama generate failed: {e}",
+                original_error=e if isinstance(e, Exception) else None,
+                provider="ollama",
+            ) from e
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        *,
+        model: Optional[str] = None,
+        system: Optional[str] = None,
+        temperature: float = DEFAULT_TEMPERATURE,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        user_api_key: Optional[str] = None,
+        use_google_search_grounding: bool = False,
+    ) -> AsyncIterator[str]:
+        """Stream Ollama /api/chat message content deltas."""
+        if use_google_search_grounding:
+            logger.debug(
+                "Google Search grounding requested but not supported by Ollama; ignoring"
+            )
+        _ = user_api_key
+        model_to_use = model or self.default_model
+        messages: list[Dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        payload = {
+            "model": model_to_use,
+            "messages": messages,
+            "stream": True,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+        logger.info(
+            "[LLM] Ollama stream  model=%s  prompt=%s chars",
+            sanitize_log_value(model_to_use),
+            sanitize_log_value(len(prompt) + (len(system) if system else 0)),
+        )
+        api_start = perf_counter()
+        total_chars = 0
+        try:
+            timeout = httpx.Timeout(self.timeout, connect=HTTP_CONNECT_TIMEOUT)
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                async with client.stream(
+                    "POST", self._url("api/chat"), json=payload
+                ) as response:
+                    if response.status_code >= 400:
+                        body = (await response.aread()).decode("utf-8", errors="replace")[
+                            :500
+                        ]
+                        raise LLMError(
+                            f"Ollama stream failed ({response.status_code}): {body}",
+                            status_code=response.status_code,
+                            provider="ollama",
+                        )
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        try:
+                            data = json.loads(line)
+                        except json.JSONDecodeError:
+                            logger.debug(
+                                "Ollama stream skip bad JSON: %s",
+                                sanitize_log_value(line[:80]),
+                            )
+                            continue
+                        message = data.get("message") or {}
+                        text = message.get("content") or ""
+                        if text:
+                            total_chars += len(text)
+                            yield text
+                        if data.get("done"):
+                            break
+            api_duration_ms = (perf_counter() - api_start) * 1000
+            logger.info(
+                "[LLM] Done stream  %sms  response=%s chars",
+                sanitize_log_value(api_duration_ms),
+                sanitize_log_value(total_chars),
+            )
+            structured_logger.log_external_api_call(
+                service="ollama",
+                operation="api/chat.stream",
+                duration_ms=api_duration_ms,
+                success=True,
+            )
+        except LLMError:
+            raise
+        except Exception as e:
+            structured_logger.log_external_api_call(
+                service="ollama",
+                operation="api/chat.stream",
+                duration_ms=0,
+                success=False,
+                error=str(e),
+            )
+            logger.error(
+                "Error in Ollama stream: %s",
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
+            raise LLMError(
+                f"Ollama stream failed: {e}",
                 original_error=e if isinstance(e, Exception) else None,
                 provider="ollama",
             ) from e

@@ -47,6 +47,7 @@ declare global {
     clearNavBadge?: () => void;
     logout?: () => void;
     initCvOptimizerTab?: (sessionId: string | null) => void;
+    initMockInterviewTab?: (sessionId: string | null) => void;
     handleDragLeave?: (event: DragEvent) => void;
     handleDragOver?: (event: DragEvent) => void;
     handleFileDrop?: (event: DragEvent) => void;

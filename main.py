@@ -35,6 +35,7 @@ from api.workflow import router as workflow_router, _safe_error_msg
 from api.websocket import router as websocket_router
 from api.interview_prep import router as interview_prep_router
 from api.cv_optimizer import router as cv_optimizer_router
+from api.mock_interview import router as mock_interview_router
 from api.tools import router as tools_router
 from api.extension_autofill import router as extension_autofill_router
 from api.admin import router as admin_router
@@ -380,7 +381,7 @@ def configure_middleware(app: FastAPI):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Restrict browser features
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(self), geolocation=()"
 
         # HSTS - only in production (Cloud Run provides HTTPS)
         if settings.is_production:
@@ -633,6 +634,11 @@ def include_routers(app: FastAPI):
         cv_optimizer_router, prefix=f"{API_V1_PREFIX}/cv-optimizer", tags=["CV Optimizer"]
     )
     app.include_router(
+        mock_interview_router,
+        prefix=f"{API_V1_PREFIX}/mock-interview",
+        tags=["Mock Interview"],
+    )
+    app.include_router(
         tools_router, prefix=f"{API_V1_PREFIX}/tools", tags=["Career Tools"]
     )
     app.include_router(
@@ -653,6 +659,12 @@ def include_routers(app: FastAPI):
     app.include_router(workflow_router, prefix="/api/workflow", tags=["Workflow (Legacy)"], include_in_schema=False)
     app.include_router(
         interview_prep_router, prefix="/api/interview-prep", tags=["Interview Prep (Legacy)"], include_in_schema=False
+    )
+    app.include_router(
+        mock_interview_router,
+        prefix="/api/mock-interview",
+        tags=["Mock Interview (Legacy)"],
+        include_in_schema=False,
     )
     app.include_router(
         tools_router, prefix="/api/tools", tags=["Career Tools (Legacy)"], include_in_schema=False

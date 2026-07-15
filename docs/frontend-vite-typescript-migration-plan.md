@@ -699,7 +699,7 @@ cd e2e && npx playwright test tests/smoke.spec.ts
 
 ## 8. Phase 7 — Application detail + CV optimizer
 
-**Goal:** Convert the largest product UI surface with WebSocket iteration events and 8 tabs.  
+**Goal:** Convert the largest product UI surface with WebSocket iteration events and **9 tabs**.  
 **Duration:** 8–12 days  
 **Risk:** Very high
 
@@ -707,7 +707,7 @@ cd e2e && npx playwright test tests/smoke.spec.ts
 
 | Legacy | Notes |
 |--------|-------|
-| `application-detail.js` | 8 tabs, sub-tabs, generate documents polling, View posting URL guard |
+| `application-detail.js` | **9 tabs** (Optimize CV + Practice Interview), sub-tabs, generate documents polling, View posting URL guard |
 | `cv-optimizer.js` | Optimize CV loop, WS events, ownership-before-cache semantics on API side |
 
 ### 8.2 Split recommendation (implementation quality)

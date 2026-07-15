@@ -11,7 +11,7 @@ alwaysApply: false
 | Type | Examples | Invocation |
 |------|----------|-----------|
 | **Workflow agents** | `job_analyzer`, `profile_matching`, `company_research`, `cover_letter_writer`, `resume_advisor` | Orchestrated by LangGraph in `job_application_workflow.py` |
-| **Standalone agents** | `interview_prep`, `hiring_manager` + `cv_optimizer_loop` (orchestrator), all 6 career tools | Called directly from API endpoint or background task |
+| **Standalone agents** | `interview_prep`, `mock_interview`, `hiring_manager` + `cv_optimizer_loop` (orchestrator), all 6 career tools | Called directly from API endpoint or background task |
 
 Never add a standalone agent to the LangGraph graph — they run independently.
 
@@ -177,7 +177,7 @@ resume_length: str = prefs.get("resume_length", "concise")
 user_model: Optional[str] = preferred_model_from_state(state, self._current_user_api_key)
 ```
 
-Pass `model=user_model` to **every** `generate()` call so BYOK users’ Settings → preferred model applies to Job Analyzer, Profile Matcher, Company Research, Cover Letter, Resume Advisor, interview prep, CV optimizer, career tools, and extension autofill:
+Pass `model=user_model` to **every** `generate()` / `generate_stream()` call so BYOK users’ Settings → preferred model applies to Job Analyzer, Profile Matcher, Company Research, Cover Letter, Resume Advisor, interview prep, mock interview, CV optimizer, career tools, and extension autofill:
 
 ```python
 response = await self.gemini_client.generate(
@@ -190,6 +190,8 @@ response = await self.gemini_client.generate(
 )
 ```
 
+Practice Interview speak path uses `generate_stream` + `SpeakFieldStreamer` with the same `provider` / `user_api_key` / `model` kwargs — see **`mock-interview-feature.mdc`** and **`llm-integration.mdc`**.
+
 Standalone agents (no LangGraph state) load the same preference via `await load_preferred_model(db, user_id, user_api_key)`.
 
 **`model` is silently ignored when `user_api_key` is None** (Vertex AI mode always uses the server-configured model). Never override `model` in server-key or Vertex AI mode.
@@ -197,7 +199,7 @@ Standalone agents (no LangGraph state) load the same preference via `await load_
 Workflow agents store their duration in `state["agent_durations"]` (Dict[str, float] in milliseconds). Use `flag_modified(workflow_session, "agent_durations")` when persisting.
 
 ## Years of Experience Rule — Applies to All Content Agents
-The `years_experience` field on the user profile is **total career years**, not domain-specific tenure. All six content-generating agents have this rule in their `SYSTEM_CONTEXT`:
+The `years_experience` field on the user profile is **total career years**, not domain-specific tenure. Content-generating agents that use profile data must carry this rule in their `SYSTEM_CONTEXT`:
 
 > *"The `Years of Experience` field is TOTAL career years — NEVER use it as domain-specific experience. When claiming 'X years of [skill/domain]', derive that number only from the relevant work history entries where that skill was actually used. If you cannot calculate it, say 'experience with [skill]' without stating a specific year count."*
 
@@ -206,6 +208,7 @@ The `years_experience` field on the user profile is **total career years**, not 
 - `resume_advisor.py`
 - `cover_letter_writer.py`
 - `interview_prep.py`
+- `mock_interview.py`
 - `job_comparison.py`
 - `salary_coach.py`
 

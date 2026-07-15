@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 
 from tenacity import (
     before_sleep_log,
@@ -180,6 +180,46 @@ class LLMClient:
                 )
 
         return result
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        model: Optional[str] = None,
+        system: Optional[str] = None,
+        temperature: float = DEFAULT_TEMPERATURE,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        user_api_key: Optional[str] = None,
+        use_google_search_grounding: bool = False,
+        provider: Optional[str] = None,
+    ) -> AsyncIterator[str]:
+        """
+        Stream text deltas from the selected provider (no Redis cache, no retry).
+
+        Args:
+            prompt: User prompt
+            model: Optional model override
+            system: Optional system instruction
+            temperature: Sampling temperature
+            max_tokens: Max output tokens
+            user_api_key: Optional BYOK key
+            use_google_search_grounding: When True, providers may fall back to
+                a single full-text yield
+            provider: Explicit provider name for per-user routing
+
+        Yields:
+            Text deltas as they arrive from the model
+        """
+        selected = self._get_provider(provider)
+        async for delta in selected.generate_stream(
+            prompt,
+            model=model,
+            system=system,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            user_api_key=user_api_key,
+            use_google_search_grounding=use_google_search_grounding,
+        ):
+            yield delta
 
     @retry(
         stop=stop_after_attempt(MAX_RETRIES),

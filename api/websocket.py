@@ -825,6 +825,126 @@ async def broadcast_cv_optimization_error(
     await manager.send_to_user(user_id, payload)
 
 
+async def broadcast_mock_interview_started(user_id: str, session_id: str) -> None:
+    """Broadcast that a mock interview run has started."""
+    payload = {
+        "type": "mock_interview_started",
+        "session_id": session_id,
+        "data": {},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_mock_interview_thinking(user_id: str, session_id: str) -> None:
+    """Broadcast that the interviewer is generating the next act."""
+    payload = {
+        "type": "mock_interview_thinking",
+        "session_id": session_id,
+        "data": {},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_mock_interview_speak_delta(
+    user_id: str,
+    session_id: str,
+    *,
+    delta: str,
+    run_id: str,
+) -> None:
+    """Broadcast a partial interviewer speak token/delta while streaming."""
+    payload = {
+        "type": "mock_interview_speak_delta",
+        "session_id": session_id,
+        "data": {"delta": delta, "run_id": run_id},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_mock_interview_utterance(
+    user_id: str,
+    session_id: str,
+    *,
+    speak: str,
+    turn_idx: int,
+    run_id: str,
+) -> None:
+    """Broadcast an interviewer spoken line."""
+    payload = {
+        "type": "mock_interview_utterance",
+        "session_id": session_id,
+        "data": {"speak": speak, "turn_idx": turn_idx, "run_id": run_id},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_mock_interview_turn_scored(
+    user_id: str,
+    session_id: str,
+    *,
+    turn_idx: int,
+    scores: dict,
+    run_id: str,
+    tip: Optional[str] = None,
+) -> None:
+    """Broadcast light per-answer scores (and optional coaching tip)."""
+    payload = {
+        "type": "mock_interview_turn_scored",
+        "session_id": session_id,
+        "data": {
+            "turn_idx": turn_idx,
+            "scores": scores,
+            "run_id": run_id,
+            "tip": tip,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_mock_interview_complete(
+    user_id: str,
+    session_id: str,
+    *,
+    debrief: dict,
+    run_id: str,
+) -> None:
+    """Broadcast mock interview completion with debrief."""
+    payload = {
+        "type": "mock_interview_complete",
+        "session_id": session_id,
+        "data": {"debrief": debrief, "run_id": run_id},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_mock_interview_error(
+    user_id: str,
+    session_id: str,
+    error_message: str,
+) -> None:
+    """Broadcast mock interview failure."""
+    payload = {
+        "type": "mock_interview_error",
+        "session_id": session_id,
+        "data": {"error": error_message},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
 # =============================================================================
 # CONNECTION STATS ENDPOINT
 # =============================================================================

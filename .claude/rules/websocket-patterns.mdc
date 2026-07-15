@@ -93,29 +93,26 @@ from api.websocket import (
     broadcast_cv_optimization_complete,
     broadcast_cv_optimization_error,
 )
-
-await broadcast_cv_optimization_started(user_id=user_id, session_id=session_id)
-
-await broadcast_cv_optimization_iteration(
-    user_id=user_id,
-    session_id=session_id,
-    iteration=record.iteration,
-    score=record.score,
-    feedback_summary=record.feedback_summary,
-    # ... other iteration fields
-)
-
-await broadcast_cv_optimization_complete(
-    user_id=user_id,
-    session_id=session_id,
-    best_score=result.best_score,
-    stop_reason=result.stop_reason,
-)
-
-await broadcast_cv_optimization_error(user_id=user_id, session_id=session_id, error_message="...")
 ```
 
-Frontend (`ui/src/pages/cv-optimizer.ts`) listens via `window.addEventListener('applypilot:ws', ...)` — same event bus as workflow updates.
+### Practice Interview Broadcasts (called by `api/mock_interview.py`)
+```python
+from api.websocket import (
+    broadcast_mock_interview_started,
+    broadcast_mock_interview_thinking,
+    broadcast_mock_interview_speak_delta,
+    broadcast_mock_interview_utterance,
+    broadcast_mock_interview_turn_scored,
+    broadcast_mock_interview_complete,
+    broadcast_mock_interview_error,
+)
+```
+
+Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('applypilot:ws', ...)`.
+
+**Client filter:** only handle events for the open application — `isMockInterviewMessageForSession` in `ui/src/mock-interview/ws-guard.ts` (shared bus can deliver other sessions’ events).
+
+**TTS:** start browser TTS from the **final HTTP** speak / utterance path — not from `mock_interview_speak_delta` chunks (deltas update the typing/stream UI only).
 
 ## All Message Types (client receives)
 
@@ -135,6 +132,13 @@ Frontend (`ui/src/pages/cv-optimizer.ts`) listens via `window.addEventListener('
 | `cv_optimization_iteration` | `api/cv_optimizer.py` | `iteration`, `score`, feedback fields |
 | `cv_optimization_complete` | `api/cv_optimizer.py` | `best_score`, `stop_reason` |
 | `cv_optimization_error` | `api/cv_optimizer.py` | `error` |
+| `mock_interview_started` | `api/mock_interview.py` | _(empty)_ |
+| `mock_interview_thinking` | `api/mock_interview.py` | _(empty)_ |
+| `mock_interview_speak_delta` | `api/mock_interview.py` | `delta`, `run_id` |
+| `mock_interview_utterance` | `api/mock_interview.py` | `speak`, `turn_idx`, `run_id` |
+| `mock_interview_turn_scored` | `api/mock_interview.py` | `turn_idx`, `scores`, `run_id` |
+| `mock_interview_complete` | `api/mock_interview.py` | `debrief`, `run_id` |
+| `mock_interview_error` | `api/mock_interview.py` | `error` |
 
 All messages share the same envelope:
 ```json

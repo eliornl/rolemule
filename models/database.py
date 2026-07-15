@@ -576,6 +576,11 @@ class WorkflowSession(Base):
         JSONB, nullable=True, default=None
     )
 
+    # Conversational mock interview practice (on-demand; HR / Pro / Manager)
+    mock_interview: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+
     # Timing - Use proper DateTime instead of String for time-based queries
     processing_start_time: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -635,6 +640,7 @@ class WorkflowSession(Base):
             "cover_letter": self.cover_letter or {},
             "interview_prep": self.interview_prep or {},
             "cv_optimization": self.cv_optimization or {},
+            "mock_interview": self.mock_interview or {},
             "processing_start_time": (
                 self.processing_start_time.isoformat()
                 if self.processing_start_time

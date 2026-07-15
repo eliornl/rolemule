@@ -237,6 +237,8 @@ These were deferred at ship time; **multi-provider BYOK + grounding are now deli
 - Migrating every agent call site from `get_gemini_client` → `get_llm_client` in one shot (alias is enough)
 - Dropping Vertex (kept as Gemini-only admin backend)
 
+**Follow-up (shipped):** `LLMClient.generate_stream` + provider streams + `SpeakFieldStreamer` for Practice Interview speak deltas — see `llm-integration.mdc` / `mock-interview-feature.mdc`.
+
 ---
 
 ## 7. Risk register

@@ -49,12 +49,13 @@ Paste a job description and five agents run automatically:
 | **Resume Advisor** | Per-bullet rewrites, ATS alignment score, before-you-submit checklist |
 | **Cover Letter Writer** | Personalized cover letter, regenerate with one click |
 
-Two more agents run **on demand** from the application detail page (after the workflow completes):
+Three more agents run **on demand** from the application detail page (after the workflow completes):
 
 | Agent | What it produces |
 |-------|-----------------|
-| **Interview Prep** | Role-specific questions, model answers, full mock interview session |
+| **Interview Prep** | Role-specific questions, model answers, STAR frameworks, and process tips (static guide on the Interview tab) |
 | **CV Optimizer** | Iterative evaluate→revise loop: AI hiring manager scores your CV, AI applicant rewrites it, repeats until score threshold or max iterations. Outputs an optimized CV, cover letter, and **Download CV** (`.odt` via LibreOffice + HTML normalizer on server when available, else `.docx`; see [USER_GUIDE.md](USER_GUIDE.md#cv-optimization)). |
+| **Practice Interview** | Timed conversational mock interview (HR / Pro / Manager; 10/15/20 min) with browser voice or typed answers and a scored debrief — see [USER_GUIDE.md](USER_GUIDE.md#practice-interview) |
 
 ## Six career tools
 
@@ -445,7 +446,7 @@ Browser / Chrome Extension
                        ↓
         Resume Advisor + Cover Letter Writer  (parallel)
 
-        Interview Prep  ← standalone, runs on demand
+        Interview Prep  ← standalone, runs on demand (static guide)
 
         CV Optimizer  ← standalone, runs on demand after workflow completes
                Hiring Manager (evaluator) ←──────────────┐
@@ -455,6 +456,8 @@ Browser / Chrome Extension
                Convergence check ─── continue ───────────┘
                        │ stop
                Cover Letter Finalizer → optimized CV + cover letter
+
+        Practice Interview  ← standalone timed conversational mock (HR/Pro/Manager)
 
         Six career tools (Follow-up Email, Thank You Note, Salary Coach,
         Rejection Analyzer, Reference Request, Job Comparison)
