@@ -1,0 +1,169 @@
+---
+description: Hiring Outreach — public web contact finder + draft messages (copy-only Outreach tab)
+globs: agents/hiring_outreach.py,api/hiring_outreach.py,ui/src/hiring-outreach/**/*.ts,ui/src/pages/hiring-outreach.ts
+alwaysApply: false
+---
+
+# Hiring Outreach Feature
+
+Standalone on-demand feature — **not** in the LangGraph workflow. Finds hiring contacts via **public web signals** (company websites, news, team pages) and drafts personalized outreach messages for a completed job application. **Copy-only** — no send integration, no professional networking profile URLs or site names in output.
+
+## Product summary
+
+- **Tab:** 10th application-detail tab **Outreach** (`data-tab="outreach"`, `#pane-outreach`) — after Practice Interview
+- **BYOK:** `require_user_llm_context()` → `CFG_6001` when user is not LLM-ready
+- **Prerequisite:** `workflow_session.job_analysis` must exist (workflow completed at least Job Analyzer)
+- **UX:** Same family as Optimize CV / Practice Interview — empty-state CTA, AI Setup warning, progress spinner, results with **Copy** buttons per draft (email subject+body, short message)
+- **No LinkedIn:** Agent strips networking profile URLs; prompts forbid citing professional networking sites by name
+
+## Standalone Agent (NOT in LangGraph workflow)
+
+`HiringOutreachAgent` in `agents/hiring_outreach.py` is invoked **on-demand** from `api/hiring_outreach.py` via `BackgroundTasks`.
+
+```python
+agent = HiringOutreachAgent()
+result = await agent.generate(
+    job_analysis=workflow_session.job_analysis or {},
+    company_research=workflow_session.company_research or {},
+    profile_matching=workflow_session.profile_matching or {},
+    user_profile=workflow_session.user_data or {},
+    user_api_key=user_api_key,
+    model=preferred_model,
+    llm_provider=llm_provider,
+)
+```
+
+**Grounding:** `settings.hiring_outreach_grounding_enabled` (default **True**). Uses `use_google_search_grounding=True` on `generate()` when provider supports web search and company name is usable (`_has_usable_company_name`). **Ollama** → grounding off. On grounded-call failure, agent retries once without grounding (`_generate_with_grounding_failover`). Skips grounding when employer name is a placeholder (unnamed-posting mode).
+
+**Output:** Up to 4 contacts (`role_type`: `hiring_manager` | `recruiter` | `team_peer` | `generic`; `confidence`: `high` | `medium` | `low`). Generic `fallback` drafts when no credible contacts found. No bracket placeholders; no invented personal emails.
+
+## Background Generation with Atomic Redis Locking
+
+```python
+from utils.cache import (
+    is_hiring_outreach_generating,
+    set_hiring_outreach_generating,   # Returns False if already locked (NX SET)
+    clear_hiring_outreach_generating,
+    cache_hiring_outreach,
+    invalidate_hiring_outreach,
+)
+
+claimed = await set_hiring_outreach_generating(session_id)
+if not claimed:
+    raise APIError(ErrorCode.RESOURCE_CONFLICT, "Hiring outreach generation is already in progress", status_code=409)
+
+background_tasks.add_task(
+    _generate_hiring_outreach_background,
+    session_id=session_id,
+    user_id=str(user_id),
+    user_api_key=user_api_key,
+    preferred_model=preferred_model,
+    llm_provider=llm_provider,
+)
+```
+
+Always clear the lock in `finally` and broadcast lifecycle events:
+
+```python
+from api.websocket import (
+    broadcast_hiring_outreach_started,
+    broadcast_hiring_outreach_complete,
+    broadcast_hiring_outreach_error,
+)
+
+async def _generate_hiring_outreach_background(...):
+    try:
+        async with get_session() as db:
+            workflow_session = await _load_session(db, session_id)
+            ws_user_id = user_id or str(workflow_session.user_id)
+            await broadcast_hiring_outreach_started(ws_user_id, session_id)
+            # generate, sanitize_llm_output(), save
+            workflow_session.hiring_outreach = result
+            flag_modified(workflow_session, "hiring_outreach")
+            await db.commit()
+            await cache_hiring_outreach(session_id, result)
+            await broadcast_hiring_outreach_complete(ws_user_id, session_id)
+    except Exception as e:
+        logger.error("Hiring outreach failed: %s", sanitize_log_value(e), exc_info=True)
+        await report_exception(e, user_id=user_id)
+        await broadcast_hiring_outreach_error(ws_user_id, session_id, "Hiring outreach generation failed")
+    finally:
+        await clear_hiring_outreach_generating(session_id)
+```
+
+## API Endpoints (`/api/v1/hiring-outreach`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/{session_id}` | Get outreach (cache first, then DB) |
+| `GET` | `/{session_id}/status` | Poll generation status (`is_generating`) |
+| `POST` | `/{session_id}/generate` | Start background generation (`?regenerate=true` to replace existing) |
+| `DELETE` | `/{session_id}` | Delete outreach (DB + cache) |
+
+**Guards:** ownership → rate limit → `job_analysis` present → `require_user_llm_context()` (`CFG_6001`) → Redis generating lock.
+
+Rate limit: **5 generations per hour** per user (`{user_id}:hiring_outreach`).
+
+## Storage
+
+JSONB `workflow_sessions.hiring_outreach` (migration `20260715_0001_027` / revision id `20260715_027`):
+
+```json
+{
+  "version": 1,
+  "generated_at": "ISO8601",
+  "grounding_used": true,
+  "company_name": "...",
+  "job_title": "...",
+  "summary": "...",
+  "contacts": [{ "name", "title", "role_type", "confidence", "source_hint", "email_draft", "short_message" }],
+  "fallback": { "email_draft", "short_message" }
+}
+```
+
+Always `flag_modified(workflow_session, "hiring_outreach")` on write. Background task uses `get_session()`, not request-scoped `get_database()`.
+
+## WebSocket Push (replaces polling)
+
+Reuse `WS /api/v1/ws/workflow/{session_id}`. Frontend connects before calling generate; 5 s status polling as fallback.
+
+| WS message type | Meaning |
+|---|---|
+| `hiring_outreach_started` | Background task began — show spinner |
+| `hiring_outreach_complete` | Saved to DB — reload from API |
+| `hiring_outreach_error` | Generation failed — show error, reset UI (`data.error`) |
+
+Frontend pattern (`ui/src/pages/hiring-outreach.ts`, `ui/src/hiring-outreach/`):
+
+```javascript
+attachWsListener();           // applypilot:ws before generate
+await triggerGenerateApi();   // POST /generate
+startPollingFallback();       // 5 s poll as safety net
+// WS complete/error stops polling and calls loadAndRender()
+```
+
+## Cache Keys
+
+Dedicated helpers in `utils/cache.py` (do not use generic `cache_llm_response`):
+
+| Cache | TTL | Key pattern |
+|-------|-----|-------------|
+| Hiring outreach result | 7d | `v1:hiring_outreach:{session_id}` |
+| Hiring outreach generating | 10min | `v1:hiring_outreach_generating:{session_id}` — atomic `SET NX` lock |
+
+## Frontend
+
+- Entry: `ui/src/pages/hiring-outreach.ts` → `window.initHiringOutreachTab(sessionId)`
+- Modules: `ui/src/hiring-outreach/` (`api`, `render`, `listeners`, `websocket`, `state`)
+- Vite: `js/hiring-outreach.js` in `ui/vite.entries.json`
+- `application-detail.ts` calls `initHiringOutreachTab` on `data-tab="outreach"`
+- Sections: `#ho-setup`, `#ho-progress`, `#ho-results` — copy buttons only (clipboard), no external send links
+
+## Tests
+
+```bash
+pytest tests/test_agents/test_hiring_outreach.py tests/test_api/test_hiring_outreach.py -v --override-ini="addopts="
+pytest tests/test_utils/test_hiring_outreach_cache.py -v --override-ini="addopts="
+```
+
+See also: `interview-prep-feature.mdc` (same background-lock pattern), `llm-integration.mdc` (grounding), `websocket-patterns.mdc`, `unit-testing.mdc`.

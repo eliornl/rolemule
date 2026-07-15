@@ -32,6 +32,7 @@ Pure pytest, fully mocked LLM clients, no network required.
 pytest tests/test_agents/ -v
 pytest tests/test_agents/test_cv_optimizer_loop.py -v  # CV optimizer orchestrator + agents
 pytest tests/test_agents/test_mock_interview.py -v     # practice interview agent
+pytest tests/test_agents/test_hiring_outreach.py -v  # hiring outreach agent
 ```
 
 ### API Integration Tests (`tests/test_api/`)
@@ -44,6 +45,7 @@ pytest tests/test_api/test_career_tools.py -v   # 6 career tools
 pytest tests/test_api/test_extension_autofill.py -v  # extension POST /extension/autofill/map
 pytest tests/test_api/test_interview_prep.py     # interview prep
 pytest tests/test_api/test_mock_interview.py     # practice / mock interview
+pytest tests/test_api/test_hiring_outreach.py    # hiring outreach
 pytest tests/test_api/test_cv_optimizer.py       # CV optimizer (ownership-before-cache, cache unwrap)
 pytest tests/test_api/test_workflow.py           # workflow trigger/status; duplicate start → RES_3002 (409); duplicate start → RES_3002 (409)
 pytest tests/test_api/test_profile.py            # profile/settings

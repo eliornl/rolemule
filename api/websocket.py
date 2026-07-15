@@ -704,6 +704,74 @@ async def broadcast_interview_prep_error(
     await manager.send_to_user(user_id, payload)
 
 
+async def broadcast_hiring_outreach_started(
+    user_id: str,
+    session_id: str,
+) -> None:
+    """
+    Broadcast that hiring outreach generation has started.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+    """
+    payload = {
+        "type": "hiring_outreach_started",
+        "session_id": session_id,
+        "data": {},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_hiring_outreach_complete(
+    user_id: str,
+    session_id: str,
+) -> None:
+    """
+    Broadcast that hiring outreach generation has completed successfully.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+    """
+    payload = {
+        "type": "hiring_outreach_complete",
+        "session_id": session_id,
+        "data": {},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_hiring_outreach_error(
+    user_id: str,
+    session_id: str,
+    error_message: str,
+) -> None:
+    """
+    Broadcast that hiring outreach generation has failed.
+
+    Args:
+        user_id: User ID to notify
+        session_id: Workflow session ID
+        error_message: Description of the failure
+    """
+    payload = {
+        "type": "hiring_outreach_error",
+        "session_id": session_id,
+        "data": {"error": error_message},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await manager.send_to_session(session_id, payload)
+    await manager.send_to_user(user_id, payload)
+
+
 # =============================================================================
 # CV OPTIMIZATION BROADCASTS
 # =============================================================================

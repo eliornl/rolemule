@@ -65,7 +65,7 @@ Before changing how jobs are keyed or deduplicated:
 11. Add API integration tests in `tests/test_api/test_career_tools.py` using `authed_client`
 12. Add E2E coverage in `e2e/tests/dashboard-pages.spec.ts` — form field visibility, input fillability, tab switching; mock the API and verify 200/429 responses do not crash the page (add matching test in `rate-limit.spec.ts`)
 
-**Application-detail on-demand tabs** (Interview Prep, CV Optimizer, Practice Interview pattern): also update **`mock-interview-feature.mdc` / `interview-prep-feature.mdc` / `cv-optimizer-feature.mdc`** as appropriate; **`ui-application-detail.mdc`** tab count; **`USER_GUIDE.md`**, **`ui/help.html`**, **`README.md`**; indexes in **`CLAUDE.md`** / **`.cursorrules`**; **`e2e-testing.mdc`** / **`e2e/README.md`** tab count; **`CHANGELOG.md`**. If using LLM streaming, document in **`llm-integration.mdc`** + **`websocket-patterns.mdc`**.
+**Application-detail on-demand tabs** (Interview Prep, CV Optimizer, Practice Interview, Hiring Outreach pattern): also update **`mock-interview-feature.mdc` / `interview-prep-feature.mdc` / `cv-optimizer-feature.mdc` / `hiring-outreach-feature.mdc`** as appropriate; **`ui-application-detail.mdc`** tab count; **`USER_GUIDE.md`**, **`ui/help.html`**, **`README.md`**; indexes in **`CLAUDE.md`** / **`.cursorrules`**; **`e2e-testing.mdc`** / **`e2e/README.md`** tab count; **`CHANGELOG.md`**. If using LLM streaming, document in **`llm-integration.mdc`** + **`websocket-patterns.mdc`**.
 
 ## New Content Regeneration Endpoint
 

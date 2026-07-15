@@ -91,7 +91,7 @@ Used by `_check_education_completion()` and `POST /profile/complete`:
 `UserProfile.to_dict()` maps both `NULL` and `[]` to `[]` for API responses for these JSONB lists — ORM checks must distinguish `NULL` vs empty JSONB for completion logic.
 
 **Never add `location_preferences` or `target_role` as profile fields** — they do not exist in the schema. Any content referencing these must be corrected.
-- `WorkflowSession`: `job_analysis`, `company_research`, `profile_matching`, `resume_recommendations`, `cover_letter`, `interview_prep`, `cv_optimization`, `mock_interview`, `agent_status`, `completed_agents`, `failed_agents`, `error_messages`, `warning_messages`, `job_input_data`, `user_data`, `agent_start_times`, `agent_durations`
+- `WorkflowSession`: `job_analysis`, `company_research`, `profile_matching`, `resume_recommendations`, `cover_letter`, `interview_prep`, `cv_optimization`, `mock_interview`, `hiring_outreach`, `agent_status`, `completed_agents`, `failed_agents`, `error_messages`, `warning_messages`, `job_input_data`, `user_data`, `agent_start_times`, `agent_durations`
 
 When updating multiple JSONB fields, loop:
 ```python

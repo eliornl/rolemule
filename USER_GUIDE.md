@@ -11,6 +11,7 @@ Welcome to ApplyPilot! This guide walks you through every feature so you can get
 - [Chrome Extension](#chrome-extension)
 - [Interview Preparation](#interview-preparation)
 - [Practice Interview](#practice-interview)
+- [Hiring Outreach](#hiring-outreach)
 - [CV Optimization](#cv-optimization)
 - [Career Tools](#career-tools)
 - [Settings](#settings)
@@ -208,9 +209,11 @@ The **CV Optimizer** also runs on demand from the **Optimize CV** tab after the 
 
 The **Practice Interview** tab runs a timed conversational mock interview (HR / Pro / Manager) using your API key. See [Practice Interview](#practice-interview).
 
+The **Outreach** tab finds hiring contacts from public web sources and drafts copy-ready outreach messages you send yourself. See [Hiring Outreach](#hiring-outreach).
+
 ### Viewing Results
 
-The application details page opens with a **9-tab layout**. When a posting URL was saved (for example from the Chrome extension), the page header shows a **View posting** link that opens the original listing in a new tab. If the job lists multiple office locations, the header location line shows them separated by **|** (primary city first, then additional offices).
+The application details page opens with a **10-tab layout**. When a posting URL was saved (for example from the Chrome extension), the page header shows a **View posting** link that opens the original listing in a new tab. If the job lists multiple office locations, the header location line shows them separated by **|** (primary city first, then additional offices).
 
 | Tab | Content |
 |-----|---------|
@@ -223,6 +226,7 @@ The application details page opens with a **9-tab layout**. When a posting URL w
 | **Interview** | 3 sub-tabs: Process, Questions, Preparation |
 | **Optimize CV** | Iterative AI CV optimization loop — optimized CV, cover letter, gap analysis |
 | **Practice Interview** | Timed conversational practice (HR / Pro / Manager) with voice or typed answers |
+| **Outreach** | Public web contact suggestions and copy-ready email / short-message drafts (no send integration) |
 
 The **Cover Letter** tab has a **Copy** button. The Cover Letter, Resume, and Interview tabs each have a **Regenerate** button (rate limited to 5/hour).
 
@@ -328,6 +332,24 @@ Practice a timed conversational mock interview grounded in this application's jo
 Optional interview prep content from the Interview tab is used when available to steer questions. Practice Interview is a live conversation — different from the static **Interview** tab guide.
 
 Voice uses free browser APIs (no audio uploaded to ApplyPilot). The mic pauses while the interviewer is speaking so it does not capture TTS. Typed answers always work if mic/speech is unavailable.
+
+---
+
+## Hiring Outreach
+
+After you apply, the **Outreach** tab helps you find people who may be involved in hiring for this role and drafts personalized messages you can copy and send yourself. ApplyPilot searches **public web sources only** (company websites, news, team pages) — not professional networking profile sites.
+
+### Accessing Outreach
+
+1. Open a completed application's detail page (job analysis must be finished)
+2. Click the **Outreach** tab (after Practice Interview)
+3. Confirm your API key is set in **Settings → AI Setup**
+4. Click **Find contacts & draft messages**
+5. Review contact cards (name, title, confidence) and copy email or short-message drafts with the **Copy** buttons
+
+If no credible public contacts are found, ApplyPilot still provides generic outreach drafts you can adapt. Regenerate replaces the previous result (`regenerate=true`). Rate limit: **5 generations per hour**.
+
+**Copy-only:** ApplyPilot does not send messages or open external apps — you paste drafts into your own email client or messaging tool.
 
 ---
 

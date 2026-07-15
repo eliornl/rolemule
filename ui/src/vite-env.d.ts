@@ -48,6 +48,7 @@ declare global {
     logout?: () => void;
     initCvOptimizerTab?: (sessionId: string | null) => void;
     initMockInterviewTab?: (sessionId: string | null) => void;
+    initHiringOutreachTab?: (sessionId: string | null) => void;
     handleDragLeave?: (event: DragEvent) => void;
     handleDragOver?: (event: DragEvent) => void;
     handleFileDrop?: (event: DragEvent) => void;

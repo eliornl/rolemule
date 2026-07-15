@@ -108,6 +108,17 @@ from api.websocket import (
 )
 ```
 
+### Hiring Outreach Broadcasts (called by `api/hiring_outreach.py` background task)
+```python
+from api.websocket import (
+    broadcast_hiring_outreach_started,
+    broadcast_hiring_outreach_complete,
+    broadcast_hiring_outreach_error,
+)
+```
+
+Frontend (`ui/src/hiring-outreach/websocket.ts`) listens via `window.addEventListener('applypilot:ws', ...)`.
+
 Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('applypilot:ws', ...)`.
 
 **Client filter:** only handle events for the open application — `isMockInterviewMessageForSession` in `ui/src/mock-interview/ws-guard.ts` (shared bus can deliver other sessions’ events).
@@ -139,6 +150,9 @@ Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('applyp
 | `mock_interview_turn_scored` | `api/mock_interview.py` | `turn_idx`, `scores`, `run_id` |
 | `mock_interview_complete` | `api/mock_interview.py` | `debrief`, `run_id` |
 | `mock_interview_error` | `api/mock_interview.py` | `error` |
+| `hiring_outreach_started` | `api/hiring_outreach.py` | _(empty)_ |
+| `hiring_outreach_complete` | `api/hiring_outreach.py` | _(empty)_ |
+| `hiring_outreach_error` | `api/hiring_outreach.py` | `error` |
 
 All messages share the same envelope:
 ```json

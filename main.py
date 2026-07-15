@@ -34,6 +34,7 @@ from api.applications import router as applications_router
 from api.workflow import router as workflow_router, _safe_error_msg
 from api.websocket import router as websocket_router
 from api.interview_prep import router as interview_prep_router
+from api.hiring_outreach import router as hiring_outreach_router
 from api.cv_optimizer import router as cv_optimizer_router
 from api.mock_interview import router as mock_interview_router
 from api.tools import router as tools_router
@@ -631,6 +632,11 @@ def include_routers(app: FastAPI):
         interview_prep_router, prefix=f"{API_V1_PREFIX}/interview-prep", tags=["Interview Prep"]
     )
     app.include_router(
+        hiring_outreach_router,
+        prefix=f"{API_V1_PREFIX}/hiring-outreach",
+        tags=["Hiring Outreach"],
+    )
+    app.include_router(
         cv_optimizer_router, prefix=f"{API_V1_PREFIX}/cv-optimizer", tags=["CV Optimizer"]
     )
     app.include_router(
@@ -659,6 +665,12 @@ def include_routers(app: FastAPI):
     app.include_router(workflow_router, prefix="/api/workflow", tags=["Workflow (Legacy)"], include_in_schema=False)
     app.include_router(
         interview_prep_router, prefix="/api/interview-prep", tags=["Interview Prep (Legacy)"], include_in_schema=False
+    )
+    app.include_router(
+        hiring_outreach_router,
+        prefix="/api/hiring-outreach",
+        tags=["Hiring Outreach (Legacy)"],
+        include_in_schema=False,
     )
     app.include_router(
         mock_interview_router,

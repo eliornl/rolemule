@@ -56,6 +56,7 @@ Three more agents run **on demand** from the application detail page (after the 
 | **Interview Prep** | Role-specific questions, model answers, STAR frameworks, and process tips (static guide on the Interview tab) |
 | **CV Optimizer** | Iterative evaluate→revise loop: AI hiring manager scores your CV, AI applicant rewrites it, repeats until score threshold or max iterations. Outputs an optimized CV, cover letter, and **Download CV** (`.odt` via LibreOffice + HTML normalizer on server when available, else `.docx`; see [USER_GUIDE.md](USER_GUIDE.md#cv-optimization)). |
 | **Practice Interview** | Timed conversational mock interview (HR / Pro / Manager; 10/15/20 min) with browser voice or typed answers and a scored debrief — see [USER_GUIDE.md](USER_GUIDE.md#practice-interview) |
+| **Hiring Outreach** | Public web contact suggestions and copy-ready outreach drafts on the Outreach tab — see [USER_GUIDE.md](USER_GUIDE.md#hiring-outreach) |
 
 ## Six career tools
 
@@ -459,6 +460,8 @@ Browser / Chrome Extension
 
         Practice Interview  ← standalone timed conversational mock (HR/Pro/Manager)
 
+        Hiring Outreach  ← standalone public-web contacts + copy-only draft messages
+
         Six career tools (Follow-up Email, Thank You Note, Salary Coach,
         Rejection Analyzer, Reference Request, Job Comparison)
                         ← standalone, no job description needed
@@ -475,7 +478,7 @@ applypilot/
 ├── main.py               # FastAPI app entry point
 ├── cli/                  # ApplyPilot CLI (Typer commands)
 ├── applypilot_client/    # Sync HTTP client for CLI
-├── agents/               # 5 workflow agents + interview prep + CV optimizer loop + 6 career tool agents
+├── agents/               # 5 workflow agents + interview prep + hiring outreach + CV optimizer loop + 6 career tool agents
 ├── workflows/            # LangGraph pipeline orchestration and state schema
 ├── api/                  # FastAPI route handlers
 ├── config/               # Settings (Pydantic BaseSettings + .env)

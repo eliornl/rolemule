@@ -11,7 +11,7 @@ alwaysApply: false
 | Type | Examples | Invocation |
 |------|----------|-----------|
 | **Workflow agents** | `job_analyzer`, `profile_matching`, `company_research`, `cover_letter_writer`, `resume_advisor` | Orchestrated by LangGraph in `job_application_workflow.py` |
-| **Standalone agents** | `interview_prep`, `mock_interview`, `hiring_manager` + `cv_optimizer_loop` (orchestrator), all 6 career tools | Called directly from API endpoint or background task |
+| **Standalone agents** | `interview_prep`, `mock_interview`, `hiring_outreach`, `hiring_manager` + `cv_optimizer_loop` (orchestrator), all 6 career tools | Called directly from API endpoint or background task |
 
 Never add a standalone agent to the LangGraph graph — they run independently.
 
@@ -177,7 +177,7 @@ resume_length: str = prefs.get("resume_length", "concise")
 user_model: Optional[str] = preferred_model_from_state(state, self._current_user_api_key)
 ```
 
-Pass `model=user_model` to **every** `generate()` / `generate_stream()` call so BYOK users’ Settings → preferred model applies to Job Analyzer, Profile Matcher, Company Research, Cover Letter, Resume Advisor, interview prep, mock interview, CV optimizer, career tools, and extension autofill:
+Pass `model=user_model` to **every** `generate()` / `generate_stream()` call so BYOK users’ Settings → preferred model applies to Job Analyzer, Profile Matcher, Company Research, Cover Letter, Resume Advisor, interview prep, mock interview, hiring outreach, CV optimizer, career tools, and extension autofill:
 
 ```python
 response = await self.gemini_client.generate(
@@ -209,6 +209,7 @@ The `years_experience` field on the user profile is **total career years**, not 
 - `cover_letter_writer.py`
 - `interview_prep.py`
 - `mock_interview.py`
+- `hiring_outreach.py`
 - `job_comparison.py`
 - `salary_coach.py`
 

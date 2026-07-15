@@ -19,6 +19,7 @@
   "js/application-detail.js": "src/pages/application-detail.ts",
   "js/cv-optimizer.js": "src/pages/cv-optimizer.ts",
   "js/mock-interview.js": "src/pages/mock-interview.ts",
+  "js/hiring-outreach.js": "src/pages/hiring-outreach.ts",
   "js/profile-setup.js": "src/pages/profile-setup.ts",
   "js/dom-security.js": "src/pages/dom-security.ts",
   "js/confirm-modal.js": "src/pages/confirm-modal.ts",

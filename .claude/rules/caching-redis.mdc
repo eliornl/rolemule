@@ -18,6 +18,8 @@ All keys are prefixed with `CACHE_VERSION` (currently `v1`). Bump `CACHE_VERSION
 | Workflow state | 1min | `v1:workflow_state:{session_id}` |
 | LLM response | 1h | `v1:llm_response:{user_id}:{hash}` (user-scoped) or `v1:llm_response:{hash}` (shared) |
 | Interview prep | 7d | `v1:interview_prep:{session_id}` |
+| Hiring outreach | 7d | `v1:hiring_outreach:{session_id}` |
+| Hiring outreach generating | 10min | `v1:hiring_outreach_generating:{session_id}` — atomic `SET NX` lock |
 | CV optimization result | 24h | `v1:cv_optimization:{session_id}` — `get_cached_cv_optimization()` unwraps `cache_set` `{"data": ...}` wrapper |
 | CV optimization running | 30min | `v1:cv_optimization_running:{session_id}` — atomic `SET NX` lock |
 | Mock interview thinking | 3min | `v1:mock_interview_thinking:{session_id}` — atomic `SET NX` turn lock |
@@ -152,6 +154,7 @@ response.headers["X-RateLimit-Reset"]     = str(result.reset_seconds)
 | Career tools (most) | `POST /tools/…` | 10/hour | user_id |
 | Salary coach | `POST /tools/salary-coach` | 5/hour | user_id |
 | Interview prep generate | `POST /interview-prep/{id}/generate` | 5/hour | user_id |
+| Hiring outreach generate | `POST /hiring-outreach/{id}/generate` | 5/hour | `{user_id}:hiring_outreach` |
 | CV optimizer start | `POST /cv-optimizer/{id}/start` | 10/hour | `{user_id}:cv_optimizer` |
 | Mock interview start | `POST /mock-interview/{id}/start` | 10/hour | `{user_id}:mock_interview_start` |
 | Mock interview turn | `POST /mock-interview/{id}/turn` | 40/hour | `{user_id}:mock_interview_turn` |

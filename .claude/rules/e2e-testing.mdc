@@ -19,7 +19,7 @@ Tests are split into two tiers based on whether they require a live server.
 | `auth-pages.spec.ts` | Login/register/forgot/reset/verify form structure + validation |
 | `interview-prep.spec.ts` | All states, 4 question sub-tabs, generate/complete/mobile |
 | `profile-setup.spec.ts` | Profile setup (resume + 5 steps: basic → work → education → skills → prefs), field validation, navigation |
-| `application-detail.spec.ts` | **9 tabs** (Optimize CV + Practice Interview), sub-tabs, cover letter, company, mobile layout |
+| `application-detail.spec.ts` | **10 tabs** (Optimize CV + Practice Interview + Outreach), sub-tabs, cover letter, company, mobile layout |
 | `onboarding.spec.ts` | Auto-show/suppress, step nav, skip, complete, `window.Onboarding` API, a11y |
 | `complete-coverage.spec.ts` | Authenticated page coverage: dashboard, settings, career tools, history |
 | `security.spec.ts` | XSS, JWT format, API headers, content security (all mocked) |

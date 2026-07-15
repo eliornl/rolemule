@@ -133,6 +133,12 @@ class Settings(BaseSettings):
         description="Ground when employer confidence is at or below this (HIGH|MEDIUM|LOW)",
     )
 
+    # Hiring outreach — provider web-search grounding (on by default for this feature)
+    hiring_outreach_grounding_enabled: bool = Field(
+        default=True,
+        description="Enable provider web-search grounding for hiring outreach LLM calls",
+    )
+
     base_url: str = "http://localhost:8000"
     security_contact_email: Optional[str] = Field(
         default=None,

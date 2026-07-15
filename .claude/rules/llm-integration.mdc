@@ -124,6 +124,10 @@ response = await self.llm_client.generate(
 
 Flag: `use_google_search_grounding=True` on `generate()` (name kept for compatibility).
 
+## Hiring Outreach grounding
+
+Same provider web-search tools as Company Research when `settings.hiring_outreach_grounding_enabled=True` (default). `HiringOutreachAgent` passes `use_google_search_grounding` only when the employer name is usable (`_has_usable_company_name`) and provider is not Ollama. On grounded-call failure, retries once without grounding (`_generate_with_grounding_failover`). See **`hiring-outreach-feature.mdc`**.
+
 ## LLM Response Caching — User ID + provider scoping
 
 Pass `user_id` and `provider=` so cache keys do not bleed across providers.

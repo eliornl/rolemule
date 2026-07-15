@@ -42,6 +42,8 @@
     "src/cv-optimizer/**/*.ts",
     "src/pages/mock-interview.ts",
     "src/mock-interview/**/*.ts",
+    "src/pages/hiring-outreach.ts",
+    "src/hiring-outreach/**/*.ts",
     "src/pages/dashboard-settings.ts",
     "src/dashboard-settings/**/*.ts",
     "src/pages/dashboard-tools.ts",

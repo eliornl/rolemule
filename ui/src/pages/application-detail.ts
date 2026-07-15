@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tabId === 'practice' && typeof window.initMockInterviewTab === 'function') {
         window.initMockInterviewTab(getCurrentSessionId());
       }
+      if (tabId === 'outreach' && typeof window.initHiringOutreachTab === 'function') {
+        window.initHiringOutreachTab(getCurrentSessionId());
+      }
     });
   });
 

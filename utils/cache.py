@@ -39,6 +39,8 @@ CACHE_PREFIX_INTERVIEW_PREP_GENERATING = "interview_prep_generating"
 CACHE_PREFIX_CV_OPTIMIZATION = "cv_optimization"
 CACHE_PREFIX_CV_OPTIMIZATION_RUNNING = "cv_optimization_running"
 CACHE_PREFIX_MOCK_INTERVIEW_THINKING = "mock_interview_thinking"
+CACHE_PREFIX_HIRING_OUTREACH = "hiring_outreach"
+CACHE_PREFIX_HIRING_OUTREACH_GENERATING = "hiring_outreach_generating"
 CACHE_PREFIX_TOOL_RESULT = "tool_result"
 CACHE_PREFIX_COMPUTE_LOCK = "computing"
 
@@ -54,6 +56,8 @@ TTL_INTERVIEW_PREP_GENERATING = 60 * 10  # 10 minutes — auto-expires if backgr
 TTL_CV_OPTIMIZATION = 60 * 60 * 24  # 24 hours
 TTL_CV_OPTIMIZATION_RUNNING = 60 * 30  # 30 minutes — auto-expires if background task crashes
 TTL_MOCK_INTERVIEW_THINKING = 60 * 3  # 3 minutes — turn LLM lock
+TTL_HIRING_OUTREACH = 60 * 60 * 24 * 7  # 7 days
+TTL_HIRING_OUTREACH_GENERATING = 60 * 10  # 10 minutes — auto-expires if background task crashes
 TTL_TOOL_RESULT = 60 * 60  # 1 hour
 TTL_COMPUTE_LOCK = 60  # 1 minute — prevents stampede, auto-expires if compute crashes
 
@@ -69,6 +73,7 @@ _CACHE_REQUIRED_FIELDS: Dict[str, List[str]] = {
     CACHE_PREFIX_LLM_RESPONSE: ["response"],
     CACHE_PREFIX_INTERVIEW_PREP: [],
     CACHE_PREFIX_CV_OPTIMIZATION: [],
+    CACHE_PREFIX_HIRING_OUTREACH: ["version", "contacts", "fallback"],
     CACHE_PREFIX_TOOL_RESULT: [],
 }
 
@@ -1024,6 +1029,146 @@ async def is_interview_prep_generating(session_id: str) -> bool:
         return value is not None
     except Exception as e:
         logger.warning("Failed to check interview_prep generating flag: %s", sanitize_log_value(str(e)))
+        return False
+
+
+# =============================================================================
+# HIRING OUTREACH CACHE
+# =============================================================================
+
+
+def _get_hiring_outreach_cache_key(session_id: str) -> str:
+    """Generate versioned cache key for hiring outreach results."""
+    return f"{CACHE_VERSION}:{CACHE_PREFIX_HIRING_OUTREACH}:{session_id}"
+
+
+async def get_cached_hiring_outreach(session_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get cached hiring outreach materials.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        Cached hiring outreach data or None
+    """
+    key = _get_hiring_outreach_cache_key(session_id)
+    t0 = perf_counter()
+    cached = await cache_get(key)
+    latency_ms = (perf_counter() - t0) * 1000
+    if cached and "data" in cached:
+        _metrics.record_hit(CACHE_PREFIX_HIRING_OUTREACH, latency_ms)
+        structured_logger.log_cache_hit("hiring_outreach", session_id[:8])
+        return cached
+    _metrics.record_miss(CACHE_PREFIX_HIRING_OUTREACH, latency_ms)
+    structured_logger.log_cache_miss("hiring_outreach", session_id[:8])
+    return None
+
+
+async def cache_hiring_outreach(session_id: str, data: Dict[str, Any]) -> bool:
+    """
+    Cache hiring outreach materials.
+
+    Args:
+        session_id: Workflow session ID
+        data: Hiring outreach payload
+
+    Returns:
+        True if cached successfully
+    """
+    key = _get_hiring_outreach_cache_key(session_id)
+    return await cache_set(key, data, TTL_HIRING_OUTREACH)
+
+
+async def invalidate_hiring_outreach(session_id: str) -> bool:
+    """
+    Invalidate hiring outreach cache (for regeneration).
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if deleted successfully
+    """
+    key = _get_hiring_outreach_cache_key(session_id)
+    return await cache_delete(key)
+
+
+async def set_hiring_outreach_generating(session_id: str) -> bool:
+    """
+    Atomically mark hiring outreach generation as in-progress for a session.
+
+    Uses Redis SET NX so concurrent requests only succeed for the first caller.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if the flag was claimed (caller should proceed),
+        False if generation is already running.
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return True
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_HIRING_OUTREACH_GENERATING}:{session_id}"
+        was_set = await redis.set(key, "1", nx=True, ex=TTL_HIRING_OUTREACH_GENERATING)
+        return was_set is not None
+    except Exception as e:
+        logger.warning(
+            "Failed to set hiring_outreach generating flag: %s",
+            sanitize_log_value(str(e)),
+        )
+        return True
+
+
+async def clear_hiring_outreach_generating(session_id: str) -> bool:
+    """
+    Clear the in-progress generation flag for a session.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if flag was cleared
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return False
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_HIRING_OUTREACH_GENERATING}:{session_id}"
+        await redis.delete(key)
+        return True
+    except Exception as e:
+        logger.warning(
+            "Failed to clear hiring_outreach generating flag: %s",
+            sanitize_log_value(str(e)),
+        )
+        return False
+
+
+async def is_hiring_outreach_generating(session_id: str) -> bool:
+    """
+    Check whether hiring outreach generation is currently in progress.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if generation is in progress
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return False
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_HIRING_OUTREACH_GENERATING}:{session_id}"
+        value = await redis.get(key)
+        return value is not None
+    except Exception as e:
+        logger.warning(
+            "Failed to check hiring_outreach generating flag: %s",
+            sanitize_log_value(str(e)),
+        )
         return False
 
 
