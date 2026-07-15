@@ -118,6 +118,12 @@ Single source of truth for Settings dropdowns and `PATCH /preferences` validatio
 | `gemini` | `GEMINI_MODEL` → `gemini-3.5-flash` | `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, `gemini-2.5-flash`, `gemini-2.5-pro` |
 | `openai` | `OPENAI_MODEL` → `gpt-5.6-luna` | `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4-mini` |
 | `anthropic` | `ANTHROPIC_MODEL` → `claude-sonnet-5` | `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5`, `claude-fable-5`, `claude-sonnet-4-6` |
-| `ollama` | `OLLAMA_MODEL` → `qwen3` | `qwen3`, `llama3.3`, `gemma3`, `mistral`, `deepseek-r1`, `phi4`, `gemma4`, `llama3.2` |
+| `ollama` | `OLLAMA_MODEL` → `qwen3.6` | `qwen3.6`, `gemma4`, `glm-4.7-flash`, `granite4.1`, `nemotron3`, `phi4` |
 
 `models_payload()` feeds `GET /api/v1/profile/api-key/status` → `models`. Resolver drops a stored `preferred_model` that is invalid for the active provider.
+
+## Provider request quirks
+
+- **OpenAI (GPT-5 / o-series):** Chat Completions must use `max_completion_tokens` (not `max_tokens`). Custom `temperature` is omitted for that family.
+- **Anthropic (Claude 5 / Opus 4.x / Haiku 4.5 / Fable):** omit `temperature` — those models reject it as deprecated.
+- **Ollama:** local library tags only (no `:cloud`). Users must `ollama pull` the chosen model.

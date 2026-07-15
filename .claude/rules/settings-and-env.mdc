@@ -54,7 +54,7 @@ GEMINI_MODEL=gemini-3.5-flash
 
 # LLM — Ollama local/self-hosted (preferred_provider=ollama needs no user key)
 # OLLAMA_BASE_URL=http://127.0.0.1:11434
-# OLLAMA_MODEL=qwen3
+# OLLAMA_MODEL=qwen3.6
 
 # Google OAuth (optional)
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
@@ -119,7 +119,7 @@ Gate helpers live in `utils/llm/availability.py`:
 - `require_user_llm_context()` — raises `no_api_key_error()` (`CFG_6001`) when not ready
 - User readiness is **not** “server `GEMINI_API_KEY` alone”; server keys are health/admin only (except Vertex)
 
-Model allowlists and defaults: `utils/llm/models.py` (Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3`).
+Model allowlists and defaults: `utils/llm/models.py` (Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3.6`).
 
 **Format validation** for Gemini is intentionally loose (`validate_gemini_api_key()` — length bounds, single line, no whitespace). OpenAI/Anthropic helpers enforce their usual prefixes (`sk-` / `sk-ant-`). Real validity is confirmed on validate/save against the provider API.
 

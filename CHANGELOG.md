@@ -35,7 +35,7 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 - Users **must** pick `preferred_provider` (`gemini` | `openai` | `anthropic` | `ollama`) and add a BYOK key for cloud providers; Ollama needs no key. Vertex (`USE_VERTEX_AI`) remains the admin no-key escape hatch.
 - Encrypted columns: `users.openai_api_key_encrypted`, `users.anthropic_api_key_encrypted`; preference `preferred_provider`. Migration `20260713_0001_025`.
-- Model allowlists in `utils/llm/models.py` (Gemini 3.5/3.1/2.5, OpenAI GPT-5.6/5.5/5.4-mini, Anthropic Sonnet 5 / Opus 4.8 / Haiku 4.5 / Fable 5 / Sonnet 4.6, Ollama `qwen3` + current library tags). Defaults: OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3`.
+- Model allowlists in `utils/llm/models.py` (Gemini 3.5/3.1/2.5, OpenAI GPT-5.6/5.5/5.4-mini, Anthropic Sonnet 5 / Opus 4.8 / Haiku 4.5 / Fable 5 / Sonnet 4.6, Ollama `qwen3.6` / `gemma4` / `glm-4.7-flash` / `granite4.1` / `nemotron3` / `phi4`). Defaults: OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3.6`.
 - AI Setup UI: compact provider/key/model cards; **API Key Required** hidden until a provider is selected; Saved indicator inline next to the title; provider-specific Get API Key links.
 - Docs/rules: `settings-page`, `settings-and-env`, `llm-integration`, `USER_GUIDE`, README, `.cursorrules` #55 updated for multi-provider BYOK.
 

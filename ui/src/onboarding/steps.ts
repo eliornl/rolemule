@@ -42,7 +42,7 @@ export const ALL_STEPS: OnboardingStep[] = [
                 <ol>
                     <li>Choose <strong>Gemini</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or local <strong>Ollama</strong></li>
                     <li>For cloud providers, create an API key and paste it (Ollama needs no key)</li>
-                    <li>Optionally pick a preferred model</li>
+                    <li>Confirm or change the preferred model (recommended is selected by default)</li>
                 </ol>
             `,
     image: '🔑',

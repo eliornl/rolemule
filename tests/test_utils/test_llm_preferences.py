@@ -53,9 +53,9 @@ async def test_load_preferred_model_row_paths() -> None:
     assert await load_preferred_model(mock_db, uid, "key", has_credentials=True) is None
 
     # row with model matching provider
-    row = SimpleNamespace(preferred_model="qwen3", preferred_provider="ollama")
+    row = SimpleNamespace(preferred_model="qwen3.6", preferred_provider="ollama")
     result.scalar_one_or_none.return_value = row
-    assert await load_preferred_model(mock_db, uid, None, has_credentials=True) == "qwen3"
+    assert await load_preferred_model(mock_db, uid, None, has_credentials=True) == "qwen3.6"
 
     # stale model for provider
     row.preferred_model = "gemini-3.5-flash"

@@ -38,7 +38,7 @@ class OllamaProvider:
         settings = get_settings()
         base = getattr(settings, "ollama_base_url", None) or "http://127.0.0.1:11434"
         self.base_url: str = base.rstrip("/") + "/"
-        self.default_model: str = getattr(settings, "ollama_model", "qwen3")
+        self.default_model: str = getattr(settings, "ollama_model", "qwen3.6")
         self.timeout = DEFAULT_TIMEOUT
         logger.info(
             "[LLM] Ready  model=%s  backend=Ollama  base_url=%s",

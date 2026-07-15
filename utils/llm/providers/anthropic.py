@@ -31,6 +31,23 @@ _WEB_SEARCH_TOOL = {
 }
 
 
+def _anthropic_omits_temperature(model: str) -> bool:
+    """
+    Return True when the model rejects or deprecates ``temperature``.
+
+    Claude 5 / recent Opus & Haiku return HTTP 400 if ``temperature`` is sent.
+    """
+    m = (model or "").strip().lower()
+    return m.startswith(
+        (
+            "claude-sonnet-5",
+            "claude-opus-4",
+            "claude-haiku-4-5",
+            "claude-fable",
+        )
+    )
+
+
 class AnthropicProvider:
     """Anthropic Messages API adapter."""
 
@@ -73,9 +90,10 @@ class AnthropicProvider:
         payload: Dict[str, Any] = {
             "model": model_to_use,
             "max_tokens": max_tokens,
-            "temperature": temperature,
             "messages": [{"role": "user", "content": prompt}],
         }
+        if not _anthropic_omits_temperature(model_to_use):
+            payload["temperature"] = temperature
         if system:
             payload["system"] = system
         if use_google_search_grounding:

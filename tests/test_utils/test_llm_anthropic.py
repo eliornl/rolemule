@@ -41,6 +41,33 @@ async def test_anthropic_generate_success() -> None:
         result = await provider.generate(prompt="hi", system="sys")
         assert result["response"] == "hello from claude"
         assert result["model"] == "claude-sonnet-5"
+        payload = mock_client.post.call_args[1]["json"]
+        assert "temperature" not in payload
+        assert payload["max_tokens"] == 16000
+
+
+@pytest.mark.asyncio
+async def test_anthropic_legacy_model_keeps_temperature() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json = MagicMock(
+        return_value={"content": [{"type": "text", "text": "ok"}]}
+    )
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.anthropic.get_settings",
+        return_value=_settings(anthropic_model="claude-sonnet-4-6"),
+    ), patch(
+        "utils.llm.providers.anthropic.httpx.AsyncClient", return_value=mock_client
+    ):
+        provider = AnthropicProvider()
+        await provider.generate(prompt="hi", temperature=0.4)
+        payload = mock_client.post.call_args[1]["json"]
+        assert payload["temperature"] == 0.4
 
 
 @pytest.mark.asyncio

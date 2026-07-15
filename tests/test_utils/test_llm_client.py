@@ -34,7 +34,7 @@ def _gemini_settings(**overrides):
         anthropic_api_key=None,
         anthropic_model="claude-sonnet-5",
         ollama_base_url="http://127.0.0.1:11434",
-        ollama_model="qwen3",
+        ollama_model="qwen3.6",
     )
     base.update(overrides)
     return MagicMock(**base)

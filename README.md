@@ -257,12 +257,12 @@ Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** (shel
 
 ## AI Provider / API Key
 
-Each user **must** pick an AI provider in **Settings → AI Setup** (`gemini`, `openai`, `anthropic`, or `ollama`) and add a BYOK API key for cloud providers. Ollama needs no key. Model is optional (system default or pick from the provider list).
+Each user **must** pick an AI provider in **Settings → AI Setup** (`gemini`, `openai`, `anthropic`, or `ollama`) and add a BYOK API key for cloud providers. Ollama needs no key. Preferred model defaults to the recommended model for that provider (changeable in Settings).
 
 1. Open **Settings → AI Setup**
 2. Select a provider
 3. Paste your API key (Gemini / OpenAI / Anthropic) — or choose Ollama for local inference
-4. Optionally pick a preferred model
+4. Confirm or change the preferred model (recommended is selected by default)
 
 **Vertex AI (self-hosted admins):** set `USE_VERTEX_AI=true` so users do not need a personal key (Gemini path).
 
@@ -410,7 +410,7 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 | `ANTHROPIC_API_KEY` | _(empty)_ | Server Anthropic key for health/admin; users add BYOK in Settings |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` | Default Anthropic model |
 | `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama host when user selects Ollama |
-| `OLLAMA_MODEL` | `qwen3` | Default Ollama model |
+| `OLLAMA_MODEL` | `qwen3.6` | Default Ollama model |
 | `BASE_URL` | `http://localhost:8000` | Used in password-reset and verification email links |
 | `DISABLE_EMAIL_VERIFICATION` | `true` | Set `false` when SMTP is configured |
 | `GOOGLE_CLIENT_ID` | _(empty)_ | Enables "Continue with Google" |

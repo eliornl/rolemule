@@ -120,12 +120,12 @@ def test_resolve_ollama_ready_without_key() -> None:
         openai_api_key_encrypted=None,
         anthropic_api_key_encrypted=None,
     )
-    prefs = SimpleNamespace(preferred_provider="ollama", preferred_model="qwen3")
+    prefs = SimpleNamespace(preferred_provider="ollama", preferred_model="qwen3.6")
     ctx = resolve_user_llm_context(user, prefs, settings=MagicMock(use_vertex_ai=False))
     assert ctx.ready is True
     assert ctx.provider == "ollama"
     assert ctx.user_api_key is None
-    assert ctx.preferred_model == "qwen3"
+    assert ctx.preferred_model == "qwen3.6"
 
 
 def test_resolve_vertex_forces_gemini() -> None:
