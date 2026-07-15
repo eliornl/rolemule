@@ -18,8 +18,8 @@ export async function checkApiKeyStatus(): Promise<void> {
     const data = (await res.json()) as Record<string, unknown>;
     setHasAiConfigured(
       !!(
+        data.has_credentials ||
         data.has_user_key ||
-        data.server_has_key ||
         data.use_vertex_ai
       ),
     );

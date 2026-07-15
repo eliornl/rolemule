@@ -5,7 +5,7 @@ Direct-handler coverage for remaining api/applications.py gaps.
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -14,6 +14,7 @@ from api.applications import (
     NotesUpdateRequest,
     StatusUpdateRequest,
     delete_application,
+    get_application,
     get_application_download,
     get_application_stats,
     list_applications,
@@ -174,6 +175,297 @@ class TestApplicationsDirectHandlers:
                 )
             assert b"JOB APPLICATION REPORT" in resp.body
             assert "Acme" in resp.headers.get("content-disposition", "")
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_get_application_direct(self) -> None:
+        uid, email = await _create_complete_user()
+        session_id = str(uuid.uuid4())
+        try:
+            app_id = await _seed_application(
+                uid,
+                job_title="Engineer",
+                company_name="Acme",
+                session_id=session_id,
+            )
+            async with _NullSessionLocal() as db:
+                ws = (await db.execute(
+                    select(WorkflowSession).where(WorkflowSession.session_id == session_id)
+                )).scalar_one()
+                ws.job_analysis = {"job_title": "Engineer", "company_name": "Acme"}
+                await db.commit()
+                resp = await get_application(
+                    application_id=str(app_id),
+                    current_user=_user(uid, email),
+                    db=db,
+                )
+            assert resp.job_title == "Engineer"
+            assert resp.company_name == "Acme"
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_list_loads_workflow_sessions(self) -> None:
+        uid, email = await _create_complete_user()
+        session_id = str(uuid.uuid4())
+        try:
+            await _seed_application(
+                uid,
+                job_title="With Session",
+                company_name="Co",
+                session_id=session_id,
+            )
+            async with _NullSessionLocal() as db:
+                ws = (await db.execute(
+                    select(WorkflowSession).where(WorkflowSession.session_id == session_id)
+                )).scalar_one()
+                ws.job_analysis = {"job_title": "With Session", "company_name": "Co"}
+                await db.commit()
+                resp = await list_applications(
+                    current_user=_user(uid, email),
+                    db=db,
+                    page=1,
+                    per_page=10,
+                    status_filter=None,
+                    days=None,
+                    company=None,
+                    search=None,
+                    sort="updated_desc",
+                )
+            assert resp.total >= 1
+            assert any(a.job_title == "With Session" for a in resp.applications)
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_update_status_accepted_sets_response_date(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            app_id = await _seed_application(uid, job_title="Role", company_name="Co", status="applied")
+            async with _NullSessionLocal() as db:
+                accepted = await update_application_status(
+                    application_id=str(app_id),
+                    status_update=StatusUpdateRequest(new_status=ApplicationStatus.ACCEPTED.value),
+                    current_user=_user(uid, email),
+                    db=db,
+                )
+            assert accepted.response_date is not None
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_get_application_not_found(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await get_application(
+                        application_id=str(uuid.uuid4()),
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 404
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_get_application_invalid_uuid(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await get_application(
+                        application_id="not-a-uuid",
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 422
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_update_status_not_found(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await update_application_status(
+                        application_id=str(uuid.uuid4()),
+                        status_update=StatusUpdateRequest(new_status=ApplicationStatus.APPLIED.value),
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 404
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_update_notes_not_found(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await update_application_notes(
+                        application_id=str(uuid.uuid4()),
+                        notes_update=NotesUpdateRequest(notes="n/a"),
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 404
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_delete_application_not_found(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await delete_application(
+                        application_id=str(uuid.uuid4()),
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 404
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_stats_zero_tracked_response_rate(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                stats = await get_application_stats(current_user=_user(uid, email), db=db)
+            assert stats.response_rate == 0.0
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_download_no_session_id(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            app_id = await _seed_application(uid, job_title="No Session", company_name="Co", session_id=None)
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await get_application_download(
+                        application_id=str(app_id),
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 404
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_download_invalid_uuid(self) -> None:
+        uid, email = await _create_complete_user()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await get_application_download(
+                        application_id="bad-id",
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 422
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_download_workflow_missing(self) -> None:
+        uid, email = await _create_complete_user()
+        session_id = str(uuid.uuid4())
+        try:
+            app_id = await _seed_application(
+                uid, job_title="Ghost", company_name="Co", session_id=session_id
+            )
+            async with _NullSessionLocal() as db:
+                from sqlalchemy import delete
+
+                await db.execute(
+                    delete(WorkflowSession).where(WorkflowSession.session_id == session_id)
+                )
+                await db.commit()
+                with pytest.raises(Exception) as exc:
+                    await get_application_download(
+                        application_id=str(app_id),
+                        current_user=_user(uid, email),
+                        db=db,
+                    )
+            assert exc.value.status_code == 404
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_download_internal_error(self) -> None:
+        uid, email = await _create_complete_user()
+        session_id = str(uuid.uuid4())
+        try:
+            app_id = await _seed_application(
+                uid, job_title="Engineer", company_name="Acme", session_id=session_id
+            )
+            async with _NullSessionLocal() as db:
+                with patch(
+                    "api.applications._generate_application_report",
+                    AsyncMock(side_effect=RuntimeError("report fail")),
+                ):
+                    with pytest.raises(Exception) as exc:
+                        await get_application_download(
+                            application_id=str(app_id),
+                            current_user=_user(uid, email),
+                            db=db,
+                        )
+            assert exc.value.status_code == 500
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_get_application_internal_error(self) -> None:
+        uid, email = await _create_complete_user()
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(side_effect=RuntimeError("db fail"))
+        try:
+            with pytest.raises(Exception) as exc:
+                await get_application(
+                    application_id=str(uuid.uuid4()),
+                    current_user=_user(uid, email),
+                    db=mock_db,
+                )
+            assert exc.value.status_code == 500
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_update_status_internal_error(self) -> None:
+        uid, email = await _create_complete_user()
+        mock_db = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = MagicMock()
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_db.commit = AsyncMock(side_effect=RuntimeError("db fail"))
+        mock_db.rollback = AsyncMock()
+        try:
+            with pytest.raises(Exception) as exc:
+                await update_application_status(
+                    application_id=str(uuid.uuid4()),
+                    status_update=StatusUpdateRequest(new_status=ApplicationStatus.APPLIED.value),
+                    current_user=_user(uid, email),
+                    db=mock_db,
+                )
+            assert exc.value.status_code == 500
+        finally:
+            await _cleanup_user(uid)
+
+    @pytest.mark.asyncio
+    async def test_stats_internal_error(self) -> None:
+        uid, email = await _create_complete_user()
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(side_effect=RuntimeError("db fail"))
+        try:
+            with pytest.raises(Exception) as exc:
+                await get_application_stats(current_user=_user(uid, email), db=mock_db)
+            assert exc.value.status_code == 500
         finally:
             await _cleanup_user(uid)
 

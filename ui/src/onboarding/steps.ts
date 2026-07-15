@@ -36,13 +36,13 @@ export const ALL_STEPS: OnboardingStep[] = [
   },
   {
     id: 'api-key',
-    title: 'Add Your Gemini API Key',
+    title: 'Set Up Your AI Provider',
     content: `
-                <p>AI features require <strong>your own Gemini API key</strong> from Google AI Studio.</p>
+                <p>AI features need a provider in <strong>Settings → AI Setup</strong>.</p>
                 <ol>
-                    <li>Go to <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">aistudio.google.com/api-keys</a></li>
-                    <li>Click <strong>"Create API Key"</strong></li>
-                    <li>Paste it in <strong>Settings → AI Setup</strong></li>
+                    <li>Choose <strong>Gemini</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or local <strong>Ollama</strong></li>
+                    <li>For cloud providers, create an API key and paste it (Ollama needs no key)</li>
+                    <li>Confirm or change the preferred model (recommended is selected by default)</li>
                 </ol>
             `,
     image: '🔑',

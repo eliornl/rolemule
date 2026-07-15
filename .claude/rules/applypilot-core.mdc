@@ -39,13 +39,23 @@ Error codes follow a namespace pattern:
 Long-lived CLI/automation auth (`ap_pat_` prefix). Implementation: `utils/personal_access_tokens.py`, migration `20260708_024`, API `POST/GET/DELETE /api/v1/auth/tokens`. `get_current_user` and WebSocket auth check PAT before JWT. Plaintext shown once on create; SHA-256 hash stored. Revoke all user PATs on password change, password reset, and account delete (with JWT invalidation).
 
 ### `CFG_6001` — No API Key (`no_api_key_error()`)
-Use `no_api_key_error()` (HTTP 422, `error_code: "CFG_6001"`) whenever an LLM-backed endpoint is called but neither a user BYOK key nor a server-side `GEMINI_API_KEY` / Vertex AI is configured. **Never use `validation_error()` for this case** — the dedicated code lets the frontend detect it and render a targeted "Add your API key → Settings" prompt instead of a generic error toast.
+Use `no_api_key_error()` (HTTP 422, `error_code: "CFG_6001"`) whenever an LLM-backed endpoint is called but the user is not ready to run LLM. **Never use `validation_error()` for this case** — the dedicated code lets the frontend detect it and render a targeted "Add your API key → Settings" prompt instead of a generic error toast.
+
+Prefer the shared gate:
 
 ```python
-server_has_key = bool(getattr(settings, 'gemini_api_key', None)) or settings.use_vertex_ai
-if not user_api_key and not server_has_key:
-    raise no_api_key_error()
+from utils.llm_context import require_user_llm_context
+
+user, llm_ctx, prefs = await require_user_llm_context(db, user_id)
+# raises no_api_key_error() when not ready
+# llm_ctx.provider / llm_ctx.user_api_key / llm_ctx.preferred_model
 ```
+
+Readiness rules (`resolve_user_llm_context`):
+- User must have `preferred_provider` (`gemini` | `openai` | `anthropic` | `ollama`), **or** a legacy Gemini BYOK key (treated as gemini).
+- Cloud providers require a decryptable BYOK key for that provider.
+- Ollama needs no key; `USE_VERTEX_AI=true` forces Gemini without user key.
+- Server `GEMINI_API_KEY` / `LLM_PROVIDER` alone do **not** satisfy user gates.
 
 The frontend (`ui/src/pages/dashboard-new-application.ts`) checks `error_code === 'CFG_6001'` and calls `showApiKeyAlert()`, which renders a dismissible warning banner with a direct link to `/settings?tab=ai-setup`.
 

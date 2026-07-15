@@ -18,7 +18,7 @@ from time import perf_counter
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from agents.hiring_manager import HiringManagerAgent, HiringManagerEvaluation
-from utils.llm_client import get_gemini_client, is_llm_quota_or_rate_limit_exception
+from utils.llm_client import get_gemini_client, is_llm_quota_or_rate_limit_exception  # noqa: F401  # test-patch alias
 from utils.logging_config import get_structured_logger
 from utils.logging_config import sanitize_log_value
 
@@ -404,6 +404,7 @@ class CVOptimizerAgent:
         profile_source_cv: str = "",
         user_profile: Optional[Dict[str, Any]] = None,
         model: Optional[str] = None,
+        llm_provider: Optional[str] = None,
     ) -> str:
         """
         Revise the CV based on hiring manager feedback.
@@ -417,10 +418,12 @@ class CVOptimizerAgent:
             profile_source_cv: Read-only baseline CV composed from user profile
             user_profile: Structured profile dict for date validation
             model: Optional BYOK preferred Gemini model from Settings
+            llm_provider: Active provider name for generate() routing
 
         Returns:
             Revised CV as markdown text. Falls back to the original on error or invalid revision.
         """
+        self._current_llm_provider = llm_provider
         self.gemini_client = await get_gemini_client()
         user_profile = user_profile or {}
 
@@ -448,6 +451,7 @@ class CVOptimizerAgent:
             max_tokens=CV_OPTIMIZER_MAX_TOKENS,
             user_api_key=user_api_key,
             model=model,
+            provider=getattr(self, "_current_llm_provider", None),
         )
 
         _dur_ms = (perf_counter() - _t0) * 1000
@@ -495,6 +499,7 @@ class CoverLetterFinalizer:
         user_api_key: str,
         profile_source_cv: str = "",
         model: Optional[str] = None,
+        llm_provider: Optional[str] = None,
     ) -> str:
         """
         Generate a cover letter for the optimized CV.
@@ -507,10 +512,12 @@ class CoverLetterFinalizer:
             user_api_key: BYOK Gemini API key
             profile_source_cv: Read-only baseline CV composed from user profile
             model: Optional BYOK preferred Gemini model from Settings
+            llm_provider: Active provider name for generate() routing
 
         Returns:
             Cover letter as plain text. Returns empty string on failure.
         """
+        self._current_llm_provider = llm_provider
         self.gemini_client = await get_gemini_client()
 
         job_title = job_analysis.get("job_title") or "the advertised position"
@@ -550,6 +557,7 @@ class CoverLetterFinalizer:
             max_tokens=COVER_LETTER_MAX_TOKENS,
             user_api_key=user_api_key,
             model=model,
+            provider=getattr(self, "_current_llm_provider", None),
         )
 
         _dur_ms = (perf_counter() - _t0) * 1000
@@ -600,6 +608,7 @@ class CVOptimizationOrchestrator:
         broadcast_iteration_fn: Callable,
         user_profile: Optional[Dict[str, Any]] = None,
         model: Optional[str] = None,
+        llm_provider: Optional[str] = None,
     ) -> OptimizationResult:
         """
         Execute the optimization loop.
@@ -647,6 +656,7 @@ class CVOptimizationOrchestrator:
                     previous_score=previous_score,
                     user_api_key=user_api_key,
                     model=model,
+                    llm_provider=llm_provider,
                 )
             except Exception as exc:
                 if iteration_history and is_llm_quota_or_rate_limit_exception(exc):
@@ -727,6 +737,7 @@ class CVOptimizationOrchestrator:
                     profile_source_cv=profile_source_cv,
                     user_profile=user_profile,
                     model=model,
+                    llm_provider=llm_provider,
                 )
             except Exception as exc:
                 if is_llm_quota_or_rate_limit_exception(exc):
@@ -748,6 +759,7 @@ class CVOptimizationOrchestrator:
                     user_api_key=user_api_key,
                     profile_source_cv=profile_source_cv,
                     model=model,
+                    llm_provider=llm_provider,
                 )
             except Exception as exc:
                 if iteration_history and is_llm_quota_or_rate_limit_exception(exc):

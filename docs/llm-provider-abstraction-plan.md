@@ -6,6 +6,8 @@
 
 All four providers (`gemini`, `openai`, `anthropic`, `ollama`) ship behind `utils/llm/` and `LLM_PROVIDER`. This document remains as the historical phase checklist — do not re-execute phases on `main`. See `.cursor/rules/llm-integration.mdc` for current patterns.
 
+**Post-ship (user BYOK multi-provider):** Users must choose `preferred_provider` and add a BYOK key (except Ollama). Server `LLM_PROVIDER` / server keys are health/admin only; Vertex remains the no-key admin escape hatch. Company Research uses real web search on Gemini, OpenAI Responses `web_search`, and Anthropic `web_search`. Do not re-open completed phases below as unchecked.
+
 ---
 
 ## 0. Agent instructions (read first)
@@ -75,7 +77,7 @@ utils/llm_client.py        # thin re-exports (backward compatible)
 3. Fallback: gemini
 ```
 
-BYOK keys remain Gemini-only until Phase 5 Settings work. Server env keys for other providers land in Phases 2–4.
+BYOK keys were Gemini-only through Phases 2–4; Phase 5 / post-ship work added multi-provider user keys in Settings.
 
 ### 0.7 Execution order
 
@@ -131,7 +133,7 @@ Gemini generate + health + cache + quota messaging behave as before; new structu
 
 ### 2.1 Tasks
 
-- [x] Add settings: `openai_api_key`, `openai_model` (default e.g. `gpt-4o-mini`)
+- [x] Add settings: `openai_api_key`, `openai_model` (default `gpt-5.6-luna`)
 - [x] Implement `OpenAIProvider` with **httpx AsyncClient** (Chat Completions or Responses API)
 - [x] Map system + user messages; map max_tokens / temperature
 - [x] `use_google_search_grounding=True` → ignore with debug log (Gemini-only)
@@ -158,7 +160,7 @@ With `LLM_PROVIDER=openai` + `OPENAI_API_KEY`, `LLMClient.generate()` returns th
 
 ### 3.1 Tasks
 
-- [x] Settings: `anthropic_api_key`, `anthropic_model` (e.g. `claude-sonnet-4-5`)
+- [x] Settings: `anthropic_api_key`, `anthropic_model` (default `claude-sonnet-5`)
 - [x] `AnthropicProvider` via httpx AsyncClient
 - [x] System prompt as top-level `system`; user content in messages
 - [x] Grounding flag ignored (debug log)
@@ -226,12 +228,14 @@ pytest tests/test_api/ -v --override-ini="addopts="
 
 ---
 
-## 6. Out of scope (explicit)
+## 6. Out of scope (explicit) — original plan
 
-- Full Settings UI for multi-provider BYOK key vault (can follow in a dedicated PR)
-- Replacing Company Research Google Search grounding with OpenAI/Anthropic web tools
+These were deferred at ship time; **multi-provider BYOK + grounding are now delivered** (see header note):
+
+- ~~Full Settings UI for multi-provider BYOK key vault~~ — done (Settings → AI Setup)
+- ~~Replacing Company Research Google Search grounding with OpenAI/Anthropic web tools~~ — done
 - Migrating every agent call site from `get_gemini_client` → `get_llm_client` in one shot (alias is enough)
-- Dropping Vertex (kept as Gemini-only backend)
+- Dropping Vertex (kept as Gemini-only admin backend)
 
 ---
 

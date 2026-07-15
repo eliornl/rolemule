@@ -692,29 +692,24 @@ test.describe('10. Pricing Section', () => {
     await expect(page.locator('.pricing-description')).toContainText(/\$0\.01/i);
   });
 
-  test('"Get Your Gemini API Key" CTA button is visible', async ({ page }) => {
+  test('"Get Started Free" CTA button is visible', async ({ page }) => {
     const btn = page.locator('#pricing .btn-primary-glow');
     await expect(btn).toBeVisible();
-    await expect(btn).toContainText(/Get Your Gemini API Key/i);
+    await expect(btn).toContainText(/Get Started Free/i);
   });
 
-  test('Gemini API key button links to aistudio.google.com', async ({ page }) => {
+  test('pricing CTA links to register', async ({ page }) => {
     const btn = page.locator('#pricing .btn-primary-glow');
     const href = await btn.getAttribute('href');
-    expect(href).toContain('aistudio.google.com');
+    expect(href).toContain('/auth/register');
   });
 
-  test('Gemini API key button opens in new tab', async ({ page }) => {
+  test('pricing CTA is a same-origin register link', async ({ page }) => {
     const btn = page.locator('#pricing .btn-primary-glow');
     const target = await btn.getAttribute('target');
-    expect(target).toBe('_blank');
-  });
-
-  test('Gemini API key button has rel="noopener noreferrer"', async ({ page }) => {
-    const btn = page.locator('#pricing .btn-primary-glow');
-    const rel = await btn.getAttribute('rel');
-    expect(rel).toContain('noopener');
-    expect(rel).toContain('noreferrer');
+    expect(target).toBeNull();
+    const href = await btn.getAttribute('href');
+    expect(href).toBe('/auth/register');
   });
 });
 

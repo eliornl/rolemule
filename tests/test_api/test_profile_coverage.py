@@ -826,7 +826,7 @@ class TestResumeCoverage:
                 user.gemini_api_key_encrypted = "encrypted-blob"
                 await session.commit()
             with patch("api.profile.parse_resume_from_file", AsyncMock(return_value=MOCK_PARSED_RESUME)), patch(
-                "api.profile.decrypt_api_key", side_effect=RuntimeError("decrypt fail")
+                "utils.encryption.decrypt_api_key", side_effect=RuntimeError("decrypt fail")
             ), patch("api.profile.settings") as mock_settings:
                 mock_settings.gemini_api_key = VALID_KEY
                 mock_settings.use_vertex_ai = False
@@ -971,14 +971,14 @@ class TestApiKeyCoverage:
         try:
             async with _NullSessionLocal() as db:
                 with patch("api.profile.encrypt_api_key", return_value="enc"), patch(
-                    "api.profile.decrypt_api_key", return_value=VALID_KEY
+                    "utils.encryption.decrypt_api_key", return_value=VALID_KEY
                 ):
                     await set_api_key(
                         ApiKeyRequest(api_key=VALID_KEY),
                         _current_user(uid, email),
                         db,
                     )
-                status = await get_api_key_status(_current_user(uid, email), db)
+                    status = await get_api_key_status(_current_user(uid, email), db)
                 assert status.has_user_key is True
                 assert status.key_preview is not None
         finally:
@@ -991,8 +991,17 @@ class TestApiKeyCoverage:
             async with _NullSessionLocal() as db:
                 user = (await db.execute(select(User).where(User.id == uid))).scalar_one()
                 user.gemini_api_key_encrypted = "blob"
+                prefs = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
+                    )
+                ).scalar_one_or_none()
+                if prefs:
+                    prefs.preferred_provider = "gemini"
                 await db.commit()
-                with patch("api.profile.decrypt_api_key", side_effect=RuntimeError("bad")):
+                with patch("utils.encryption.decrypt_api_key", side_effect=RuntimeError("bad")):
                     status = await get_api_key_status(_current_user(uid, email), db)
                 assert status.key_preview == "(invalid)"
         finally:
@@ -1066,7 +1075,10 @@ class TestApiKeyCoverage:
             async with _NullSessionLocal() as db:
                 with patch.object(db, "commit", AsyncMock(side_effect=RuntimeError("db"))):
                     with pytest.raises(Exception) as exc:
-                        await delete_api_key(_current_user(uid, email), db)
+                        await delete_api_key(
+                            current_user=_current_user(uid, email),
+                            db=db,
+                        )
                 assert exc.value.status_code == 500
         finally:
             await _delete_user_data(uid)
@@ -1140,13 +1152,14 @@ class TestPreferencesCoverage:
         uid, email = await _create_user_with_password()
         try:
             async with _NullSessionLocal() as db:
-                db.add(
-                    UserWorkflowPreferences(
-                        id=uuid.uuid4(),
-                        user_id=uid,
-                        workflow_gate_threshold=0.6,
+                prefs = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
                     )
-                )
+                ).scalar_one()
+                prefs.workflow_gate_threshold = 0.6
                 await db.commit()
                 resp = await get_application_preferences(_current_user(uid, email), db)
                 assert resp.workflow_gate_threshold == 0.6
@@ -1170,6 +1183,7 @@ class TestPreferencesCoverage:
                 req = ApplicationPreferencesRequest(
                     cover_letter_tone="conversational",
                     resume_length="detailed",
+                    preferred_provider="gemini",
                     preferred_model="gemini-2.5-flash",
                 )
                 resp = await update_application_preferences(req, _current_user(uid, email), db)
@@ -1203,12 +1217,14 @@ class TestPreferencesCoverage:
         uid, email = await _create_user_with_password()
         try:
             async with _NullSessionLocal() as db:
-                existing = UserWorkflowPreferences(
-                    id=uuid.uuid4(),
-                    user_id=uid,
-                    workflow_gate_threshold=0.4,
-                )
-                db.add(existing)
+                existing = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
+                    )
+                ).scalar_one()
+                existing.workflow_gate_threshold = 0.4
                 await db.commit()
 
                 class FakeNested:
@@ -1621,7 +1637,7 @@ class TestProfileCoverageRemaining:
             parsed["phone"] = "+1 555 9999"
             parsed["linkedin_url"] = "ftp://skip.me"
             with patch("api.profile.parse_resume_from_file", AsyncMock(return_value=parsed)), patch(
-                "api.profile.decrypt_api_key", return_value=VALID_KEY
+                "utils.encryption.decrypt_api_key", return_value=VALID_KEY
             ), patch("api.profile.settings") as mock_settings:
                 mock_settings.gemini_api_key = None
                 mock_settings.use_vertex_ai = False
@@ -1702,8 +1718,17 @@ class TestProfileCoverageRemaining:
             async with _NullSessionLocal() as db:
                 user = (await db.execute(select(User).where(User.id == uid))).scalar_one()
                 user.gemini_api_key_encrypted = "enc"
+                prefs = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
+                    )
+                ).scalar_one_or_none()
+                if prefs:
+                    prefs.preferred_provider = "gemini"
                 await db.commit()
-                with patch("api.profile.decrypt_api_key", return_value="short"):
+                with patch("utils.encryption.decrypt_api_key", return_value="short"):
                     status = await get_api_key_status(_current_user(uid, email), db)
                 assert status.key_preview == "****"
         finally:
@@ -1958,15 +1983,135 @@ class TestProfileCoverageRemaining:
             async with _NullSessionLocal() as db:
                 user = (await db.execute(select(User).where(User.id == uid))).scalar_one()
                 user.gemini_api_key_encrypted = "enc"
+                prefs = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
+                    )
+                ).scalar_one_or_none()
+                if prefs:
+                    prefs.preferred_provider = "gemini"
                 await db.commit()
-                with patch("api.profile.decrypt_api_key", return_value=VALID_KEY):
+                with patch("utils.encryption.decrypt_api_key", return_value=VALID_KEY):
                     status = await get_api_key_status(_current_user(uid, email), db)
                 assert "..." in (status.key_preview or "")
                 with patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)), patch(
                     "api.profile.invalidate_user_llm_cache", AsyncMock(return_value=None)
                 ) as mock_llm:
-                    await delete_api_key(_current_user(uid, email), db)
+                    await delete_api_key(
+                        current_user=_current_user(uid, email),
+                        db=db,
+                    )
                 mock_llm.assert_awaited()
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_set_api_key_openai_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await set_api_key(
+                        ApiKeyRequest(api_key="not-a-valid-key", provider="openai"),
+                        _current_user(uid, email),
+                        db,
+                    )
+                assert exc.value.status_code == 422
+                assert "OpenAI" in exc.value.message
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_set_api_key_anthropic_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            async with _NullSessionLocal() as db:
+                with pytest.raises(Exception) as exc:
+                    await set_api_key(
+                        ApiKeyRequest(api_key="sk-not-anthropic", provider="anthropic"),
+                        _current_user(uid, email),
+                        db,
+                    )
+                assert exc.value.status_code == 422
+                assert "Anthropic" in exc.value.message
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_openai_key_success(self) -> None:
+        uid, email = await _create_user_with_password()
+        openai_key = "sk-testopenaikey1234567890"
+        try:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))), patch(
+                "httpx.AsyncClient"
+            ) as client_cls:
+                client = AsyncMock()
+                client.__aenter__.return_value = client
+                client.__aexit__.return_value = None
+                client.get = AsyncMock(return_value=mock_resp)
+                client_cls.return_value = client
+                result = await validate_api_key_endpoint(
+                    ApiKeyRequest(api_key=openai_key, provider="openai"),
+                    _current_user(uid, email),
+                )
+            assert result["valid"] is True
+            assert result["provider"] == "openai"
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_anthropic_key_success(self) -> None:
+        uid, email = await _create_user_with_password()
+        anthropic_key = "sk-ant-testkey1234567890"
+        try:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))), patch(
+                "httpx.AsyncClient"
+            ) as client_cls:
+                client = AsyncMock()
+                client.__aenter__.return_value = client
+                client.__aexit__.return_value = None
+                client.get = AsyncMock(return_value=mock_resp)
+                client_cls.return_value = client
+                result = await validate_api_key_endpoint(
+                    ApiKeyRequest(api_key=anthropic_key, provider="anthropic"),
+                    _current_user(uid, email),
+                )
+            assert result["valid"] is True
+            assert result["provider"] == "anthropic"
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_openai_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))):
+                with pytest.raises(Exception) as exc:
+                    await validate_api_key_endpoint(
+                        ApiKeyRequest(api_key="notvalidopenaikey", provider="openai"),
+                        _current_user(uid, email),
+                    )
+            assert exc.value.status_code == 422
+        finally:
+            await _delete_user_data(uid)
+
+    @pytest.mark.asyncio
+    async def test_validate_anthropic_invalid_format(self) -> None:
+        uid, email = await _create_user_with_password()
+        try:
+            with patch("api.profile.check_rate_limit", AsyncMock(return_value=(True, 9))):
+                with pytest.raises(Exception) as exc:
+                    await validate_api_key_endpoint(
+                        ApiKeyRequest(api_key="sk-not-anthropic", provider="anthropic"),
+                        _current_user(uid, email),
+                    )
+            assert exc.value.status_code == 422
         finally:
             await _delete_user_data(uid)
 
@@ -1989,12 +2134,14 @@ class TestProfileCoverageRemaining:
         uid, email = await _create_user_with_password()
         try:
             async with _NullSessionLocal() as db:
-                existing = UserWorkflowPreferences(
-                    id=uuid.uuid4(),
-                    user_id=uid,
-                    workflow_gate_threshold=0.3,
-                )
-                db.add(existing)
+                existing = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
+                    )
+                ).scalar_one()
+                existing.workflow_gate_threshold = 0.3
                 await db.commit()
 
                 class FakeNested:
@@ -2104,7 +2251,7 @@ class TestProfileCoverageRemaining:
                 upload.filename = "resume.txt"
                 upload.read = AsyncMock(return_value=b"Resume text long enough for parsing.")
                 with patch("api.profile.parse_resume_from_file", AsyncMock(return_value=MOCK_PARSED_RESUME)), patch(
-                    "api.profile.decrypt_api_key", return_value=VALID_KEY
+                    "utils.encryption.decrypt_api_key", return_value=VALID_KEY
                 ), patch("api.profile.settings") as mock_settings, patch(
                     "api.profile.save_resume_bytes", return_value=("rel/path", "sha", "txt")
                 ), patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)):
@@ -2183,8 +2330,17 @@ class TestProfileCoverageRemaining:
             async with _NullSessionLocal() as db:
                 user = (await db.execute(select(User).where(User.id == uid))).scalar_one()
                 user.gemini_api_key_encrypted = "enc"
+                prefs = (
+                    await db.execute(
+                        select(UserWorkflowPreferences).where(
+                            UserWorkflowPreferences.user_id == uid
+                        )
+                    )
+                ).scalar_one_or_none()
+                if prefs:
+                    prefs.preferred_provider = None
                 await db.commit()
-                with patch("api.profile.decrypt_api_key", side_effect=RuntimeError("decrypt fail")), patch(
+                with patch("utils.encryption.decrypt_api_key", side_effect=RuntimeError("decrypt fail")), patch(
                     "api.profile.settings"
                 ) as mock_settings:
                     mock_settings.gemini_api_key = None

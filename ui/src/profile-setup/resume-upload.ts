@@ -80,7 +80,7 @@ export async function checkApiKeyStatus() {
         });
         if (!res.ok) return;
         const data = await res.json();
-        setHasApiKey(!!(data.has_user_key || data.server_has_key || data.use_vertex_ai));
+        setHasApiKey(!!(data.has_credentials || data.has_user_key || data.use_vertex_ai));
     } catch (_e) {
         // Non-fatal — assume key available so we never block upload incorrectly
     }
@@ -128,11 +128,20 @@ export function setupInlineApiKey() {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ api_key: key })
+                body: JSON.stringify({ api_key: key, provider: 'gemini' })
             });
 
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.message || data.detail || 'Failed to save key.');
+
+            await fetch(`${API_BASE}/profile/preferences`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ preferred_provider: 'gemini' })
+            });
 
             // Mark key as available so next interaction goes straight to upload
             setHasApiKey(true);
@@ -247,7 +256,7 @@ export async function handleResumeUpload(file: File): Promise<void> {
             if (errorData.error_code === 'CFG_6001') {
                 setHasApiKey(false);
                 showApiKeyPrompt();
-                throw new Error('Resume parsing requires a Gemini API key. Add your key above, or use "Fill in manually".');
+                throw new Error('Resume parsing requires AI credentials. Configure a provider in Settings → AI Setup, or use "Fill in manually".');
             }
             throw new Error(errorData.message || errorData.detail || "Failed to parse resume");
         }

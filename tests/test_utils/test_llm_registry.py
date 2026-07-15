@@ -30,7 +30,7 @@ def test_normalize_provider_name_invalid() -> None:
 def test_create_provider_openai() -> None:
     settings = MagicMock(
         openai_api_key=None,
-        openai_model="gpt-4o-mini",
+        openai_model="gpt-5.6-luna",
     )
     with patch("utils.llm.providers.openai.get_settings", return_value=settings):
         provider = create_provider("openai")
@@ -41,7 +41,7 @@ def test_create_provider_openai() -> None:
 def test_create_provider_anthropic() -> None:
     settings = MagicMock(
         anthropic_api_key=None,
-        anthropic_model="claude-sonnet-4-5",
+        anthropic_model="claude-sonnet-5",
     )
     with patch("utils.llm.providers.anthropic.get_settings", return_value=settings):
         provider = create_provider("anthropic")
@@ -51,7 +51,7 @@ def test_create_provider_anthropic() -> None:
 def test_create_provider_ollama() -> None:
     settings = MagicMock(
         ollama_base_url="http://127.0.0.1:11434",
-        ollama_model="llama3.2",
+        ollama_model="qwen3.6",
     )
     with patch("utils.llm.providers.ollama.get_settings", return_value=settings):
         provider = create_provider("ollama")

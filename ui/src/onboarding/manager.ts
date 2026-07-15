@@ -158,7 +158,7 @@ async function checkServerApiKey(): Promise<boolean> {
     });
     if (!res.ok) return false;
     const data = (await res.json()) as ApiKeyStatusResponse;
-    return Boolean(data.has_user_key || data.server_has_key || data.use_vertex_ai);
+    return Boolean(data.has_credentials || data.has_user_key || data.use_vertex_ai);
   } catch (e) {
     console.warn('Could not check API key status:', e);
     return false;

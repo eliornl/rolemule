@@ -29,8 +29,9 @@ function showApiKeyAlert(): void {
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
       <i class="fas fa-key me-2"></i>
       <strong>API key required.</strong>
-      To analyze jobs with AI, add your Gemini API key in
-      <a href="/settings?tab=ai-setup" class="alert-link">Settings &rarr; AI Setup</a>.
+      To analyze jobs with AI, choose a provider and add your API key in
+      <a href="/settings?tab=ai-setup" class="alert-link">Settings &rarr; AI Setup</a>
+      (or select Ollama / ask your admin about Vertex AI).
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>`;
 }

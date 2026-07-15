@@ -229,6 +229,7 @@ Table: user_workflow_preferences
   cover_letter_tone        VARCHAR(32) NOT NULL DEFAULT 'professional'
   resume_length            VARCHAR(16) NOT NULL DEFAULT 'concise'
   preferred_model          VARCHAR(64) NULLABLE DEFAULT NULL
+  preferred_provider       VARCHAR(32) NULLABLE DEFAULT NULL  -- gemini|openai|anthropic|ollama
   created_at / updated_at  TIMESTAMPTZ
 ```
 
@@ -267,4 +268,5 @@ The workflow then passes this as `workflow_preferences` in `WorkflowState` so ag
 **Valid values** (enforced in the API layer):
 - `cover_letter_tone`: `professional` | `conversational` | `enthusiastic`
 - `resume_length`: `concise` | `detailed`
-- `preferred_model`: one of the values in `_VALID_MODELS` set in `api/profile.py`, or `null`
+- `preferred_provider`: `gemini` | `openai` | `anthropic` | `ollama`, or `null`
+- `preferred_model`: id from `utils/llm/models.py` allowlist for the **active** provider (`is_valid_model_for_provider`), or `null` (system default). Cleared when `preferred_provider` changes.

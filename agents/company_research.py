@@ -206,9 +206,20 @@ Respond with ONLY valid JSON in this exact structure:
 
 Be thorough, specific, and focus on information that will help someone succeed in their job application. If the company is not well-known, provide what you can and clearly indicate uncertainty."""
 
-_GROUNDING_SEARCH_HINT: str = """
+_GROUNDING_SEARCH_HINT_GEMINI: str = """
 Use Google Search to verify company facts when needed. Search queries MUST include employer name + industry + job title + posting domain when available — never search a generic name alone.
 """
+
+_GROUNDING_SEARCH_HINT_WEB: str = """
+Use web search to verify company facts when needed. Search queries MUST include employer name + industry + job title + posting domain when available — never search a generic name alone.
+"""
+
+
+def _grounding_hint_for_provider(provider: Optional[str]) -> str:
+    """Return the grounding prompt preface for the active LLM provider."""
+    if provider == "gemini" or not provider:
+        return _GROUNDING_SEARCH_HINT_GEMINI
+    return _GROUNDING_SEARCH_HINT_WEB
 
 
 def _has_usable_company_name(name: Optional[str]) -> bool:
@@ -372,8 +383,11 @@ def _should_enable_grounding(
     company_name: str,
     job_analysis: Dict[str, Any],
     disambiguation_confidence: Optional[str],
+    llm_provider: Optional[str] = None,
 ) -> bool:
-    """Return True when Google Search grounding should be used for this research call."""
+    """Return True when web/Google Search grounding should be used for this research call."""
+    if llm_provider == "ollama":
+        return False
     settings = get_settings()
     if not getattr(settings, "company_research_grounding_enabled", False):
         return False
@@ -424,6 +438,7 @@ class CompanyResearchAgent:
         """
         logger.info("Starting company research process")
         self._current_user_api_key = state.get("user_api_key")
+        self._current_llm_provider = state.get("llm_provider")
         self._current_user_model = preferred_model_from_state(
             state, self._current_user_api_key
         )
@@ -470,7 +485,9 @@ class CompanyResearchAgent:
             cached_result: Optional[Dict[str, Any]] = None
             if not skip_cache:
                 cached_result = await get_cached_company_research(
-                    company_name, disambiguators=disambiguators
+                    company_name,
+                    disambiguators=disambiguators,
+                    provider=self._current_llm_provider,
                 )
             if cached_result:
                 logger.info("Using cached research for %s", sanitize_log_value(company_name))
@@ -478,7 +495,9 @@ class CompanyResearchAgent:
                 return state
 
             cache_key = _get_company_research_cache_key(
-                company_name, disambiguators=disambiguators
+                company_name,
+                disambiguators=disambiguators,
+                provider=self._current_llm_provider,
             )
             lock_claimed = await acquire_compute_lock(cache_key)
 
@@ -493,7 +512,9 @@ class CompanyResearchAgent:
                     await _asyncio.sleep(0.5)
                     if not skip_cache:
                         cached_result = await get_cached_company_research(
-                            company_name, disambiguators=disambiguators
+                            company_name,
+                            disambiguators=disambiguators,
+                            provider=self._current_llm_provider,
                         )
                         if cached_result:
                             state["company_research"] = cached_result
@@ -517,6 +538,7 @@ class CompanyResearchAgent:
                         company_name,
                         result_dict,
                         disambiguators=disambiguators,
+                        provider=self._current_llm_provider,
                     )
                 state["company_research"] = result_dict
             finally:
@@ -563,6 +585,7 @@ class CompanyResearchAgent:
                 max_tokens=2048,
                 user_api_key=self._current_user_api_key,
                 model=self._current_user_model,
+                provider=getattr(self, "_current_llm_provider", None),
             )
             if response.get("filtered"):
                 return None
@@ -638,7 +661,11 @@ class CompanyResearchAgent:
 
         body = COMPANY_RESEARCH_PROMPT.format(company_name=company_name)
         if use_grounding:
-            body = _GROUNDING_SEARCH_HINT + "\n" + body
+            body = (
+                _grounding_hint_for_provider(getattr(self, "_current_llm_provider", None))
+                + "\n"
+                + body
+            )
         return prefix + body
 
     async def _research_company_with_llm(
@@ -690,6 +717,7 @@ class CompanyResearchAgent:
             company_name=company_name,
             job_analysis=job_analysis,
             disambiguation_confidence=disambiguation_confidence,
+            llm_provider=getattr(self, "_current_llm_provider", None),
         )
 
         try:
@@ -796,6 +824,7 @@ class CompanyResearchAgent:
                 user_api_key=self._current_user_api_key,
                 model=self._current_user_model,
                 use_google_search_grounding=use_google_search_grounding,
+                provider=getattr(self, "_current_llm_provider", None),
             )
         except Exception as grounding_exc:
             if not use_google_search_grounding:
@@ -813,6 +842,7 @@ class CompanyResearchAgent:
                 user_api_key=self._current_user_api_key,
                 model=self._current_user_model,
                 use_google_search_grounding=False,
+                provider=getattr(self, "_current_llm_provider", None),
             )
 
     def _map_to_result(self, data: Dict[str, Any]) -> CompanyResearchResult:

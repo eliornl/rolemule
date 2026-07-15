@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-from utils.llm_client import get_gemini_client
+from utils.llm_client import get_gemini_client  # noqa: F401  # test-patch alias
 from utils.llm_parsing import parse_json_from_llm_response
 from utils.logging_config import get_structured_logger, sanitize_log_value
 
@@ -93,6 +93,7 @@ class ThankYouWriterAgent:
         additional_notes: Optional[str] = None,
         user_api_key: Optional[str] = None,
         model: Optional[str] = None,
+        llm_provider: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate a personalized thank you note.
@@ -112,6 +113,7 @@ class ThankYouWriterAgent:
             Dict containing subject_line, email_body, key_points_referenced, tone
         """
         self._current_user_api_key = user_api_key
+        self._current_llm_provider = llm_provider
         self._current_user_model = model
         
         try:
@@ -149,6 +151,7 @@ class ThankYouWriterAgent:
                 max_tokens=LLM_MAX_TOKENS,
                 user_api_key=self._current_user_api_key,
                 model=self._current_user_model,
+                provider=getattr(self, "_current_llm_provider", None),
             )
             
             duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000

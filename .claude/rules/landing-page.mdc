@@ -20,7 +20,7 @@ The landing page lives at `ui/index.html` and uses `ui/static/css/landing.css` +
 | Chrome Extension | `#extension` `.section-extension` | Copy covers **Analyze This Job** + **Match Form To Profile**; hero and `#features` agent cards stay posting/workflow-focused |
 | Career Tools | `#tools` `.section-tools` | 6 tool cards in Bootstrap rows |
 | **Screenshot Showcase** | `#example` `.section-example` | Real app screenshots — see below |
-| Pricing / CTA | `#pricing` `.section-pricing` | BYOK / open-source CTA |
+| Pricing / CTA | `#pricing` `.section-pricing` | Multi-provider BYOK copy; CTA → `/auth/register` (“Get Started Free”) |
 
 ---
 

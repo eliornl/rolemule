@@ -151,13 +151,13 @@ Google OAuth users: log in via the browser, then `applypilot auth token set`. Fo
 | `profile resume show` | `GET /api/v1/profile/resume` |
 | `profile resume delete --confirm` | `DELETE /api/v1/profile/resume` |
 | `profile api-key status` | `GET /api/v1/profile/api-key/status` |
-| `profile api-key set` | `POST /api/v1/profile/api-key` |
-| `profile api-key delete --confirm` | `DELETE /api/v1/profile/api-key` |
-| `profile api-key validate` | `POST /api/v1/profile/api-key/validate` |
+| `profile api-key set [--provider gemini\|openai\|anthropic]` | `POST /api/v1/profile/api-key` |
+| `profile api-key delete --confirm [--provider …]` | `DELETE /api/v1/profile/api-key?provider=` |
+| `profile api-key validate [--provider …]` | `POST /api/v1/profile/api-key/validate` |
 | `profile workflow-preferences show` | `GET /api/v1/profile/preferences` |
 | `profile workflow-preferences set` | `PATCH /api/v1/profile/preferences` |
 
-**Workflow preferences flags:** `--file`, `--gate-threshold`, `--auto-generate-documents` / `--no-auto-generate-documents`, `--cover-letter-tone`, `--resume-length`, `--preferred-model`
+**Workflow preferences flags:** `--file`, `--gate-threshold`, `--auto-generate-documents` / `--no-auto-generate-documents`, `--cover-letter-tone`, `--resume-length`, `--preferred-model`, `--preferred-provider`
 | `profile export [--out FILE]` | `GET /api/v1/profile/export` |
 | `profile clear-data --confirm` | `DELETE /api/v1/profile/clear-data` |
 | `profile delete-account --confirm` | `DELETE /api/v1/profile/delete-account` |
@@ -318,7 +318,7 @@ applypilot tools salary-coach --file offer.json --format json
 - Login once: `applypilot auth login` or `auth token set`
 - Global flags go **before** subcommands
 - Destructive commands need `--confirm` (account/data/application/resume/api-key deletes, maintenance toggles, etc.)
-- `422 CFG_6001` → user needs API key (`profile api-key set` or server key)
+- `422 CFG_6001` → configure AI (`profile api-key set --provider …`, `preferred_provider=ollama`, or Vertex)
 
 ---
 

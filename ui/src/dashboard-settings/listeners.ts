@@ -2,6 +2,7 @@ import {
   deleteApiKey,
   handleApiKeySave,
   loadApiKeyStatus,
+  scheduleProviderSave,
   toggleApiKeyVisibility,
 } from './api-keys';
 import { loadGoogleAccountStatus } from './account';
@@ -126,6 +127,7 @@ export function attachEventListeners(): void {
   }
 
   el('preferredModelSelect')?.addEventListener('change', scheduleModelSave);
+  el('preferredProviderSelect')?.addEventListener('change', scheduleProviderSave);
 
   document.querySelectorAll('[role="button"][data-action]').forEach((node) => {
     node.addEventListener('keydown', (e) => {

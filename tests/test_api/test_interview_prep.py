@@ -345,14 +345,19 @@ class TestInterviewPrepHelpers:
     @pytest.mark.asyncio
     async def test_check_api_key_server_vertex(self):
         from api.interview_prep import _check_api_key_available
+        from utils.llm.availability import UserLLMContext
 
         mock_db = AsyncMock()
-        with (
-            patch("api.interview_prep._get_user_api_key", AsyncMock(return_value=None)),
-            patch("api.interview_prep.settings") as mock_settings,
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key=None,
+            preferred_model=None,
+            ready=True,
+        )
+        with patch(
+            "utils.llm_context.require_user_llm_context",
+            AsyncMock(return_value=(MagicMock(), ctx, None)),
         ):
-            mock_settings.gemini_api_key = None
-            mock_settings.use_vertex_ai = True
             assert await _check_api_key_available(mock_db, uuid.uuid4()) is True
 
 
@@ -528,9 +533,15 @@ class TestInterviewPrepDbEndpoints:
             )
             await db.commit()
 
-        with patch("api.interview_prep._check_api_key_available", AsyncMock(return_value=False)):
+        from utils.error_responses import no_api_key_error
+
+        with patch(
+            "utils.llm_context.require_user_llm_context",
+            AsyncMock(side_effect=no_api_key_error()),
+        ):
             resp = await authed_client_with_user.post(f"{BASE}/{sid}/generate")
         assert resp.status_code == 422
+        assert resp.json().get("error_code") == "CFG_6001"
 
     @pytest.mark.asyncio
     async def test_background_failure_broadcasts_and_persists_error(

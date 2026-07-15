@@ -162,12 +162,18 @@ parsed = await parse_resume_from_file(file_content: bytes, filename: str)
 ```python
 from utils.encryption import encrypt_api_key, decrypt_api_key
 from utils.gemini_api_key_format import validate_gemini_api_key
+from utils.openai_api_key_format import validate_openai_api_key
+from utils.anthropic_api_key_format import validate_anthropic_api_key
 
 encrypted = encrypt_api_key(plaintext_key)    # before DB storage
 plaintext = decrypt_api_key(encrypted_key)    # before use in agents
-is_valid  = validate_gemini_api_key(api_key)  # loose shape check before saving (see module docstring)
 ```
-Stored in `users.gemini_api_key_encrypted` (TEXT).
+
+Stored columns on `users`:
+- `gemini_api_key_encrypted`
+- `openai_api_key_encrypted`
+- `anthropic_api_key_encrypted`
+- Preference: `user_workflow_preferences.preferred_provider` / `preferred_model`
 
 **LLM cache invalidation on key change**: When a user updates or deletes their BYOK key, invalidate all cached LLM responses for that user. Otherwise the new key may receive results generated under the old key.
 
@@ -177,10 +183,11 @@ from utils.cache import invalidate_user_llm_cache
 await invalidate_user_llm_cache(str(user_id))  # call after set and delete
 ```
 
-Key management endpoints:
+Key management endpoints (provider-aware):
 ```
-GET    /api/v1/profile/api-key/status   # has key?
-POST   /api/v1/profile/api-key          # save/update
-DELETE /api/v1/profile/api-key          # delete
-POST   /api/v1/profile/api-key/validate # validate before saving
+GET    /api/v1/profile/api-key/status              # preferred_provider, providers.*, models, has_credentials
+POST   /api/v1/profile/api-key                     # body: { provider, api_key }
+DELETE /api/v1/profile/api-key?provider=gemini|…  # delete that provider's key
+POST   /api/v1/profile/api-key/validate            # body: { provider, api_key }
 ```
+Ollama has no key endpoints (select provider only).

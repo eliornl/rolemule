@@ -540,6 +540,14 @@ test.describe('Mocked Smoke Tests', { tag: '@smoke' }, () => {
       await page.reload();
       await page.waitForLoadState('domcontentloaded');
       const banner = page.locator('#cookie-consent-banner');
+      // Banner is only created when PostHog is enabled (APP_CONFIG.posthogEnabled).
+      const posthogOn = await page.evaluate(
+        () => Boolean((window as { APP_CONFIG?: { posthogEnabled?: boolean } }).APP_CONFIG?.posthogEnabled),
+      );
+      if (!posthogOn) {
+        await expect(banner).toHaveCount(0);
+        return;
+      }
       await expect(banner).toHaveClass(/visible/, { timeout: 5000 });
       await page.locator('[data-action="cookie-accept-all"]').click();
       await expect(banner).not.toHaveClass(/visible/);

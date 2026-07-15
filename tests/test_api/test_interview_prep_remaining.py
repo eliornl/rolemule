@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import BackgroundTasks
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from api.interview_prep import (
     _check_api_key_available,
@@ -73,6 +73,15 @@ async def prep_user():
                 full_name="Prep User",
             )
         )
+        from models.database import UserWorkflowPreferences
+
+        db.add(
+            UserWorkflowPreferences(
+                id=uuid.uuid4(),
+                user_id=uid,
+                preferred_provider="ollama",
+            )
+        )
         await db.commit()
     yield uid, email
     async with _NullSessionLocal() as db:
@@ -86,23 +95,39 @@ async def prep_user():
 class TestInterviewPrepDirectHandlers:
     @pytest.mark.asyncio
     async def test_get_user_api_key_decrypts_from_db(self, prep_user) -> None:
+        from utils.llm.availability import UserLLMContext
+
         uid, _ = prep_user
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key="byok-key",
+            preferred_model=None,
+            ready=True,
+        )
         async with _NullSessionLocal() as db:
-            await db.execute(
-                update(User)
-                .where(User.id == uid)
-                .values(gemini_api_key_encrypted="encrypted-blob")
-            )
-            await db.commit()
-            with patch("api.interview_prep.decrypt_api_key", return_value="byok-key"):
+            with patch(
+                "utils.llm_context.require_user_llm_context",
+                AsyncMock(return_value=(MagicMock(), ctx, None)),
+            ):
                 key = await _get_user_api_key(db, uid)
         assert key == "byok-key"
 
     @pytest.mark.asyncio
     async def test_check_api_key_available_user_key(self, prep_user) -> None:
+        from utils.llm.availability import UserLLMContext
+
         uid, _ = prep_user
+        ctx = UserLLMContext(
+            provider="gemini",
+            user_api_key="user-key",
+            preferred_model=None,
+            ready=True,
+        )
         async with _NullSessionLocal() as db:
-            with patch("api.interview_prep._get_user_api_key", AsyncMock(return_value="user-key")):
+            with patch(
+                "utils.llm_context.require_user_llm_context",
+                AsyncMock(return_value=(MagicMock(), ctx, None)),
+            ):
                 assert await _check_api_key_available(db, uid) is True
 
     @pytest.mark.asyncio
