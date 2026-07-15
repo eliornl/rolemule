@@ -26,14 +26,12 @@ const MODEL_LABELS: Record<string, string> = {
   'claude-haiku-4-5': 'Claude Haiku 4.5 — fastest near-frontier',
   'claude-fable-5': 'Claude Fable 5 — highest capability agents',
   'claude-sonnet-4-6': 'Claude Sonnet 4.6 — previous Sonnet generation',
-  qwen3: 'Qwen 3 — strong local general & tools (recommended)',
-  'llama3.3': 'Llama 3.3 — Meta instruction baseline',
-  gemma3: 'Gemma 3 — Google multilingual / multimodal',
-  mistral: 'Mistral — fast lightweight chat',
-  'deepseek-r1': 'DeepSeek-R1 — open reasoning',
-  phi4: 'Phi-4 — compact high quality',
+  'qwen3.6': 'Qwen 3.6 — strong local general & tools (recommended)',
   gemma4: 'Gemma 4 — newest Google open family',
-  'llama3.2': 'Llama 3.2 — small / edge',
+  'glm-4.7-flash': 'GLM-4.7 Flash — efficient 30B-class MoE',
+  'granite4.1': 'Granite 4.1 — IBM enterprise / RAG / tools',
+  nemotron3: 'Nemotron 3 — NVIDIA multimodal (heavy)',
+  phi4: 'Phi-4 — compact high quality (light)',
 };
 
 function showPrefsSaved(): void {
@@ -136,7 +134,22 @@ export async function loadModelPreference(): Promise<void> {
     if (!res.ok) return;
     const data = (await res.json()) as ApplicationPreferences;
     const sel = selectEl('preferredModelSelect');
-    if (sel) sel.value = data.preferred_model || '';
+    if (!sel || sel.options.length === 0) return;
+
+    const saved = data.preferred_model || '';
+    const hasSaved = Boolean(
+      saved && Array.from(sel.options).some((opt) => opt.value === saved),
+    );
+    if (hasSaved) {
+      sel.value = saved;
+      return;
+    }
+
+    // No saved model (or stale after provider switch) → recommended = first option
+    sel.selectedIndex = 0;
+    if (sel.value) {
+      await saveModelPreference({ quiet: true });
+    }
   } catch (err) {
     console.error('Error loading model preference:', err);
   }
@@ -162,6 +175,24 @@ export function populateModelSelect(
 export async function saveModelPreference(): Promise<void> {
   const sel = selectEl('preferredModelSelect');
   if (!sel) return;
+  const current = selected ?? sel.value;
+  sel.innerHTML = '';
+  for (const model of models) {
+    const opt = document.createElement('option');
+    opt.value = model;
+    opt.textContent = MODEL_LABELS[model] || model;
+    sel.appendChild(opt);
+  }
+  if (!models.length) return;
+  // Prefer saved selection when still valid; otherwise recommended (first in list)
+  sel.value = current && models.includes(current) ? current : models[0]!;
+}
+
+export async function saveModelPreference(
+  opts: { quiet?: boolean } = {},
+): Promise<void> {
+  const sel = selectEl('preferredModelSelect');
+  if (!sel || !sel.value) return;
   try {
     const res = await fetch(`${getApiBase()}/profile/preferences`, {
       method: 'PATCH',
@@ -170,10 +201,10 @@ export async function saveModelPreference(): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        preferred_model: sel.value ? sel.value : null,
+        preferred_model: sel.value,
       }),
     });
-    if (res.ok) {
+    if (res.ok && !opts.quiet) {
       const indicator = el('modelSavedIndicator');
       if (indicator) {
         indicator.style.opacity = '1';

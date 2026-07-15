@@ -458,11 +458,11 @@ Each user picks an AI provider and adds their own API key (bring-your-own-key). 
 1. Go to **Settings → AI Setup**
 2. Choose a provider: **Google Gemini**, **OpenAI**, **Anthropic**, or **Ollama (local)**
 3. For cloud providers, open the linked **Get API Key** page, create a key, paste it, and click **Save**
-4. Optionally pick a preferred model for that provider (or leave the system default)
+4. Pick a preferred model (defaults to the recommended model for that provider)
 
 Your keys are encrypted at rest and never logged or exposed. Switching provider clears any previously saved preferred model so you don’t keep a model id from another vendor.
 
-**Model selection** — after a key is saved (or Ollama is selected), you can choose a model from that provider’s list. Defaults: Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3`. Only change this if you have a specific reason — different models have different speed, cost, and quality trade-offs.
+**Model selection** — after a key is saved (or Ollama is selected), the recommended model is selected automatically. Defaults: Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3.6`. Only change this if you have a specific reason — different models have different speed, cost, and quality trade-offs.
 
 **Key pages:** [Google AI Studio](https://aistudio.google.com/app/apikey) · [OpenAI API keys](https://platform.openai.com/api-keys) · [Anthropic console](https://console.anthropic.com/settings/keys) · Ollama: `ollama pull <model>` on the server.
 

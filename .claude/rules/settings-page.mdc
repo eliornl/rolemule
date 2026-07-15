@@ -55,7 +55,7 @@ Tab switching is handled by `showSection(sectionName)` via delegated click on `.
 | Gemini | `gemini-3.5-flash` | `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, `gemini-2.5-flash`, `gemini-2.5-pro` |
 | OpenAI | `gpt-5.6-luna` | `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4-mini` |
 | Anthropic | `claude-sonnet-5` | `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5`, `claude-fable-5`, `claude-sonnet-4-6` |
-| Ollama | `qwen3` | `qwen3`, `llama3.3`, `gemma3`, `mistral`, `deepseek-r1`, `phi4`, `gemma4`, `llama3.2` |
+| Ollama | `qwen3.6` | `qwen3.6`, `gemma4`, `glm-4.7-flash`, `granite4.1`, `nemotron3`, `phi4` |
 
 Do not re-add dead Gemini ids (`gemini-3-flash-preview`, `gemini-3.1-flash-lite-preview`, `gemini-3-pro-preview`, `gemini-2.0-*`, `gemini-1.5-*`) or retired OpenAI/Anthropic names (`gpt-4o*`, `claude-sonnet-4-5` as primary, etc.).
 

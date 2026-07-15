@@ -46,17 +46,15 @@ VALID_ANTHROPIC_MODELS: FrozenSet[str] = frozenset(
     }
 )
 
-# Ollama — popular library pull tags (user must have pulled the model)
+# Ollama — local library pull tags only (no :cloud). User must `ollama pull`.
 VALID_OLLAMA_MODELS: FrozenSet[str] = frozenset(
     {
-        "qwen3",
-        "llama3.3",
-        "gemma3",
+        "qwen3.6",
         "gemma4",
-        "mistral",
-        "deepseek-r1",
+        "glm-4.7-flash",
+        "granite4.1",
+        "nemotron3",
         "phi4",
-        "llama3.2",
     }
 )
 
@@ -91,14 +89,12 @@ _MODEL_ORDER: Dict[str, List[str]] = {
         "claude-sonnet-4-6",
     ],
     "ollama": [
-        "qwen3",
-        "llama3.3",
-        "gemma3",
-        "mistral",
-        "deepseek-r1",
-        "phi4",
+        "qwen3.6",
         "gemma4",
-        "llama3.2",
+        "glm-4.7-flash",
+        "granite4.1",
+        "nemotron3",
+        "phi4",
     ],
 }
 
@@ -119,14 +115,12 @@ MODEL_LABELS: Dict[str, str] = {
     "claude-haiku-4-5": "Claude Haiku 4.5 — fastest near-frontier",
     "claude-fable-5": "Claude Fable 5 — highest capability agents",
     "claude-sonnet-4-6": "Claude Sonnet 4.6 — previous Sonnet generation",
-    "qwen3": "Qwen 3 — strong local general & tools (recommended)",
-    "llama3.3": "Llama 3.3 — Meta instruction baseline",
-    "gemma3": "Gemma 3 — Google multilingual / multimodal",
-    "mistral": "Mistral — fast lightweight chat",
-    "deepseek-r1": "DeepSeek-R1 — open reasoning",
-    "phi4": "Phi-4 — compact high quality",
+    "qwen3.6": "Qwen 3.6 — strong local general & tools (recommended)",
     "gemma4": "Gemma 4 — newest Google open family",
-    "llama3.2": "Llama 3.2 — small / edge",
+    "glm-4.7-flash": "GLM-4.7 Flash — efficient 30B-class MoE",
+    "granite4.1": "Granite 4.1 — IBM enterprise / RAG / tools",
+    "nemotron3": "Nemotron 3 — NVIDIA multimodal (heavy)",
+    "phi4": "Phi-4 — compact high quality (light)",
 }
 
 
@@ -195,6 +189,6 @@ def default_model_for_provider(provider: str, settings: object = None) -> str:
         "gemini": getattr(settings, "gemini_model", "gemini-3.5-flash"),
         "openai": getattr(settings, "openai_model", "gpt-5.6-luna"),
         "anthropic": getattr(settings, "anthropic_model", "claude-sonnet-5"),
-        "ollama": getattr(settings, "ollama_model", "qwen3"),
+        "ollama": getattr(settings, "ollama_model", "qwen3.6"),
     }
     return str(mapping.get(provider, mapping["gemini"]))

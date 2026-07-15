@@ -30,7 +30,7 @@ def test_model_list_and_label() -> None:
 def test_models_payloads() -> None:
     payload = models_payload()
     assert set(payload.keys()) >= {"anthropic", "gemini", "ollama", "openai"}
-    assert payload["ollama"][0] == "qwen3"
+    assert payload["ollama"][0] == "qwen3.6"
     labeled = models_labeled_payload()
     assert labeled["gemini"][0]["id"] == "gemini-3.5-flash"
     assert "label" in labeled["gemini"][0]
@@ -49,12 +49,12 @@ def test_default_model_for_provider() -> None:
         gemini_model="gemini-2.5-flash",
         openai_model="gpt-5.5",
         anthropic_model="claude-haiku-4-5",
-        ollama_model="llama3.3",
+        ollama_model="granite4.1",
     )
     assert default_model_for_provider("gemini", settings) == "gemini-2.5-flash"
     assert default_model_for_provider("openai", settings) == "gpt-5.5"
     assert default_model_for_provider("anthropic", settings) == "claude-haiku-4-5"
-    assert default_model_for_provider("ollama", settings) == "llama3.3"
+    assert default_model_for_provider("ollama", settings) == "granite4.1"
     assert default_model_for_provider("unknown", settings) == "gemini-2.5-flash"
     # settings=None resolves get_settings at call time
     assert isinstance(default_model_for_provider("gemini"), str)

@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
-from utils.llm_preferences import preferred_model_for_byok, preferred_model_from_state
+import uuid
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+from utils.llm_preferences import (
+    load_preferred_model,
+    preferred_model_for_byok,
+    preferred_model_for_context,
+    preferred_model_from_state,
+)
 
 
 def test_preferred_model_for_byok_requires_user_key() -> None:
@@ -20,15 +31,6 @@ def test_preferred_model_from_state() -> None:
     assert preferred_model_from_state(state, None) is None
     assert preferred_model_from_state({}, "user-key") is None
     assert preferred_model_from_state(None, "user-key") is None
-
-
-import uuid
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
-
-from utils.llm_preferences import load_preferred_model, preferred_model_for_context
 
 
 def test_preferred_model_for_context_vertex() -> None:
@@ -52,10 +54,10 @@ async def test_load_preferred_model_row_paths() -> None:
     mock_db.execute = AsyncMock(return_value=result)
     assert await load_preferred_model(mock_db, uid, "key", has_credentials=True) is None
 
-    # row with model matching provider
-    row = SimpleNamespace(preferred_model="qwen3", preferred_provider="ollama")
+    # valid ollama model
+    row = SimpleNamespace(preferred_model="qwen3.6", preferred_provider="ollama")
     result.scalar_one_or_none.return_value = row
-    assert await load_preferred_model(mock_db, uid, None, has_credentials=True) == "qwen3"
+    assert await load_preferred_model(mock_db, uid, None, has_credentials=True) == "qwen3.6"
 
     # stale model for provider
     row.preferred_model = "gemini-3.5-flash"

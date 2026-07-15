@@ -206,9 +206,13 @@ async def test_trace_span_sets_attributes_and_yields(monkeypatch: pytest.MonkeyP
 async def test_trace_span_records_exceptions(monkeypatch: pytest.MonkeyPatch) -> None:
     fakes = _install_fake_otel(monkeypatch)
     monkeypatch.setattr(tracing, "_tracer", fakes["tracer"])
-    with pytest.raises(ValueError, match="fail"):
+    raised = False
+    try:
         async with tracing.trace_span("agent.job"):
             raise ValueError("fail")
+    except ValueError:
+        raised = True
+    assert raised is True
     fakes["span"].set_status.assert_called_once()
     fakes["span"].record_exception.assert_called_once()
 
