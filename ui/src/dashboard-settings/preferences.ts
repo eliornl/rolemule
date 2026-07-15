@@ -162,20 +162,6 @@ export function populateModelSelect(
   const sel = selectEl('preferredModelSelect');
   if (!sel) return;
   const current = selected ?? sel.value;
-  sel.innerHTML = '<option value="">System default</option>';
-  for (const model of models) {
-    const opt = document.createElement('option');
-    opt.value = model;
-    opt.textContent = MODEL_LABELS[model] || model;
-    sel.appendChild(opt);
-  }
-  if (current) sel.value = current;
-}
-
-export async function saveModelPreference(): Promise<void> {
-  const sel = selectEl('preferredModelSelect');
-  if (!sel) return;
-  const current = selected ?? sel.value;
   sel.innerHTML = '';
   for (const model of models) {
     const opt = document.createElement('option');
