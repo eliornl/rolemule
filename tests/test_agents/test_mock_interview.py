@@ -9,6 +9,7 @@ import pytest
 from agents.mock_interview import (
     STYLE_PACKS,
     MockInterviewAgent,
+    _answer_reviews_from_turns,
     _extract_prep_questions,
     _safe_score,
 )
@@ -414,3 +415,31 @@ def test_extract_prep_questions_manager_prefers_role_and_behavioral() -> None:
 )
 def test_safe_score(raw, expected) -> None:
     assert _safe_score(raw) == expected
+
+
+def test_answer_reviews_from_turns_pairs_and_caps() -> None:
+    assert _answer_reviews_from_turns([]) == []
+    assert _answer_reviews_from_turns([{"role": "interviewer", "text": "Only Q"}]) == []
+    assert _answer_reviews_from_turns([{"role": "candidate", "text": ""}]) == []
+
+    reviews = _answer_reviews_from_turns(
+        [
+            {"role": "interviewer", "text": "Q1"},
+            {"role": "candidate", "text": "A1"},
+            {"role": "interviewer", "text": "Q2"},
+            {"role": "candidate", "text": "A2"},
+            {"role": "other", "text": "ignore"},
+        ],
+        weakest_rewrite="Stronger A1",
+    )
+    assert len(reviews) == 2
+    assert reviews[0]["question"] == "Q1"
+    assert reviews[0]["your_answer"] == "A1"
+    assert reviews[0]["stronger_answer"] == "Stronger A1"
+    assert reviews[1]["stronger_answer"] == ""
+
+    many: list[dict] = []
+    for i in range(8):
+        many.append({"role": "interviewer", "text": f"Q{i}"})
+        many.append({"role": "candidate", "text": f"Answer {i}"})
+    assert len(_answer_reviews_from_turns(many)) == 6

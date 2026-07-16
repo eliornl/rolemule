@@ -18,6 +18,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from api.mock_interview import MockInterviewFinishRequest
+
 BASE = "/api/v1/mock-interview"
 SESSION_ID = str(uuid.uuid4())
 
@@ -33,6 +35,22 @@ def _mock_ws() -> MagicMock:
     ws.interview_prep = None
     ws.mock_interview = None
     return ws
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        (None, None),
+        ("", None),
+        ("   ", None),
+        ("hi", None),
+        ("hello", "hello"),
+        ("  hello there  ", "hello there"),
+    ],
+)
+def test_finish_request_final_answer_validator(raw, expected):
+    req = MockInterviewFinishRequest(final_answer=raw)
+    assert req.final_answer == expected
 
 
 @pytest.mark.asyncio
