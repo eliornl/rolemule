@@ -27,6 +27,40 @@ _OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
 _OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
 
+def _is_openai_new_param_family(model: str) -> bool:
+    """
+    Return True for models that reject legacy Chat Completions params.
+
+    GPT-5 / o-series require ``max_completion_tokens`` (not ``max_tokens``)
+    and typically reject non-default ``temperature``.
+    """
+    m = (model or "").strip().lower()
+    return m.startswith(("gpt-5", "o1", "o3", "o4"))
+
+
+def _chat_completions_body(
+    *,
+    model: str,
+    messages: List[Dict[str, str]],
+    temperature: float,
+    max_tokens: int,
+) -> Dict[str, Any]:
+    """Build a Chat Completions JSON body compatible with the target model."""
+    payload: Dict[str, Any] = {
+        "model": model,
+        "messages": messages,
+    }
+    if _is_openai_new_param_family(model):
+        # GPT-5 / reasoning: max_tokens → 400; custom temperature often → 400
+        payload["max_completion_tokens"] = max_tokens
+        if temperature == 1.0:
+            payload["temperature"] = temperature
+    else:
+        payload["temperature"] = temperature
+        payload["max_completion_tokens"] = max_tokens
+    return payload
+
+
 def _extract_responses_text(data: Dict[str, Any]) -> str:
     """Pull assistant text from a Responses API payload."""
     direct = data.get("output_text")
@@ -101,12 +135,12 @@ class OpenAIProvider:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        payload = {
-            "model": model_to_use,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
+        payload = _chat_completions_body(
+            model=model_to_use,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
         headers = {
             "Authorization": f"Bearer {effective_key}",
             "Content-Type": "application/json",
@@ -217,13 +251,13 @@ class OpenAIProvider:
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        payload = {
-            "model": model_to_use,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-        }
+        payload = _chat_completions_body(
+            model=model_to_use,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        payload["stream"] = True
         headers = {
             "Authorization": f"Bearer {effective_key}",
             "Content-Type": "application/json",

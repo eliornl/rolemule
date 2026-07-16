@@ -119,7 +119,7 @@ class Settings(BaseSettings):
         description="Ollama base URL (no trailing path)",
     )
     ollama_model: str = Field(
-        default="qwen3",
+        default="qwen3.6",
         description="Default Ollama model tag",
     )
 

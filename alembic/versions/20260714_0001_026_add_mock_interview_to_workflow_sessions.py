@@ -7,6 +7,7 @@ Create Date: 2026-07-14
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 from sqlalchemy.dialects.postgresql import JSONB
 
 revision = "20260714_026"
@@ -15,12 +16,21 @@ branch_labels = None
 depends_on = None
 
 
+def _workflow_session_columns() -> set[str]:
+    bind = op.get_bind()
+    return {c["name"] for c in inspect(bind).get_columns("workflow_sessions")}
+
+
 def upgrade() -> None:
-    op.add_column(
-        "workflow_sessions",
-        sa.Column("mock_interview", JSONB, nullable=True),
-    )
+    # Idempotent: local DBs may already have the column from an earlier apply
+    # that did not stamp alembic_version.
+    if "mock_interview" not in _workflow_session_columns():
+        op.add_column(
+            "workflow_sessions",
+            sa.Column("mock_interview", JSONB, nullable=True),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("workflow_sessions", "mock_interview")
+    if "mock_interview" in _workflow_session_columns():
+        op.drop_column("workflow_sessions", "mock_interview")

@@ -321,13 +321,12 @@ Practice a timed conversational mock interview grounded in this application's jo
 
 1. Open a completed application's detail page
 2. Click the **Practice Interview** tab (after Optimize CV)
-3. Choose style (**HR**, **Pro**, or **Manager**) and length (**10**, **15**, or **20** minutes)
-4. Optionally enable **STAR coach** (follow-ups when Situation / Action / Result is missing)
-5. Click **Start Practice Interview**
-6. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
-7. While the interviewer is composing, you may see **Interviewer is typing…** as the question streams in; speech plays when the full line is ready
-8. Use **Replay** to hear the last question again; **End early** confirms then scores you; **Abort** ends with no score
-9. Watch **topic coverage** and mid-session tips; when time is low the interviewer wraps up; finish for a full debrief
+3. Choose style (**HR — screening**, **Pro — peer technical**, or **Manager — hiring manager**) and length (**10**, **15**, or **20** minutes)
+4. Click **Start Practice Interview** (STAR follow-ups are always on)
+5. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
+6. While the question is composing, you may see **Loading…** as it streams in; speech plays when the full line is ready
+7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score). If you End early while an answer is still processing, ApplyPilot waits for that answer, then scores.
+8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out (or you End early) with text still in the answer box, ApplyPilot includes that draft in your debrief. The debrief shows an overall summary, score dimensions with short explanations, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
 
 Optional interview prep content from the Interview tab is used when available to steer questions. Practice Interview is a live conversation — different from the static **Interview** tab guide.
 
@@ -352,7 +351,6 @@ If no credible public contacts are found, ApplyPilot still provides generic outr
 **Copy-only:** ApplyPilot does not send messages or open external apps — you paste drafts into your own email client or messaging tool.
 
 ---
-
 ## CV Optimization
 
 The **CV Optimizer** runs an iterative AI loop tailored to a specific job application. An AI hiring manager scores your CV against the job description; an AI applicant revises it based on the feedback; the cycle repeats until the fit score converges. When the loop finishes, ApplyPilot generates a final optimized CV and a matching cover letter.
@@ -480,11 +478,11 @@ Each user picks an AI provider and adds their own API key (bring-your-own-key). 
 1. Go to **Settings → AI Setup**
 2. Choose a provider: **Google Gemini**, **OpenAI**, **Anthropic**, or **Ollama (local)**
 3. For cloud providers, open the linked **Get API Key** page, create a key, paste it, and click **Save**
-4. Optionally pick a preferred model for that provider (or leave the system default)
+4. Pick a preferred model (defaults to the recommended model for that provider)
 
 Your keys are encrypted at rest and never logged or exposed. Switching provider clears any previously saved preferred model so you don’t keep a model id from another vendor.
 
-**Model selection** — after a key is saved (or Ollama is selected), you can choose a model from that provider’s list. Defaults: Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3`. Only change this if you have a specific reason — different models have different speed, cost, and quality trade-offs.
+**Model selection** — after a key is saved (or Ollama is selected), the recommended model is selected automatically. Defaults: Gemini `gemini-3.5-flash`, OpenAI `gpt-5.6-luna`, Anthropic `claude-sonnet-5`, Ollama `qwen3.6`. Only change this if you have a specific reason — different models have different speed, cost, and quality trade-offs.
 
 **Key pages:** [Google AI Studio](https://aistudio.google.com/app/apikey) · [OpenAI API keys](https://platform.openai.com/api-keys) · [Anthropic console](https://console.anthropic.com/settings/keys) · Ollama: `ollama pull <model>` on the server.
 

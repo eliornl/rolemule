@@ -1,5 +1,7 @@
 /** Shared state for Practice Interview tab. */
 
+import { decodeEntities } from '../shared/dom-security';
+
 export type MockStyle = 'hr' | 'pro' | 'manager';
 
 export interface MockActiveRun {
@@ -19,12 +21,32 @@ let pollTimeoutId: number | null = null;
 let countdownTimerId: number | null = null;
 let isBusy = false;
 let lastSpeak = '';
+let lastPlan: Array<Record<string, unknown>> = [];
+let lastCoveredPlanIds: string[] = [];
 
 export function getSessionId(): string | null {
   return sessionId;
 }
 export function setSessionId(id: string | null): void {
   sessionId = id;
+}
+
+export function getLastPlan(): Array<Record<string, unknown>> {
+  return lastPlan;
+}
+export function getLastCoveredPlanIds(): string[] {
+  return lastCoveredPlanIds;
+}
+export function setPlanCoverage(
+  plan: Array<Record<string, unknown>>,
+  covered: string[],
+): void {
+  lastPlan = plan;
+  lastCoveredPlanIds = covered;
+}
+export function clearPlanCoverage(): void {
+  lastPlan = [];
+  lastCoveredPlanIds = [];
 }
 export function getEventListenersAttached(): boolean {
   return eventListenersAttached;
@@ -60,5 +82,6 @@ export function getLastSpeak(): string {
   return lastSpeak;
 }
 export function setLastSpeak(s: string): void {
-  lastSpeak = s;
+  // sanitize_llm_output HTML-escapes stored speak; keep plain text for TTS / replay
+  lastSpeak = decodeEntities(s);
 }

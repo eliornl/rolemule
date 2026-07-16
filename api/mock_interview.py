@@ -5,6 +5,7 @@ HR / Pro / Manager styles; duration-based sessions (10/15/20 minutes).
 
 from __future__ import annotations
 
+import html
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -95,7 +96,10 @@ class MockInterviewStartRequest(BaseModel):
 
     style: str = Field(..., description="hr | pro | manager")
     duration_minutes: int = Field(DEFAULT_DURATION, description="10, 15, or 20")
-    star_coach: bool = Field(False, description="Probe for STAR structure when answers are thin")
+    star_coach: bool = Field(
+        True,
+        description="Ignored — STAR coaching is always on for Practice Interview",
+    )
 
     validate_style = field_validator("style")(_validate_style)
     validate_duration = field_validator("duration_minutes")(_validate_duration)
@@ -108,6 +112,33 @@ class MockInterviewTurnRequest(BaseModel):
     source: Literal["typed", "stt"] = Field("typed")
 
     validate_transcript = field_validator("transcript")(_validate_transcript)
+
+
+class MockInterviewFinishRequest(BaseModel):
+    """Optional last draft answer to include when ending / time runs out."""
+
+    final_answer: Optional[str] = Field(
+        None,
+        max_length=MAX_TRANSCRIPT_CHARS,
+        description="Unsubmitted draft to score before generating the debrief",
+    )
+    source: Literal["typed", "stt"] = Field("typed")
+
+    @field_validator("final_answer")
+    @classmethod
+    def validate_final_answer(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        text = sanitize_text(v or "").strip()
+        if not text:
+            return None
+        if len(text) < MIN_TRANSCRIPT_CHARS:
+            return None
+        if len(text) > MAX_TRANSCRIPT_CHARS:
+            raise ValueError(
+                f"final_answer must be at most {MAX_TRANSCRIPT_CHARS} characters"
+            )
+        return text
 
 
 class MockInterviewResponse(BaseModel):
@@ -145,7 +176,7 @@ class MockInterviewActionResponse(BaseModel):
     tip: Optional[str] = None
     plan: Optional[List[Dict[str, Any]]] = None
     covered_plan_ids: Optional[List[str]] = None
-    star_coach: bool = False
+    star_coach: bool = True
     debrief: Optional[Dict[str, Any]] = None
     message: str = ""
 
@@ -178,11 +209,29 @@ def _empty_store() -> Dict[str, Any]:
     return {"version": 1, "active": None, "history": []}
 
 
+def _plain_mock_strings(obj: Any) -> Any:
+    """Undo HTML escaping from sanitize_llm_output for plain-text dialogue UI.
+
+    Mock interview turns/tips are shown via textContent / escapeHtml, so storing
+    ``&#x27;`` makes apostrophes appear literally. Keep script stripping from
+    sanitize_llm_output, then unescape so users see normal punctuation.
+    """
+    if isinstance(obj, dict):
+        return {k: _plain_mock_strings(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_plain_mock_strings(item) for item in obj]
+    if isinstance(obj, str):
+        return html.unescape(obj)
+    return obj
+
+
 def _get_store(ws: WorkflowSession) -> Dict[str, Any]:
     data = ws.mock_interview
     if not isinstance(data, dict):
         return _empty_store()
-    out = dict(data)
+    out = _plain_mock_strings(dict(data))
+    if not isinstance(out, dict):
+        return _empty_store()
     if "history" not in out or not isinstance(out.get("history"), list):
         out["history"] = []
     return out
@@ -215,7 +264,8 @@ def _archive_active(store: Dict[str, Any]) -> None:
 
 
 async def _save_store(db: AsyncSession, ws: WorkflowSession, store: Dict[str, Any]) -> None:
-    ws.mock_interview = sanitize_llm_output(store)
+    # Strip risky markup, then unescape so dialogue keeps normal apostrophes.
+    ws.mock_interview = _plain_mock_strings(sanitize_llm_output(store))
     flag_modified(ws, "mock_interview")
     await db.commit()
     await db.refresh(ws)
@@ -360,7 +410,7 @@ async def start_mock_interview(
             profile_matching=ws.profile_matching or {},
             user_profile=ws.user_data or {},
             interview_prep=ws.interview_prep or {},
-            star_coach=bool(body.star_coach),
+            star_coach=True,
             user_api_key=user_api_key,
             model=preferred_model,
             llm_provider=llm_provider,
@@ -380,7 +430,7 @@ async def start_mock_interview(
             "status": "asking",
             "style": body.style,
             "duration_minutes": body.duration_minutes,
-            "star_coach": bool(body.star_coach),
+            "star_coach": True,
             "language": "en",
             "started_at": now.isoformat(),
             "updated_at": now.isoformat(),
@@ -420,7 +470,7 @@ async def start_mock_interview(
             ends_at=ends.isoformat(),
             plan=plan if isinstance(plan, list) else [],
             covered_plan_ids=[],
-            star_coach=bool(body.star_coach),
+            star_coach=True,
             message="Practice interview started",
         )
     except APIError:
@@ -528,7 +578,7 @@ async def submit_mock_interview_turn(
             plan=list(working.get("plan") or []),
             running_notes=list(working.get("running_notes") or []),
             covered_plan_ids=list(working.get("covered_plan_ids") or []),
-            star_coach=bool(working.get("star_coach")),
+            star_coach=True,
             job_analysis=ws.job_analysis or {},
             user_api_key=user_api_key,
             model=preferred_model,
@@ -609,7 +659,7 @@ async def submit_mock_interview_turn(
                 tip=tip,
                 plan=list(working.get("plan") or []),
                 covered_plan_ids=covered,
-                star_coach=bool(working.get("star_coach")),
+                star_coach=True,
                 debrief=debrief,
                 message="Practice interview complete",
             )
@@ -644,7 +694,7 @@ async def submit_mock_interview_turn(
             tip=tip,
             plan=list(working.get("plan") or []),
             covered_plan_ids=covered,
-            star_coach=bool(working.get("star_coach")),
+            star_coach=True,
             message="Next question ready",
         )
     except APIError:
@@ -667,10 +717,12 @@ async def submit_mock_interview_turn(
 @router.post("/{session_id}/finish", response_model=MockInterviewActionResponse)
 async def finish_mock_interview(
     session_id: str,
+    body: Optional[MockInterviewFinishRequest] = None,
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_database),
 ) -> MockInterviewActionResponse:
     """End early and generate a debrief."""
+    finish_body = body or MockInterviewFinishRequest()
     user_id = _get_user_uuid(current_user)
     allowed, _remaining = await check_rate_limit(
         identifier=f"{user_id}:mock_interview_finish",
@@ -714,8 +766,20 @@ async def finish_mock_interview(
     try:
         await broadcast_mock_interview_thinking(ws_user_id, session_id)
         agent = MockInterviewAgent()
-        speak = "Thanks for practicing — here's your feedback."
         turns = list(working.get("turns") or [])
+        # Include any unsubmitted draft so time-up / end-early still scores it.
+        final_answer = finish_body.final_answer
+        if final_answer:
+            turns.append(
+                {
+                    "idx": len(turns),
+                    "role": "candidate",
+                    "text": final_answer,
+                    "source": finish_body.source,
+                    "at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        speak = "Thanks for practicing — here's your feedback."
         turns.append(
             {
                 "idx": len(turns),
@@ -751,6 +815,9 @@ async def finish_mock_interview(
             act="wrap_up",
             seconds_remaining=0,
             ends_at=working.get("ends_at"),
+            plan=list(working.get("plan") or []),
+            covered_plan_ids=list(working.get("covered_plan_ids") or []),
+            star_coach=True,
             debrief=debrief,
             message="Practice interview finished",
         )

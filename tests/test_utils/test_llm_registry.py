@@ -51,7 +51,7 @@ def test_create_provider_anthropic() -> None:
 def test_create_provider_ollama() -> None:
     settings = MagicMock(
         ollama_base_url="http://127.0.0.1:11434",
-        ollama_model="qwen3",
+        ollama_model="qwen3.6",
     )
     with patch("utils.llm.providers.ollama.get_settings", return_value=settings):
         provider = create_provider("ollama")

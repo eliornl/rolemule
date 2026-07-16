@@ -40,6 +40,34 @@ async def test_openai_generate_success() -> None:
         assert result["response"] == "hello from openai"
         assert result["done"] is True
         assert result["model"] == "gpt-5.6-luna"
+        payload = mock_client.post.call_args[1]["json"]
+        assert "max_tokens" not in payload
+        assert payload["max_completion_tokens"] == 16000
+        assert "temperature" not in payload
+
+
+@pytest.mark.asyncio
+async def test_openai_legacy_model_keeps_temperature() -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json = MagicMock(
+        return_value={"choices": [{"message": {"content": "ok"}}]}
+    )
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch(
+        "utils.llm.providers.openai.get_settings",
+        return_value=_settings(openai_model="gpt-4o"),
+    ), patch("utils.llm.providers.openai.httpx.AsyncClient", return_value=mock_client):
+        provider = OpenAIProvider()
+        await provider.generate(prompt="hi", temperature=0.3, max_tokens=500)
+        payload = mock_client.post.call_args[1]["json"]
+        assert payload["temperature"] == 0.3
+        assert payload["max_completion_tokens"] == 500
+        assert "max_tokens" not in payload
 
 
 @pytest.mark.asyncio

@@ -140,7 +140,6 @@ def resolve_user_llm_context(
 
     # Vertex admin escape hatch — Gemini, no BYOK required
     if bool(getattr(cfg, "use_vertex_ai", False)):
-        preferred_model = _prefs_get(prefs, "preferred_model")
         return UserLLMContext(
             provider="gemini",
             user_api_key=None,

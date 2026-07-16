@@ -1123,6 +1123,10 @@
                 font-weight: 500;
             }
 
+            .fit-badge.is-hidden {
+                display: none;
+            }
+
             .badge-good   { background: rgba(16,185,129,0.15); color: #10b981; }
             .badge-review { background: rgba(245,158,11,0.15); color: #f59e0b; }
             .badge-poor   { background: rgba(239,68,68,0.15);  color: #ef4444; }
@@ -3579,15 +3583,6 @@
                 justify-content: center;
             }
 
-            .mi-setup-note {
-                font-size: 0.85rem;
-                color: var(--text-muted);
-                line-height: 1.6;
-                max-width: none;
-                width: 100%;
-                margin: 0.5rem 0 0;
-            }
-
             .mi-setup-empty .mi-ai-setup-warning,
             .mi-setup-empty .mi-voice-banner {
                 max-width: none;
@@ -3601,10 +3596,11 @@
                 display: none;
             }
 
+            /* Same row pattern as Optimize CV: label | control, next row below */
             .mi-setup-empty .mi-config {
                 display: grid;
-                grid-template-columns: max-content 7.5rem max-content;
-                gap: 0.75rem 0.5rem;
+                grid-template-columns: max-content minmax(12rem, 15rem);
+                gap: 0.75rem 0.75rem;
                 align-items: center;
                 justify-content: center;
                 margin-top: 1.25rem;
@@ -3615,12 +3611,8 @@
                 font-weight: 500;
                 color: var(--text-secondary);
                 white-space: nowrap;
-            }
-
-            .mi-config-hint {
-                font-size: 0.75rem;
-                color: var(--text-muted);
-                font-weight: 400;
+                text-align: right;
+                justify-self: end;
             }
 
             .mi-config-select {
@@ -3630,11 +3622,12 @@
                 color: var(--text-primary);
                 font-size: 0.9rem;
                 padding: 0.35rem 1.35rem 0.35rem 0.45rem;
-                width: 7.5rem;
-                min-width: 7.5rem;
-                max-width: 7.5rem;
+                width: 100%;
+                min-width: 12rem;
+                max-width: 15rem;
                 justify-self: start;
                 transition: border-color 0.2s;
+                color-scheme: dark;
             }
 
             .mi-config-select:focus {
@@ -3643,47 +3636,25 @@
                 box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
             }
 
-            .mi-config-rec {
-                font-size: 0.8rem;
-                color: var(--text-muted);
-            }
-
             .mi-setup-empty .mi-start-btn {
                 margin-top: 1.25rem;
             }
 
-            .mi-toggle {
-                display: flex;
-                align-items: flex-start;
-                gap: 0.65rem;
-                text-align: left;
-                max-width: 420px;
-                width: 100%;
-                margin-top: 1rem;
-                margin-left: auto;
-                margin-right: auto;
-                font-size: 0.9rem;
-                color: var(--text-secondary);
-                cursor: pointer;
-            }
+            @media (max-width: 576px) {
+                .mi-setup-empty .mi-config {
+                    grid-template-columns: 1fr;
+                    justify-items: center;
+                }
 
-            .mi-toggle input {
-                margin-top: 0.2rem;
-                accent-color: var(--accent-primary);
-            }
+                .mi-config-label {
+                    text-align: center;
+                    justify-self: center;
+                }
 
-            .mi-toggle strong {
-                display: block;
-                color: var(--text-primary);
-                font-weight: 600;
-            }
-
-            .mi-toggle-hint {
-                display: block;
-                font-size: 0.75rem;
-                color: var(--text-muted);
-                margin-top: 0.15rem;
-                line-height: 1.4;
+                .mi-config-select {
+                    min-width: 12rem;
+                    max-width: 15rem;
+                }
             }
 
             .mi-coverage {
@@ -3711,24 +3682,29 @@
                 color: #10b981;
             }
 
-            .mi-coverage-empty {
-                font-size: 0.85rem;
-                color: var(--text-muted);
+            .mi-tip {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.5rem;
+                margin: 0.75rem 0 0;
+                padding: 0.65rem 0.85rem;
+                border-radius: var(--radius-md);
+                border: 1px solid rgba(0, 212, 255, 0.2);
+                background: rgba(0, 212, 255, 0.06);
+                font-size: 0.82rem;
+                line-height: 1.45;
+                color: var(--text-secondary);
+                text-align: left;
             }
 
-            .mi-tip {
-                margin-bottom: 1rem;
+            .mi-tip > i {
+                color: var(--accent-primary);
+                margin-top: 0.15rem;
+                flex-shrink: 0;
             }
 
             .mi-tip.is-hidden {
                 display: none;
-            }
-
-            @media (max-width: 576px) {
-                .mi-setup-empty .mi-config {
-                    grid-template-columns: 1fr;
-                    justify-items: center;
-                }
             }
 
             #mi-active {
@@ -3737,18 +3713,112 @@
 
             .mi-session-banner {
                 margin-bottom: 1rem;
+                align-items: center;
+                gap: 0.75rem 1rem;
+            }
+
+            .mi-session-toolbar {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 0.5rem 0.65rem;
+                margin-left: auto;
+                min-width: 0;
             }
 
             .mi-session-actions {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 0.5rem;
-                margin: 0 0 1rem;
+                align-items: center;
+                gap: 0.15rem 0.35rem;
+                margin: 0;
                 justify-content: flex-end;
             }
 
-            .mi-session-actions .cl-copy-btn {
-                margin-top: 0;
+            .mi-session-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.3rem 0.55rem;
+                border: none;
+                background: transparent;
+                border-radius: var(--radius-md);
+                font-size: 0.78rem;
+                font-weight: 500;
+                color: var(--text-muted);
+                cursor: pointer;
+                transition: color 0.15s, background 0.15s;
+            }
+
+            .mi-session-link:hover,
+            .mi-session-link[aria-expanded="true"] {
+                color: var(--text-primary);
+                background: rgba(255, 255, 255, 0.04);
+            }
+
+            .mi-more-wrap {
+                position: relative;
+            }
+
+            .mi-more-menu {
+                position: absolute;
+                top: calc(100% + 0.35rem);
+                right: 0;
+                z-index: 20;
+                min-width: 11rem;
+                padding: 0.35rem;
+                border-radius: var(--radius-md);
+                border: 1px solid var(--border-color);
+                background: var(--bg-card);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            }
+
+            .mi-more-menu.is-hidden {
+                display: none;
+            }
+
+            .mi-more-item {
+                display: flex;
+                width: 100%;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem 0.65rem;
+                border: none;
+                border-radius: var(--radius-sm);
+                background: transparent;
+                color: var(--text-secondary);
+                font-size: 0.8rem;
+                font-weight: 500;
+                text-align: left;
+                cursor: pointer;
+                transition: background 0.15s, color 0.15s;
+            }
+
+            .mi-more-item:hover {
+                background: var(--bg-secondary);
+                color: var(--text-primary);
+            }
+
+            .mi-more-item.mi-abort-item {
+                color: #f87171;
+            }
+
+            .mi-more-item.mi-abort-item:hover {
+                background: rgba(239, 68, 68, 0.12);
+                color: #fca5a5;
+            }
+
+            @media (max-width: 768px) {
+                .mi-session-banner {
+                    align-items: flex-start;
+                }
+
+                .mi-session-toolbar {
+                    width: 100%;
+                    margin-left: 0;
+                    justify-content: flex-start;
+                }
             }
 
             .mi-interviewer-card {
@@ -3780,22 +3850,58 @@
                 font-size: 0.95rem;
             }
 
+            .mi-conversation-section .section-title {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.75rem;
+            }
+
+            .mi-conversation-heading {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45rem;
+            }
+
+            .mi-collapse-btn {
+                border: none;
+                background: transparent;
+                color: var(--text-muted);
+                font-size: 0.75rem;
+                font-weight: 500;
+                cursor: pointer;
+                padding: 0.2rem 0.35rem;
+                border-radius: var(--radius-sm);
+            }
+
+            .mi-collapse-btn:hover {
+                color: var(--text-primary);
+            }
+
             .mi-transcript {
-                max-height: 240px;
+                max-height: 220px;
                 overflow-y: auto;
                 border: 1px solid var(--border-color);
                 border-radius: var(--radius-md);
-                padding: 0.75rem;
-                background: var(--bg-card);
+                padding: 1rem 1.15rem;
+                background: var(--bg-secondary);
+            }
+
+            .mi-conversation-section.is-collapsed .mi-transcript {
+                display: none;
             }
 
             .mi-turn {
                 display: flex;
                 gap: 0.6rem;
-                margin-bottom: 0.55rem;
+                margin-bottom: 0.65rem;
                 font-size: 0.88rem;
                 color: var(--text-secondary);
-                line-height: 1.45;
+                line-height: 1.5;
+            }
+
+            .mi-turn:last-child {
+                margin-bottom: 0;
             }
 
             .mi-turn-role {
@@ -3846,19 +3952,54 @@
             .mi-answer-actions {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 0.75rem;
+                gap: 0.65rem;
+                justify-content: flex-end;
+                align-items: center;
                 margin-top: 0.85rem;
-                position: sticky;
-                bottom: 0.5rem;
-                padding: 0.5rem 0;
-                background: linear-gradient(transparent, var(--bg-primary) 40%);
             }
 
+            .mi-answer-actions .cl-copy-btn,
             .mi-answer-actions .regen-btn {
                 margin-top: 0;
+                min-width: 10.5rem;
+                min-height: 2.5rem;
+                justify-content: center;
+                padding: 0.5rem 1.1rem;
+                font-size: 0.8rem;
+            }
+
+            /* Outline secondary — avoid solid black fill next to the primary CTA */
+            .mi-answer-actions .mi-mic-btn {
+                background: transparent;
+                border: 1px solid var(--border-color);
+                color: var(--text-secondary);
+            }
+
+            .mi-answer-actions .mi-mic-btn:hover {
+                background: rgba(0, 212, 255, 0.08);
+                border-color: var(--accent-primary);
+                color: var(--accent-primary);
+            }
+
+            .mi-submit-btn {
+                background: var(--accent-gradient);
+                border-color: transparent;
+                color: #fff;
+            }
+
+            .mi-submit-btn:hover {
+                filter: brightness(1.05);
+                color: #fff;
+                border-color: transparent;
+            }
+
+            .mi-submit-btn.loading .spinner {
+                border-color: rgba(255, 255, 255, 0.35);
+                border-top-color: #fff;
             }
 
             .mi-mic-btn.mi-listening {
+                background: rgba(0, 212, 255, 0.1);
                 border-color: var(--accent-primary);
                 color: var(--accent-primary);
                 box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
@@ -3869,13 +4010,47 @@
                 align-items: center;
                 gap: 1rem;
                 flex-wrap: wrap;
-                margin-bottom: 0.5rem;
+                margin-bottom: 1.25rem;
             }
 
             .mi-results-banner {
                 flex: 1;
                 min-width: min(100%, 260px);
                 margin-bottom: 0;
+                overflow: visible;
+                min-height: 0;
+            }
+
+            .mi-results-banner .apply-main {
+                align-items: flex-start;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .mi-results-banner .apply-main > div {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .mi-results-banner .apply-answer {
+                font-size: 1.35rem;
+                line-height: 1.4;
+                overflow: visible;
+            }
+
+            #mi-final-score {
+                display: inline-block;
+                line-height: 1.4;
+                vertical-align: baseline;
+            }
+
+            .mi-results-banner .apply-rec {
+                max-width: none;
+                width: 100%;
+                white-space: normal;
+                overflow: visible;
+                display: block;
+                line-height: 1.45;
             }
 
             .mi-results-header .regen-btn {
@@ -3885,46 +4060,143 @@
             }
 
             .mi-score-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 0.5rem;
                 margin: 0 0 1rem;
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             }
 
-            .mi-score-chip {
-                border: 1px solid var(--border-color);
-                border-radius: var(--radius-md);
-                background: var(--bg-secondary);
-                padding: 0.65rem 0.75rem;
-                font-size: 0.85rem;
-                color: var(--text-secondary);
+            .mi-score-top {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 0.65rem;
             }
 
-            .mi-score-chip strong {
-                display: block;
-                font-size: 1rem;
+            .mi-score-top .jd-glance-label {
+                margin-bottom: 0;
+            }
+
+            .mi-score-grid .jd-glance-value {
+                font-size: 1.35rem;
+                font-weight: 700;
+                line-height: 1.2;
+                flex-shrink: 0;
                 color: var(--text-primary);
-                margin-top: 0.15rem;
+            }
+
+            .mi-score-item {
+                align-items: flex-start;
+                min-height: 100%;
+            }
+
+            .mi-score-item .jd-glance-body {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .mi-score-help {
+                margin: 0.35rem 0 0;
+                font-size: 0.72rem;
+                line-height: 1.4;
+                color: var(--text-muted);
+            }
+
+            .mi-answer-reviews-note {
+                font-size: 0.85rem;
+                color: var(--text-muted);
+                line-height: 1.5;
+                margin: -0.35rem 0 1rem;
+            }
+
+            .mi-answer-reviews {
+                display: flex;
+                flex-direction: column;
+                gap: 1.25rem;
+            }
+
+            .mi-answer-review-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.75rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .mi-answer-review-label {
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+
+            .mi-answer-score {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: var(--accent-primary);
+                padding: 0.2rem 0.5rem;
+                border-radius: var(--radius-full);
+                border: 1px solid rgba(0, 212, 255, 0.25);
+                background: rgba(0, 212, 255, 0.08);
+            }
+
+            .mi-answer-q,
+            .mi-answer-yours {
+                font-size: 0.88rem;
+                color: var(--text-secondary);
+                line-height: 1.5;
+                margin: 0 0 0.55rem;
+            }
+
+            .mi-answer-kicker {
+                display: inline-block;
+                font-size: 0.7rem;
+                font-weight: 600;
+                letter-spacing: 0.03em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                margin-right: 0.35rem;
+            }
+
+            .mi-coverage-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem 0.75rem;
+                margin: 0 0 1rem;
+                padding: 0.65rem 0.85rem;
+                border-radius: var(--radius-md);
+                border: 1px solid var(--border-color);
+                background: var(--bg-secondary);
+            }
+
+            .mi-coverage-label {
+                font-size: 0.75rem;
+                font-weight: 600;
+                letter-spacing: 0.03em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                flex-shrink: 0;
+            }
+
+            .mi-coverage-row .mi-coverage {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .mi-summary-block {
+                display: flex;
+                flex-direction: column;
+                gap: 0.65rem;
+                margin-bottom: 0;
             }
 
             .mi-summary {
                 font-size: 0.9rem;
                 color: var(--text-secondary);
                 line-height: 1.6;
-                margin-bottom: 1rem;
+                margin: 0;
             }
 
-            .mi-rewrite {
+            .mi-rewrite-box .cover-letter-body {
                 white-space: pre-wrap;
-                border: 1px solid var(--border-color);
-                border-left: 3px solid var(--accent-primary);
-                padding: 1rem 1.15rem;
-                background: var(--bg-card);
-                border-radius: 0 var(--radius-md) var(--radius-md) 0;
-                margin-bottom: 0;
-                font-size: 0.9rem;
-                color: var(--text-primary);
-                line-height: 1.7;
             }
 
             #mi-results {
@@ -4802,13 +5074,10 @@
                                 <i class="fas fa-microphone empty-state-icon" aria-hidden="true"></i>
                                 <p class="empty-state-title">Practice Your Interview</p>
                                 <p class="empty-state-desc">
-                                    Run a timed conversational practice interview grounded in this application.
-                                    An AI interviewer asks questions in your chosen style; you answer by voice or typing,
-                                    then get a scored debrief with strengths and improvements.
-                                </p>
-                                <p class="mi-setup-note">
-                                    Sessions end when time runs out or you finish early. Voice uses your browser
-                                    (nothing is uploaded). Typed answers always work.
+                                    Run a timed practice interview grounded in this application: an AI interviewer
+                                    asks questions in your chosen style, you answer by voice or typing, and when
+                                    time is up you get a scored debrief with strengths and improvements.
+                                    Voice stays in your browser — nothing is uploaded.
                                 </p>
 
                                 <div id="mi-ai-setup-warning" class="alert alert-warning mi-ai-setup-warning is-hidden" role="alert">
@@ -4823,34 +5092,20 @@
                                 </div>
 
                                 <div class="mi-config">
-                                    <label class="mi-config-label" for="mi-style">Interviewer style
-                                        <span class="mi-config-hint">(HR screen · Pro peer · Manager)</span>
-                                    </label>
+                                    <label class="mi-config-label" for="mi-style">Interviewer style</label>
                                     <select id="mi-style" class="mi-config-select">
-                                        <option value="hr" selected>HR</option>
-                                        <option value="pro">Pro</option>
-                                        <option value="manager">Manager</option>
+                                        <option value="hr" selected>HR — screening</option>
+                                        <option value="pro">Pro — peer technical</option>
+                                        <option value="manager">Manager — hiring manager</option>
                                     </select>
-                                    <span class="mi-config-rec">Recommended: HR</span>
 
-                                    <label class="mi-config-label" for="mi-duration">Duration
-                                        <span class="mi-config-hint">(10–20 min)</span>
-                                    </label>
+                                    <label class="mi-config-label" for="mi-duration">Duration</label>
                                     <select id="mi-duration" class="mi-config-select">
-                                        <option value="10">10 min</option>
-                                        <option value="15" selected>15 min</option>
-                                        <option value="20">20 min</option>
+                                        <option value="10">10 minutes</option>
+                                        <option value="15" selected>15 minutes</option>
+                                        <option value="20">20 minutes</option>
                                     </select>
-                                    <span class="mi-config-rec">Recommended: 15</span>
                                 </div>
-
-                                <label class="mi-toggle">
-                                    <input type="checkbox" id="mi-star-coach" />
-                                    <span>
-                                        <strong>STAR coach</strong>
-                                        <span class="mi-toggle-hint">Ask follow-ups when Situation / Action / Result is missing</span>
-                                    </span>
-                                </label>
 
                                 <button id="mi-start-btn" type="button" class="regen-btn mi-start-btn" data-action="miStart">
                                     <span class="spinner"></span>
@@ -4867,42 +5122,38 @@
                                             <div class="apply-rec" id="mi-session-status">Practice in progress</div>
                                         </div>
                                     </div>
-                                    <div class="apply-badges">
-                                        <span id="mi-thinking" class="fit-badge badge-muted is-hidden" aria-live="polite">Typing&hellip;</span>
-                                        <span id="mi-time-warning" class="fit-badge badge-review is-hidden">2 minutes left</span>
+                                    <div class="mi-session-toolbar">
+                                        <div class="apply-badges">
+                                            <span id="mi-thinking" class="fit-badge badge-muted is-hidden" aria-live="polite">Loading&hellip;</span>
+                                            <span id="mi-time-warning" class="fit-badge badge-review is-hidden">2 minutes left</span>
+                                        </div>
+                                        <div class="mi-session-actions">
+                                            <button type="button" class="mi-session-link" data-action="miReplay" aria-label="Replay last interviewer question" title="Play the last interviewer question again">
+                                                <i class="fas fa-redo" aria-hidden="true"></i> Replay question
+                                            </button>
+                                            <button type="button" class="mi-session-link" data-action="miStopAudio" aria-label="Mute this question" title="Mutes only this interviewer question (and the mic) — does not end the practice">
+                                                <i class="fas fa-volume-mute" aria-hidden="true"></i> Mute this question
+                                            </button>
+                                            <div class="mi-more-wrap">
+                                                <button type="button" class="mi-session-link" data-action="miMoreToggle" aria-expanded="false" aria-haspopup="true" aria-controls="mi-more-menu">
+                                                    <i class="fas fa-ellipsis-h" aria-hidden="true"></i> More
+                                                </button>
+                                                <div id="mi-more-menu" class="mi-more-menu is-hidden" role="menu">
+                                                    <button type="button" class="mi-more-item" role="menuitem" data-action="miFinish">
+                                                        <i class="fas fa-flag-checkered" aria-hidden="true"></i> End early
+                                                    </button>
+                                                    <button type="button" class="mi-more-item mi-abort-item" role="menuitem" data-action="miAbort">
+                                                        <i class="fas fa-times" aria-hidden="true"></i> Abort
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="mi-session-actions">
-                                    <button type="button" class="cl-copy-btn" data-action="miReplay" aria-label="Replay last question">
-                                        <i class="fas fa-redo" aria-hidden="true"></i> Replay
-                                    </button>
-                                    <button type="button" class="cl-copy-btn" data-action="miStopAudio" aria-label="Stop audio">
-                                        <i class="fas fa-volume-mute" aria-hidden="true"></i> Stop audio
-                                    </button>
-                                    <button type="button" class="cl-copy-btn" data-action="miFinish">
-                                        <i class="fas fa-flag-checkered" aria-hidden="true"></i> End early
-                                    </button>
-                                    <button type="button" class="cl-copy-btn" data-action="miAbort">
-                                        <i class="fas fa-times" aria-hidden="true"></i> Abort
-                                    </button>
-                                </div>
-
-                                <div class="content-section mi-coverage-section">
-                                    <div class="section-title"><i class="fas fa-list-check" aria-hidden="true"></i> Topic coverage</div>
-                                    <div id="mi-coverage" class="mi-coverage" aria-live="polite"></div>
-                                </div>
-
-                                <div id="mi-tip" class="alert alert-info mi-tip is-hidden" role="status"></div>
-
                                 <div class="mi-interviewer-card" aria-live="polite">
-                                    <div class="mi-interviewer-label">Interviewer</div>
+                                    <div class="mi-interviewer-label">Current question</div>
                                     <div id="mi-interviewer-text" class="mi-interviewer-text"></div>
-                                </div>
-
-                                <div class="content-section">
-                                    <div class="section-title"><i class="fas fa-comments" aria-hidden="true"></i> Transcript</div>
-                                    <div id="mi-transcript" class="mi-transcript" aria-label="Transcript"></div>
                                 </div>
 
                                 <div class="content-section">
@@ -4910,15 +5161,24 @@
                                     <textarea id="mi-answer" class="mi-answer" rows="5" maxlength="4000" placeholder="Type or speak your answer… Enter to send · Shift+Enter for a new line"></textarea>
                                     <p class="mi-answer-hint">Voice auto-sends after a short pause. Enter sends typed answers (Shift+Enter = new line). You can still use Submit.</p>
                                     <div class="mi-answer-actions">
-                                        <button type="button" id="mi-mic-btn" class="regen-btn mi-mic-btn" data-action="miMic" aria-label="Toggle microphone" aria-pressed="false">
+                                        <button type="button" id="mi-mic-btn" class="cl-copy-btn mi-mic-btn" data-action="miMic" aria-label="Toggle microphone" aria-pressed="false">
                                             <i class="fas fa-microphone" aria-hidden="true"></i>
                                             <span class="btn-text">Voice</span>
                                         </button>
-                                        <button type="button" class="regen-btn" data-action="miSubmit">
+                                        <button type="button" class="regen-btn mi-submit-btn" data-action="miSubmit">
                                             <span class="spinner"></span>
                                             <span class="btn-text">Submit answer</span>
                                         </button>
                                     </div>
+                                    <div id="mi-tip" class="mi-tip is-hidden" role="status"></div>
+                                </div>
+
+                                <div class="content-section mi-conversation-section">
+                                    <div class="section-title">
+                                        <span class="mi-conversation-heading"><i class="fas fa-comments" aria-hidden="true"></i> Conversation</span>
+                                        <button type="button" class="mi-collapse-btn" data-action="miToggleConversation" aria-expanded="true" aria-controls="mi-transcript">Hide</button>
+                                    </div>
+                                    <div id="mi-transcript" class="mi-transcript" aria-label="Conversation"></div>
                                 </div>
                             </div>
 
@@ -4942,7 +5202,6 @@
                                 <div id="mi-debrief"></div>
                             </div>
                         </div>
-                    </div>
                     <div class="tab-pane" id="pane-outreach">
                         <div id="hiringOutreachContent">
                             <div id="ho-setup" class="ho-section ho-setup-empty">
@@ -5023,6 +5282,8 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
                     </div>
                 </div>
             </div>

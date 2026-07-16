@@ -461,7 +461,6 @@ Browser / Chrome Extension
         Practice Interview  ← standalone timed conversational mock (HR/Pro/Manager)
 
         Hiring Outreach  ← standalone public-web contacts + copy-only draft messages
-
         Six career tools (Follow-up Email, Thank You Note, Salary Coach,
         Rejection Analyzer, Reference Request, Job Comparison)
                         ← standalone, no job description needed
