@@ -15,10 +15,14 @@ Standalone on-demand feature — **not** in the LangGraph workflow. Conversation
 - **Duration:** `10` | `15` | `20` minutes (default 15) — countdown from server `ends_at`, not fixed round count
 - Voice: browser Web Speech API (STT) + `speechSynthesis` (TTS); typed fallback always available
 - **Submit UX:** voice auto-submits after ~5s silence (`VOICE_SILENCE_MS`); typing uses **Enter** to send (**Shift+Enter** = newline); **Submit answer** button remains
-- **Replay** last interviewer line; **confirm** before End early
-- **STAR coach** optional toggle; mid-session **tips** when answers are weak; **topic coverage** checklist from plan
+- **Replay question** / **Mute this question** as quiet session links; **End early** / **Abort** under **More**; **confirm** before End early
+- **STAR coach** always on; mid-session **tips** under the answer box; **topic coverage** in the debrief (not mid-session)
+- Debrief includes dimension score explanations in the UI, plus **answer_reviews** (stronger sample per candidate answer, capped at 6) with Copy; legacy `weakest_answer_rewrite` still filled for older clients
+- On timer expiry, any draft answer (≥5 chars) in the box is submitted before wrap-up / debrief
 - Mic **pauses while TTS speaks** (avoids capturing interviewer audio)
-- While waiting for stream: interviewer card shows *Interviewer is typing…* until the first speak delta
+- While waiting for stream: current-question card shows *Loading…* until the first speak delta
+- Ending early / time-up: timer stops immediately and UI shows scoring state until debrief is ready
+- Debrief: overall score banner, score breakdown (number on the right of each card), summary, strengths/improvements, stronger sample answers — no Topics row
 - Low-time coaching: last question (~2 min), short summary (~1 min), wrap-up (≤30s)
 - **No audio upload / no server Whisper** in v1
 

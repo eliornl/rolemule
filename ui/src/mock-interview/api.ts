@@ -47,14 +47,13 @@ export async function startMockInterview(
   sessionId: string,
   style: string,
   durationMinutes: number,
-  starCoach = false,
 ): Promise<Record<string, unknown>> {
   const { ok, data } = await request(`/${encodeURIComponent(sessionId)}/start`, {
     method: 'POST',
     body: JSON.stringify({
       style,
       duration_minutes: durationMinutes,
-      star_coach: starCoach,
+      star_coach: true,
     }),
   });
   if (!ok) raiseFromBody(data, 'Failed to start');

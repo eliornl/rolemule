@@ -2,6 +2,8 @@
  * Browser STT (Web Speech API) + TTS (speechSynthesis). English only.
  * Pauses mic while TTS speaks so the interviewer is not transcribed.
  */
+import { decodeEntities } from '../shared/dom-security';
+
 type TranscriptCb = (text: string, isFinal: boolean) => void;
 
 interface SpeechRecognitionLike {
@@ -191,11 +193,12 @@ function resumeMicAfterTtsIfNeeded(): void {
 }
 
 export function speakText(text: string): void {
-  if (!isTtsSupported() || !text.trim()) return;
+  const plain = decodeEntities(text).trim();
+  if (!isTtsSupported() || !plain) return;
   try {
     window.speechSynthesis.cancel();
     pauseMicForTts();
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(plain);
     u.lang = 'en-US';
     u.rate = 1;
     u.onend = () => resumeMicAfterTtsIfNeeded();

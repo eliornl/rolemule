@@ -317,13 +317,12 @@ Practice a timed conversational mock interview grounded in this application's jo
 
 1. Open a completed application's detail page
 2. Click the **Practice Interview** tab (after Optimize CV)
-3. Choose style (**HR**, **Pro**, or **Manager**) and length (**10**, **15**, or **20** minutes)
-4. Optionally enable **STAR coach** (follow-ups when Situation / Action / Result is missing)
-5. Click **Start Practice Interview**
-6. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
-7. While the interviewer is composing, you may see **Interviewer is typing…** as the question streams in; speech plays when the full line is ready
-8. Use **Replay** to hear the last question again; **End early** confirms then scores you; **Abort** ends with no score
-9. Watch **topic coverage** and mid-session tips; when time is low the interviewer wraps up; finish for a full debrief
+3. Choose style (**HR — screening**, **Pro — peer technical**, or **Manager — hiring manager**) and length (**10**, **15**, or **20** minutes)
+4. Click **Start Practice Interview** (STAR follow-ups are always on)
+5. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
+6. While the question is composing, you may see **Loading…** as it streams in; speech plays when the full line is ready
+7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score)
+8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out with text in the answer box, ApplyPilot submits that draft then finishes. The debrief shows score dimensions with short explanations, topic coverage, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
 
 Optional interview prep content from the Interview tab is used when available to steer questions. Practice Interview is a live conversation — different from the static **Interview** tab guide.
 

@@ -1,4 +1,4 @@
-import { escapeHtml } from '../shared/dom-security';
+import { decodeEntities, escapeHtml } from '../shared/dom-security';
 import { getAuthToken } from '../shared/auth';
 import { isSttSupported } from './voice';
 
@@ -43,34 +43,55 @@ export async function checkApiKeyStatus(): Promise<void> {
 export function updateAiSetupUi(ready: boolean): void {
   setHidden(el('mi-ai-setup-warning'), ready);
   const startBtn = el('mi-start-btn') as HTMLButtonElement | null;
-  if (startBtn) startBtn.disabled = !ready;
+  if (startBtn && !startBtn.classList.contains('loading')) {
+    startBtn.disabled = !ready;
+  }
+}
+
+export function setStartBtnLoading(loading: boolean): void {
+  const btn = el('mi-start-btn') as HTMLButtonElement | null;
+  if (!btn) return;
+  btn.classList.toggle('loading', loading);
+  if (loading) {
+    btn.disabled = true;
+    return;
+  }
+  // Restore based on whether the warning is hidden (AI ready)
+  const warning = el('mi-ai-setup-warning');
+  const ready = !warning || warning.classList.contains('is-hidden');
+  btn.disabled = !ready;
 }
 
 export function setInterviewerSpeak(text: string): void {
   const box = el('mi-interviewer-text');
   if (!box) return;
   box.classList.remove('mi-typing');
-  box.textContent = text;
+  const plain = decodeEntities(text);
+  delete box.dataset['miRaw'];
+  box.textContent = plain;
 }
 
 /** Placeholder while waiting for the first streamed speak characters. */
-export function setInterviewerTyping(): void {
+export function setInterviewerTyping(message?: string): void {
   const box = el('mi-interviewer-text');
   if (!box) return;
   box.classList.add('mi-typing');
-  box.textContent = 'Interviewer is typing…';
+  delete box.dataset['miRaw'];
+  box.textContent = message || 'Loading…';
 }
 
 export function appendInterviewerDelta(delta: string): void {
   if (!delta) return;
   const box = el('mi-interviewer-text');
   if (!box) return;
+  // Accumulate raw, then decode once so split entities (e.g. &#x27;) still resolve.
+  const rawPrev = box.dataset['miRaw'] || (box.classList.contains('mi-typing') ? '' : box.textContent || '');
+  const raw = rawPrev + delta;
+  box.dataset['miRaw'] = raw;
   if (box.classList.contains('mi-typing')) {
     box.classList.remove('mi-typing');
-    box.textContent = delta;
-    return;
   }
-  box.textContent = (box.textContent || '') + delta;
+  box.textContent = decodeEntities(raw);
 }
 
 export function setTip(tip: string | null | undefined): void {
@@ -82,47 +103,168 @@ export function setTip(tip: string | null | undefined): void {
     setHidden(box, true);
     return;
   }
-  box.innerHTML = `<i class="fas fa-lightbulb me-2" aria-hidden="true"></i>${escapeHtml(text)}`;
+  box.innerHTML = `<i class="fas fa-lightbulb" aria-hidden="true"></i><span>${escapeHtml(text)}</span>`;
   setHidden(box, false);
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  behavioral: 'Behavioral',
-  technical: 'Technical',
-  role_specific: 'Role',
-  company_specific: 'Company',
-};
-
-export function renderCoverage(
-  plan: Array<Record<string, unknown>> | null | undefined,
-  coveredIds: string[] | null | undefined,
-): void {
-  const root = el('mi-coverage');
-  if (!root) return;
-  const items = Array.isArray(plan) ? plan : [];
-  const covered = new Set((coveredIds || []).map(String));
-  if (!items.length) {
-    root.innerHTML = '<span class="mi-coverage-empty">Topics appear after the first question.</span>';
-    return;
+function shortVerdict(summary: string, overall: number | null): string {
+  const cleaned = decodeEntities(summary).trim();
+  if (!cleaned) {
+    return overall == null || Number.isNaN(overall)
+      ? 'Practice complete'
+      : `Practice complete — ${overall}/10`;
   }
-  root.innerHTML = items
-    .map((p) => {
-      const id = String(p['id'] || '');
-      const cat = String(p['category'] || 'behavioral');
-      const label = CATEGORY_LABELS[cat] || cat;
-      const done = covered.has(id);
-      const icon = done ? 'fa-check-circle' : 'fa-circle';
-      return `<span class="mi-coverage-item${done ? ' done' : ''}"><i class="fas ${icon}" aria-hidden="true"></i>${escapeHtml(label)}</span>`;
-    })
-    .join('');
+  const match = cleaned.match(/^[^.!?]+[.!?]?/);
+  const first = (match ? match[0] : cleaned).trim();
+  return first.length > 140 ? `${first.slice(0, 137)}…` : first;
 }
 
+const SCORE_HELP: Record<string, string> = {
+  content: 'How specific and evidence-based your answers were for this role.',
+  structure: 'How clearly you organized answers (situation → action → result).',
+  clarity: 'How easy it was to follow what you meant, without fluff.',
+  role_fit: 'How well your examples mapped to this job’s real needs.',
+  style_focus: 'How well you hit what this interviewer style cares about most.',
+};
 
-export function setThinking(on: boolean): void {
-  setHidden(el('mi-thinking'), !on);
+function scoreGlance(
+  key: string,
+  label: string,
+  icon: string,
+  value: number | string | undefined,
+): string {
+  const help = SCORE_HELP[key] || '';
+  return `
+    <div class="jd-glance-item mi-score-item">
+      <div class="jd-glance-icon"><i class="fas ${icon}" aria-hidden="true"></i></div>
+      <div class="jd-glance-body">
+        <div class="mi-score-top">
+          <div class="jd-glance-label">${escapeHtml(label)}</div>
+          <div class="jd-glance-value">${escapeHtml(String(value ?? '—'))}</div>
+        </div>
+        ${help ? `<p class="mi-score-help">${escapeHtml(help)}</p>` : ''}
+      </div>
+    </div>`;
+}
+
+function bulletList(
+  items: unknown[],
+  iconClass: string,
+  iconName: string,
+): string {
+  if (!items.length) {
+    return '<ul class="content-list"><li class="text-muted">None listed</li></ul>';
+  }
+  return `<ul class="content-list">${items
+    .map(
+      (s) =>
+        `<li><i class="fas ${iconName} ${iconClass}" aria-hidden="true"></i><span>${escapeHtml(String(s))}</span></li>`,
+    )
+    .join('')}</ul>`;
+}
+
+let lastDebriefRewrite = '';
+let lastAnswerRewrites: string[] = [];
+
+export function getLastDebriefRewrite(index?: number): string {
+  if (typeof index === 'number' && index >= 0 && index < lastAnswerRewrites.length) {
+    return lastAnswerRewrites[index] || '';
+  }
+  return lastDebriefRewrite;
+}
+
+function answerReviewsHtml(reviews: Array<Record<string, unknown>>): string {
+  if (!reviews.length) return '';
+  const cards = reviews
+    .map((r, idx) => {
+      const question = decodeEntities(String(r['question'] || ''));
+      const yours = decodeEntities(String(r['your_answer'] || ''));
+      const stronger = decodeEntities(String(r['stronger_answer'] || ''));
+      const scoreRaw = r['answer_score'];
+      const score =
+        typeof scoreRaw === 'number'
+          ? scoreRaw
+          : typeof scoreRaw === 'string'
+            ? Number(scoreRaw)
+            : null;
+      const scoreLabel =
+        score == null || Number.isNaN(score) ? '' : `<span class="mi-answer-score">${escapeHtml(String(score))}/10</span>`;
+      return `
+        <div class="mi-answer-review">
+          <div class="mi-answer-review-head">
+            <div class="mi-answer-review-label">Answer ${idx + 1}</div>
+            ${scoreLabel}
+          </div>
+          ${question ? `<p class="mi-answer-q"><span class="mi-answer-kicker">Question</span> ${escapeHtml(question)}</p>` : ''}
+          ${yours ? `<p class="mi-answer-yours"><span class="mi-answer-kicker">Your answer</span> ${escapeHtml(yours)}</p>` : ''}
+          <div class="cover-letter-wrapper mi-rewrite-box">
+            <div class="cover-letter-box">
+              <div class="cover-letter-body">${escapeHtml(stronger || 'No stronger sample for this turn.')}</div>
+              <div class="cover-letter-box-footer">
+                <div class="cl-footer-meta"><span><i class="fas fa-magic" aria-hidden="true"></i> Stronger sample</span></div>
+                <div class="cl-footer-actions">
+                  <button type="button" class="cl-copy-btn" data-action="miCopyRewrite" data-index="${idx}" ${stronger ? '' : 'disabled'}>
+                    <i class="fas fa-copy" aria-hidden="true"></i> Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    })
+    .join('');
+  return `
+    <div class="content-section">
+      <div class="section-title"><i class="fas fa-comments" aria-hidden="true"></i> Stronger samples for your answers</div>
+      <p class="mi-answer-reviews-note">A model rewrite for each answer you gave — use these as practice scripts, not scripts to memorize word-for-word.</p>
+      <div class="mi-answer-reviews">${cards}</div>
+    </div>`;
+}
+
+export function setThinking(on: boolean, badgeText = 'Loading…'): void {
+  const badge = el('mi-thinking');
+  if (badge && on) badge.textContent = badgeText;
+  setHidden(badge, !on);
   const status = el('mi-session-status');
-  if (status && on) status.textContent = 'Interviewer is typing…';
-  else if (status && !on) status.textContent = 'Practice in progress';
+  if (status && on) {
+    status.textContent = badgeText === 'Scoring…'
+      ? 'Generating your debrief…'
+      : 'Loading…';
+  } else if (status && !on) {
+    status.textContent = 'Practice in progress';
+  }
+}
+
+/** Freeze the live UI while the debrief is being generated. */
+export function setWrappingUpUi(): void {
+  setThinking(true, 'Scoring…');
+  setInterviewerTyping('Scoring your practice interview…');
+  const ta = el('mi-answer') as HTMLTextAreaElement | null;
+  if (ta) {
+    ta.disabled = true;
+    ta.placeholder = 'Scoring in progress…';
+  }
+  const submit = document.querySelector(
+    '#pane-practice [data-action="miSubmit"]',
+  ) as HTMLButtonElement | null;
+  const mic = el('mi-mic-btn') as HTMLButtonElement | null;
+  if (submit) submit.disabled = true;
+  if (mic) mic.disabled = true;
+}
+
+export function clearWrappingUpUi(): void {
+  const ta = el('mi-answer') as HTMLTextAreaElement | null;
+  if (ta) {
+    ta.disabled = false;
+    ta.placeholder =
+      'Type or speak your answer… Enter to send · Shift+Enter for a new line';
+  }
+  const submit = document.querySelector(
+    '#pane-practice [data-action="miSubmit"]',
+  ) as HTMLButtonElement | null;
+  const mic = el('mi-mic-btn') as HTMLButtonElement | null;
+  if (submit) submit.disabled = false;
+  if (mic) mic.disabled = false;
 }
 
 function sessionBannerClasses(seconds: number | null): void {
@@ -153,7 +295,7 @@ export function setCountdown(seconds: number | null | undefined): void {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   elTimer.textContent = `${m}:${String(s).padStart(2, '0')}`;
-  setHidden(warn, seconds > 120);
+  setHidden(warn, seconds > 120 || seconds <= 0);
   sessionBannerClasses(seconds);
   if (status && thinking?.classList.contains('is-hidden')) {
     status.textContent = seconds <= 120 ? 'Wrap up soon' : 'Practice in progress';
@@ -199,7 +341,9 @@ function debriefTier(score: number | null): { banner: string; icon: string } {
   return { banner: 'apply-poor', icon: 'fa-exclamation-circle' };
 }
 
-export function renderDebrief(debrief: Record<string, unknown> | null | undefined): void {
+export function renderDebrief(
+  debrief: Record<string, unknown> | null | undefined,
+): void {
   const root = el('mi-debrief');
   const scoreEl = el('mi-final-score');
   const recEl = el('mi-result-rec');
@@ -208,6 +352,8 @@ export function renderDebrief(debrief: Record<string, unknown> | null | undefine
   if (!root) return;
 
   if (!debrief) {
+    lastDebriefRewrite = '';
+    lastAnswerRewrites = [];
     if (scoreEl) scoreEl.textContent = '–';
     if (recEl) recEl.textContent = 'No debrief available';
     root.innerHTML = '<p class="text-muted">No debrief available.</p>';
@@ -222,8 +368,9 @@ export function renderDebrief(debrief: Record<string, unknown> | null | undefine
         ? Number(overallRaw)
         : null;
   const tier = debriefTier(overall);
+  const summary = decodeEntities(String(debrief.summary || ''));
   if (scoreEl) scoreEl.textContent = overall == null || Number.isNaN(overall) ? '–' : String(overall);
-  if (recEl) recEl.textContent = String(debrief.summary || 'Practice complete');
+  if (recEl) recEl.textContent = shortVerdict(summary, overall);
   if (banner) {
     banner.classList.remove('apply-muted', 'apply-review', 'apply-poor', 'apply-good');
     banner.classList.add(tier.banner);
@@ -233,32 +380,54 @@ export function renderDebrief(debrief: Record<string, unknown> | null | undefine
   const scores = (debrief.scores || {}) as Record<string, number>;
   const strengths = Array.isArray(debrief.strengths) ? debrief.strengths : [];
   const improvements = Array.isArray(debrief.improvements) ? debrief.improvements : [];
-  const rewrite = String(debrief.weakest_answer_rewrite || '');
+  const rewrite = decodeEntities(String(debrief.weakest_answer_rewrite || ''));
+  lastDebriefRewrite = rewrite;
+  const reviewsRaw = Array.isArray(debrief.answer_reviews)
+    ? (debrief.answer_reviews as Array<Record<string, unknown>>)
+    : [];
+  // Legacy debriefs only had weakest_answer_rewrite — show that as a single review.
+  const reviews =
+    reviewsRaw.length > 0
+      ? reviewsRaw
+      : rewrite
+        ? [
+            {
+              question: '',
+              your_answer: '',
+              answer_score: '',
+              stronger_answer: rewrite,
+            },
+          ]
+        : [];
+  lastAnswerRewrites = reviews.map((r) => decodeEntities(String(r['stronger_answer'] || '')));
 
   root.innerHTML = `
     <div class="content-section">
       <div class="section-title"><i class="fas fa-chart-bar" aria-hidden="true"></i> Score breakdown</div>
-      <div class="mi-score-grid">
-        <div class="mi-score-chip">Content<strong>${escapeHtml(String(scores.content ?? '—'))}</strong></div>
-        <div class="mi-score-chip">Structure<strong>${escapeHtml(String(scores.structure ?? '—'))}</strong></div>
-        <div class="mi-score-chip">Clarity<strong>${escapeHtml(String(scores.clarity ?? '—'))}</strong></div>
-        <div class="mi-score-chip">Role fit<strong>${escapeHtml(String(scores.role_fit ?? '—'))}</strong></div>
-        <div class="mi-score-chip">Style focus<strong>${escapeHtml(String(scores.style_focus ?? '—'))}</strong></div>
+      <div class="jd-glance-grid mi-score-grid">
+        ${scoreGlance('content', 'Content', 'fa-align-left', scores.content)}
+        ${scoreGlance('structure', 'Structure', 'fa-layer-group', scores.structure)}
+        ${scoreGlance('clarity', 'Clarity', 'fa-comment', scores.clarity)}
+        ${scoreGlance('role_fit', 'Role fit', 'fa-briefcase', scores.role_fit)}
+        ${scoreGlance('style_focus', 'Style focus', 'fa-bullseye', scores.style_focus)}
       </div>
-      <p class="mi-summary">${escapeHtml(String(debrief.summary || ''))}</p>
+      ${
+        summary
+          ? `<div class="mi-summary-block">
+              <p class="mi-summary">${escapeHtml(summary)}</p>
+            </div>`
+          : ''
+      }
     </div>
     <div class="content-section">
       <div class="section-title"><i class="fas fa-thumbs-up" aria-hidden="true"></i> Strengths</div>
-      <ul class="content-list">${strengths.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('') || '<li class="text-muted">None listed</li>'}</ul>
+      ${bulletList(strengths, 'green', 'fa-check')}
     </div>
     <div class="content-section">
       <div class="section-title"><i class="fas fa-lightbulb" aria-hidden="true"></i> Improvements</div>
-      <ul class="content-list">${improvements.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('') || '<li class="text-muted">None listed</li>'}</ul>
+      ${bulletList(improvements, 'amber', 'fa-arrow-up')}
     </div>
-    <div class="content-section">
-      <div class="section-title"><i class="fas fa-pen" aria-hidden="true"></i> Stronger answer example</div>
-      <div class="mi-rewrite">${escapeHtml(rewrite || 'No rewrite available.')}</div>
-    </div>
+    ${answerReviewsHtml(reviews)}
   `;
 }
 

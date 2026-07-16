@@ -219,6 +219,41 @@ async def test_debrief_schema(agent: MockInterviewAgent) -> None:
     assert result["overall_score"] == 8
     assert len(result["strengths"]) == 3
     assert "Better STAR" in result["weakest_answer_rewrite"]
+    assert result["answer_reviews"] == []
+
+
+@pytest.mark.asyncio
+async def test_debrief_normalizes_answer_reviews(agent: MockInterviewAgent) -> None:
+    mock_client = MagicMock()
+    mock_client.generate = AsyncMock(
+        return_value={
+            "response": (
+                '{"overall_score":7,"scores":{"content":7,"structure":6,"clarity":7,"role_fit":7,"style_focus":6},'
+                '"strengths":["a","b","c"],"improvements":["d","e","f"],'
+                '"answer_reviews":['
+                '{"question":"Why us?","your_answer":"I like startups.","answer_score":4,'
+                '"stronger_answer":"I want to join because..."},'
+                '{"question":"Tell me about a project.","your_answer":"I built X.","answer_score":7,'
+                '"stronger_answer":"At Cakewalk I owned..."}'
+                '],'
+                '"weakest_answer_rewrite":"","summary":"Good start."}'
+            ),
+            "done": True,
+        }
+    )
+    with patch("agents.mock_interview.get_gemini_client", AsyncMock(return_value=mock_client)):
+        result = await agent.debrief(
+            style="pro",
+            turns=[
+                {"role": "interviewer", "text": "Why us?"},
+                {"role": "candidate", "text": "I like startups."},
+            ],
+            job_analysis={"job_title": "Engineer"},
+            user_api_key="k",
+        )
+    assert len(result["answer_reviews"]) == 2
+    assert result["answer_reviews"][0]["answer_score"] == 4
+    assert "join because" in result["weakest_answer_rewrite"]
 
 
 @pytest.mark.asyncio

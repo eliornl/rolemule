@@ -193,7 +193,12 @@ Weight feedback for this style:
 Debrief quality bar:
 - overall_score and dimension scores must match the transcript (no grade inflation).
 - strengths / improvements: 3 specific bullets each, tied to what they said — not generic advice.
-- weakest_answer_rewrite: a stronger model answer in first person for their weakest turn (plain text, ~80–140 words), using STAR when relevant.
+- answer_reviews: one entry per candidate answer in the transcript (max 6). Pair the interviewer
+  question that preceded it with a stronger first-person model answer (~60–120 words, STAR when relevant).
+  Include a 1–10 answer_score for that turn. Prefer covering every candidate turn; if more than 6, pick
+  the most important ones (weakest + highest-signal).
+- weakest_answer_rewrite: still include a stronger rewrite for the single weakest turn (can match that
+  entry in answer_reviews).
 - summary: 2–3 sentences a hiring coach would say out loud after the practice.
 
 Return ONLY JSON:
@@ -208,6 +213,14 @@ Return ONLY JSON:
   }},
   "strengths": ["...", "...", "..."],
   "improvements": ["...", "...", "..."],
+  "answer_reviews": [
+    {{
+      "question": "Interviewer question for this turn",
+      "your_answer": "Short excerpt of what the candidate said",
+      "answer_score": 1-10,
+      "stronger_answer": "Stronger first-person model answer"
+    }}
+  ],
   "weakest_answer_rewrite": "A stronger model answer for the weakest turn",
   "summary": "2-3 sentence overall summary"
 }}
@@ -272,6 +285,29 @@ def _safe_score(value: Any, default: int = 5) -> int:
     except (TypeError, ValueError):
         return default
     return max(1, min(10, n))
+
+
+def _normalize_answer_reviews(raw: Any) -> List[Dict[str, Any]]:
+    """Normalize per-answer coaching entries from the debrief LLM."""
+    if not isinstance(raw, list):
+        return []
+    out: List[Dict[str, Any]] = []
+    for item in raw[:6]:
+        if not isinstance(item, dict):
+            continue
+        stronger = str(item.get("stronger_answer") or "").strip()
+        question = str(item.get("question") or "").strip()
+        if not stronger and not question:
+            continue
+        out.append(
+            {
+                "question": question[:500],
+                "your_answer": str(item.get("your_answer") or "").strip()[:500],
+                "answer_score": _safe_score(item.get("answer_score")),
+                "stronger_answer": stronger[:2000],
+            }
+        )
+    return out
 
 
 def _time_coaching(seconds_remaining: int) -> str:
@@ -449,7 +485,7 @@ class MockInterviewAgent:
         profile_matching: Optional[Dict[str, Any]] = None,
         user_profile: Optional[Dict[str, Any]] = None,
         interview_prep: Optional[Dict[str, Any]] = None,
-        star_coach: bool = False,
+        star_coach: bool = True,
         user_api_key: Optional[str] = None,
         model: Optional[str] = None,
         llm_provider: Optional[str] = None,
@@ -535,7 +571,7 @@ class MockInterviewAgent:
         plan: List[Dict[str, Any]],
         running_notes: List[Any],
         covered_plan_ids: Optional[List[str]] = None,
-        star_coach: bool = False,
+        star_coach: bool = True,
         job_analysis: Optional[Dict[str, Any]] = None,
         user_api_key: Optional[str] = None,
         model: Optional[str] = None,
@@ -684,6 +720,14 @@ class MockInterviewAgent:
         scores = result.get("scores") if isinstance(result.get("scores"), dict) else {}
         strengths = result.get("strengths") if isinstance(result.get("strengths"), list) else []
         improvements = result.get("improvements") if isinstance(result.get("improvements"), list) else []
+        answer_reviews = _normalize_answer_reviews(result.get("answer_reviews"))
+        weakest = str(result.get("weakest_answer_rewrite") or "").strip()
+        if not weakest and answer_reviews:
+            # Prefer the lowest-scored review as the legacy single rewrite.
+            weakest = min(answer_reviews, key=lambda r: int(r.get("answer_score") or 5)).get(
+                "stronger_answer", ""
+            )
+            weakest = str(weakest or "")
         return {
             "overall_score": _safe_score(result.get("overall_score")),
             "scores": {
@@ -695,7 +739,8 @@ class MockInterviewAgent:
             },
             "strengths": [str(s) for s in strengths[:5]],
             "improvements": [str(s) for s in improvements[:5]],
-            "weakest_answer_rewrite": str(result.get("weakest_answer_rewrite") or ""),
+            "answer_reviews": answer_reviews,
+            "weakest_answer_rewrite": weakest,
             "summary": str(result.get("summary") or ""),
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
