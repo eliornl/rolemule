@@ -109,14 +109,10 @@ export function setTip(tip: string | null | undefined): void {
 
 function shortVerdict(summary: string, overall: number | null): string {
   const cleaned = decodeEntities(summary).trim();
-  if (!cleaned) {
-    return overall == null || Number.isNaN(overall)
-      ? 'Practice complete'
-      : `Practice complete — ${overall}/10`;
-  }
-  const match = cleaned.match(/^[^.!?]+[.!?]?/);
-  const first = (match ? match[0] : cleaned).trim();
-  return first.length > 140 ? `${first.slice(0, 137)}…` : first;
+  if (cleaned) return cleaned;
+  return overall == null || Number.isNaN(overall)
+    ? 'Practice complete'
+    : `Practice complete — ${overall}/10`;
 }
 
 const SCORE_HELP: Record<string, string> = {
@@ -411,13 +407,6 @@ export function renderDebrief(
         ${scoreGlance('role_fit', 'Role fit', 'fa-briefcase', scores.role_fit)}
         ${scoreGlance('style_focus', 'Style focus', 'fa-bullseye', scores.style_focus)}
       </div>
-      ${
-        summary
-          ? `<div class="mi-summary-block">
-              <p class="mi-summary">${escapeHtml(summary)}</p>
-            </div>`
-          : ''
-      }
     </div>
     <div class="content-section">
       <div class="section-title"><i class="fas fa-thumbs-up" aria-hidden="true"></i> Strengths</div>

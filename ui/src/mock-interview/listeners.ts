@@ -46,6 +46,10 @@ import { speakText, startListening, stopListening, stopSpeaking } from './voice'
 import { isMockInterviewMessageForSession } from './ws-guard';
 
 let autoFinishTriggered = false;
+/** Timer hit zero while a turn was still in flight — finish after busy clears. */
+let pendingTimeUp = false;
+/** User chose End early while a turn was in flight — finish after busy clears. */
+let pendingFinish = false;
 
 function selectedStyle(): MockStyle {
   const sel = document.getElementById('mi-style') as HTMLSelectElement | null;
@@ -81,6 +85,8 @@ function stopCountdown(): void {
 function startCountdownFromEndsAt(endsAt: string | undefined | null): void {
   stopCountdown();
   autoFinishTriggered = false;
+  pendingTimeUp = false;
+  pendingFinish = false;
   if (!endsAt) {
     setCountdown(null);
     return;
@@ -93,7 +99,11 @@ function startCountdownFromEndsAt(endsAt: string | undefined | null): void {
     }
     const sec = Math.max(0, Math.floor((ends - Date.now()) / 1000));
     setCountdown(sec);
-    if (sec <= 0 && !autoFinishTriggered && !getIsBusy()) {
+    if (sec <= 0 && !autoFinishTriggered) {
+      if (getIsBusy()) {
+        pendingTimeUp = true;
+        return;
+      }
       autoFinishTriggered = true;
       stopCountdown();
       void handleTimeUp();
@@ -259,6 +269,19 @@ async function handleSubmit(source: 'typed' | 'stt'): Promise<boolean> {
     const result = await submitTurn(sessionId, answer, source);
     appendTranscriptLine('candidate', answer);
     clearAnswer();
+    // End-early was requested while this turn was in flight — skip next-question UI.
+    if (pendingFinish) {
+      if (result['status'] === 'complete') {
+        pendingFinish = false;
+        pendingTimeUp = false;
+        stopPolling();
+        stopCountdown();
+        showSection('results');
+        renderDebrief(result['debrief'] as Record<string, unknown>);
+        return true;
+      }
+      return false;
+    }
     const speak = String(result['speak'] || '');
     setThinking(false);
     setInterviewerSpeak(speak);
@@ -271,6 +294,7 @@ async function handleSubmit(source: 'typed' | 'stt'): Promise<boolean> {
       setCountdown(result['seconds_remaining'] as number);
     }
     if (result['status'] === 'complete') {
+      pendingTimeUp = false;
       stopPolling();
       stopCountdown();
       showSection('results');
@@ -289,19 +313,31 @@ async function handleSubmit(source: 'typed' | 'stt'): Promise<boolean> {
     return false;
   } finally {
     setIsBusy(false);
+    if (pendingFinish) {
+      pendingFinish = false;
+      pendingTimeUp = false;
+      autoFinishTriggered = true;
+      stopCountdown();
+      void handleFinish({ skipConfirm: true });
+    } else if (pendingTimeUp && !autoFinishTriggered) {
+      pendingTimeUp = false;
+      autoFinishTriggered = true;
+      stopCountdown();
+      void handleTimeUp();
+    }
   }
 }
 
-/** Time expired: submit any draft answer in the box, then wrap up for a debrief. */
+/** Time expired: include any draft answer in the debrief, then wrap up. */
 async function handleTimeUp(): Promise<void> {
   const draft = getAnswerText();
   if (draft.length >= 5) {
     notify('Time is up — submitting your answer and wrapping up…', 'info');
-    const completed = await handleSubmit('typed');
-    if (completed) return;
   } else {
     notify('Time is up — wrapping up your practice…', 'info');
   }
+  // Finish with final_answer (not /turn) so an unsubmitted draft is always scored,
+  // even if a previous turn request failed or the clock hit zero mid-flight.
   await handleFinish({ skipConfirm: true });
 }
 
@@ -351,9 +387,36 @@ function handleReplay(): void {
   speakText(speak);
 }
 
+function isBusyConflictError(err: unknown): boolean {
+  const e = err as Error & { status?: number; error_code?: string };
+  if (e.status === 409) return true;
+  if (e.error_code === 'RES_3003') return true;
+  return /busy/i.test(e.message || '');
+}
+
+async function finishMockInterviewWithRetry(
+  sessionId: string,
+  finalAnswer?: string,
+): Promise<Record<string, unknown>> {
+  const delaysMs = [800, 1500, 2000, 2500, 3000];
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= delaysMs.length; attempt += 1) {
+    try {
+      return await finishMockInterview(sessionId, finalAnswer);
+    } catch (err) {
+      lastErr = err;
+      if (!isBusyConflictError(err) || attempt === delaysMs.length) throw err;
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, delaysMs[attempt]);
+      });
+    }
+  }
+  throw lastErr;
+}
+
 async function handleFinish(opts?: { skipConfirm?: boolean }): Promise<void> {
   const sessionId = getSessionId();
-  if (!sessionId || getIsBusy()) return;
+  if (!sessionId) return;
   if (!opts?.skipConfirm) {
     const confirmFn = window.showConfirm;
     if (typeof confirmFn === 'function') {
@@ -367,6 +430,18 @@ async function handleFinish(opts?: { skipConfirm?: boolean }): Promise<void> {
       if (!ok) return;
     }
   }
+  // Answer still processing — queue finish and show scoring UI immediately.
+  if (getIsBusy()) {
+    pendingFinish = true;
+    pendingTimeUp = false;
+    autoFinishTriggered = true;
+    stopPolling();
+    stopCountdown();
+    setCountdown(null);
+    setWrappingUpUi();
+    notify('Waiting for your current answer to finish, then scoring…', 'info');
+    return;
+  }
   setIsBusy(true);
   setMicUiListening(false);
   stopListening();
@@ -375,8 +450,13 @@ async function handleFinish(opts?: { skipConfirm?: boolean }): Promise<void> {
   stopCountdown();
   setCountdown(null);
   setWrappingUpUi();
+  const draft = getAnswerText();
   try {
-    const result = await finishMockInterview(sessionId);
+    const result = await finishMockInterviewWithRetry(
+      sessionId,
+      draft.length >= 5 ? draft : undefined,
+    );
+    clearAnswer();
     clearWrappingUpUi();
     setThinking(false);
     showSection('results');

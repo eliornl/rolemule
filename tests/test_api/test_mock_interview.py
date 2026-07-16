@@ -343,6 +343,72 @@ async def test_finish_early(authed_client):
 
 
 @pytest.mark.asyncio
+async def test_finish_includes_final_answer_in_debrief_turns(authed_client):
+    ws = _mock_ws()
+    ws.mock_interview = {
+        "version": 1,
+        "active": {
+            "run_id": "run-finish-draft",
+            "status": "asking",
+            "style": "hr",
+            "ends_at": (datetime.now(timezone.utc) + timedelta(minutes=1)).isoformat(),
+            "turns": [
+                {
+                    "idx": 0,
+                    "role": "interviewer",
+                    "text": "Tell me about a project.",
+                    "source": "tts",
+                }
+            ],
+            "running_notes": [],
+        },
+        "history": [],
+    }
+    llm_ctx = MagicMock(user_api_key="key", provider="gemini", ready=True)
+    debrief = {
+        "overall_score": 5,
+        "scores": {
+            "content": 5,
+            "structure": 4,
+            "clarity": 4,
+            "role_fit": 6,
+            "style_focus": 5,
+        },
+        "strengths": ["enthusiasm"],
+        "improvements": ["structure"],
+        "answer_reviews": [],
+        "weakest_answer_rewrite": "As founding engineer I owned…",
+        "summary": "Solid raw material, tighten structure.",
+    }
+    debrief_mock = AsyncMock(return_value=debrief)
+    with patch("api.mock_interview._load_owned_session", AsyncMock(return_value=ws)), \
+         patch("api.mock_interview.check_rate_limit", AsyncMock(return_value=(True, 9))), \
+         patch("api.mock_interview.require_user_llm_context", AsyncMock(return_value=(None, llm_ctx, None))), \
+         patch("api.mock_interview.load_preferred_model", AsyncMock(return_value=None)), \
+         patch("api.mock_interview.set_mock_interview_thinking", AsyncMock(return_value=True)), \
+         patch("api.mock_interview.clear_mock_interview_thinking", AsyncMock(return_value=True)), \
+         patch("api.mock_interview.is_mock_interview_thinking", AsyncMock(return_value=False)), \
+         patch("api.mock_interview.broadcast_mock_interview_thinking", AsyncMock()), \
+         patch("api.mock_interview.broadcast_mock_interview_complete", AsyncMock()), \
+         patch("api.mock_interview._save_store", AsyncMock()), \
+         patch("api.mock_interview.MockInterviewAgent.debrief", debrief_mock):
+        resp = await authed_client.post(
+            f"{BASE}/{SESSION_ID}/finish",
+            json={
+                "final_answer": "I built a scalable API from scratch using Python.",
+                "source": "typed",
+            },
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "complete"
+    assert debrief_mock.await_count == 1
+    turns = debrief_mock.await_args.kwargs["turns"]
+    candidate = [t for t in turns if t.get("role") == "candidate"]
+    assert len(candidate) == 1
+    assert "scalable API" in candidate[0]["text"]
+
+
+@pytest.mark.asyncio
 async def test_start_rate_limited(authed_client):
     ws = _mock_ws()
     with patch("api.mock_interview._load_owned_session", AsyncMock(return_value=ws)), \

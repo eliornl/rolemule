@@ -114,6 +114,33 @@ class MockInterviewTurnRequest(BaseModel):
     validate_transcript = field_validator("transcript")(_validate_transcript)
 
 
+class MockInterviewFinishRequest(BaseModel):
+    """Optional last draft answer to include when ending / time runs out."""
+
+    final_answer: Optional[str] = Field(
+        None,
+        max_length=MAX_TRANSCRIPT_CHARS,
+        description="Unsubmitted draft to score before generating the debrief",
+    )
+    source: Literal["typed", "stt"] = Field("typed")
+
+    @field_validator("final_answer")
+    @classmethod
+    def validate_final_answer(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        text = sanitize_text(v or "").strip()
+        if not text:
+            return None
+        if len(text) < MIN_TRANSCRIPT_CHARS:
+            return None
+        if len(text) > MAX_TRANSCRIPT_CHARS:
+            raise ValueError(
+                f"final_answer must be at most {MAX_TRANSCRIPT_CHARS} characters"
+            )
+        return text
+
+
 class MockInterviewResponse(BaseModel):
     """Active run + history summary."""
 
@@ -690,10 +717,12 @@ async def submit_mock_interview_turn(
 @router.post("/{session_id}/finish", response_model=MockInterviewActionResponse)
 async def finish_mock_interview(
     session_id: str,
+    body: Optional[MockInterviewFinishRequest] = None,
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_database),
 ) -> MockInterviewActionResponse:
     """End early and generate a debrief."""
+    finish_body = body or MockInterviewFinishRequest()
     user_id = _get_user_uuid(current_user)
     allowed, _remaining = await check_rate_limit(
         identifier=f"{user_id}:mock_interview_finish",
@@ -737,8 +766,20 @@ async def finish_mock_interview(
     try:
         await broadcast_mock_interview_thinking(ws_user_id, session_id)
         agent = MockInterviewAgent()
-        speak = "Thanks for practicing — here's your feedback."
         turns = list(working.get("turns") or [])
+        # Include any unsubmitted draft so time-up / end-early still scores it.
+        final_answer = finish_body.final_answer
+        if final_answer:
+            turns.append(
+                {
+                    "idx": len(turns),
+                    "role": "candidate",
+                    "text": final_answer,
+                    "source": finish_body.source,
+                    "at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        speak = "Thanks for practicing — here's your feedback."
         turns.append(
             {
                 "idx": len(turns),

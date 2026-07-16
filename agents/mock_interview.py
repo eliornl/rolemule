@@ -310,6 +310,34 @@ def _normalize_answer_reviews(raw: Any) -> List[Dict[str, Any]]:
     return out
 
 
+def _answer_reviews_from_turns(
+    turns: List[Dict[str, Any]],
+    weakest_rewrite: str = "",
+) -> List[Dict[str, Any]]:
+    """Build review shells from the transcript when the LLM omits answer_reviews."""
+    out: List[Dict[str, Any]] = []
+    last_q = ""
+    for turn in turns or []:
+        role = str(turn.get("role") or "")
+        text = str(turn.get("text") or "").strip()
+        if role == "interviewer" and text:
+            last_q = text
+            continue
+        if role != "candidate" or not text:
+            continue
+        out.append(
+            {
+                "question": last_q[:500],
+                "your_answer": text[:500],
+                "answer_score": 5,
+                "stronger_answer": (weakest_rewrite[:2000] if not out and weakest_rewrite else ""),
+            }
+        )
+        if len(out) >= 6:
+            break
+    return out
+
+
 def _time_coaching(seconds_remaining: int) -> str:
     if seconds_remaining <= 0:
         return "Time is up — wrap_up only."
@@ -728,6 +756,8 @@ class MockInterviewAgent:
                 "stronger_answer", ""
             )
             weakest = str(weakest or "")
+        if not answer_reviews:
+            answer_reviews = _answer_reviews_from_turns(turns, weakest)
         return {
             "overall_score": _safe_score(result.get("overall_score")),
             "scores": {

@@ -4023,6 +4023,13 @@
 
             .mi-results-banner .apply-main {
                 align-items: flex-start;
+                width: 100%;
+                min-width: 0;
+            }
+
+            .mi-results-banner .apply-main > div {
+                flex: 1;
+                min-width: 0;
             }
 
             .mi-results-banner .apply-answer {
@@ -4038,11 +4045,12 @@
             }
 
             .mi-results-banner .apply-rec {
-                max-width: 36rem;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
+                max-width: none;
+                width: 100%;
+                white-space: normal;
+                overflow: visible;
+                display: block;
+                line-height: 1.45;
             }
 
             .mi-results-header .regen-btn {

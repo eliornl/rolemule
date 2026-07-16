@@ -219,7 +219,10 @@ async def test_debrief_schema(agent: MockInterviewAgent) -> None:
     assert result["overall_score"] == 8
     assert len(result["strengths"]) == 3
     assert "Better STAR" in result["weakest_answer_rewrite"]
-    assert result["answer_reviews"] == []
+    # LLM omitted answer_reviews — fallback builds shells from candidate turns.
+    assert len(result["answer_reviews"]) == 1
+    assert result["answer_reviews"][0]["your_answer"] == "I handled conflict well."
+    assert "Better STAR" in result["answer_reviews"][0]["stronger_answer"]
 
 
 @pytest.mark.asyncio

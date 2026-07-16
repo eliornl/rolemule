@@ -321,8 +321,8 @@ Practice a timed conversational mock interview grounded in this application's jo
 4. Click **Start Practice Interview** (STAR follow-ups are always on)
 5. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
 6. While the question is composing, you may see **Loading…** as it streams in; speech plays when the full line is ready
-7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score)
-8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out with text in the answer box, ApplyPilot submits that draft then finishes. The debrief shows score dimensions with short explanations, topic coverage, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
+7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score). If you End early while an answer is still processing, ApplyPilot waits for that answer, then scores.
+8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out (or you End early) with text still in the answer box, ApplyPilot includes that draft in your debrief. The debrief shows an overall summary, score dimensions with short explanations, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
 
 Optional interview prep content from the Interview tab is used when available to steer questions. Practice Interview is a live conversation — different from the static **Interview** tab guide.
 
