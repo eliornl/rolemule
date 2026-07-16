@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from typing import Generator
 from urllib.parse import urlparse
 
 import pytest
+
+logger = logging.getLogger(__name__)
 
 _plugins = ["tests.test_cli.conftest"]
 # test_api/conftest.py is auto-loaded when tests/test_api/ is collected; do not
@@ -20,7 +23,7 @@ def _session_loop() -> asyncio.AbstractEventLoop:
     Return the pytest-asyncio session loop when available.
 
     Do not create a new loop after async tests have bound the NullPool engine /
-    asyncpg driver to the session loop — Starlette TestClient does that and
+    asyncpg driver to the session loop - Starlette TestClient does that and
     causes "Event loop is closed" / "Future attached to a different loop".
     """
     try:
@@ -145,4 +148,5 @@ def cli_user_token() -> Generator[dict, None, None]:
         try:
             _run_on_session_loop(_cleanup(user["id"]))
         except Exception:
-            pass
+            # Teardown must not fail the test if the user row is already gone.
+            logger.debug("cli integration fixture cleanup failed", exc_info=True)
