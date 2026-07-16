@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from time import perf_counter
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 
 from config.settings import get_settings
 from utils.llm.constants import (
@@ -96,6 +96,212 @@ class GeminiProvider:
             user_api_key=user_api_key,
             use_google_search_grounding=use_google_search_grounding,
         )
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        *,
+        model: Optional[str] = None,
+        system: Optional[str] = None,
+        temperature: float = DEFAULT_TEMPERATURE,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        user_api_key: Optional[str] = None,
+        use_google_search_grounding: bool = False,
+    ) -> AsyncIterator[str]:
+        """Yield text deltas via generate_content_stream (Vertex or AI Studio)."""
+        if use_google_search_grounding:
+            logger.debug(
+                "Google Search grounding not used with Gemini stream; ignoring"
+            )
+        if self.use_vertex_ai:
+            async for delta in self._stream_vertex_ai(
+                prompt=prompt,
+                model=model,
+                system=system,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            ):
+                yield delta
+            return
+        async for delta in self._stream_google_ai(
+            prompt=prompt,
+            model=model,
+            system=system,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            user_api_key=user_api_key,
+        ):
+            yield delta
+
+    @staticmethod
+    def _chunk_text(chunk: Any) -> str:
+        """Best-effort text from a GenerateContentResponse stream chunk."""
+        try:
+            text = getattr(chunk, "text", None)
+            if isinstance(text, str) and text:
+                return text
+        except Exception:
+            logger.debug("Gemini stream chunk.text unavailable", exc_info=True)
+        return ""
+
+    async def _stream_sync_iterator(
+        self,
+        *,
+        iterator_factory,
+        service: str,
+        model_to_use: str,
+    ) -> AsyncIterator[str]:
+        """Drive a sync generate_content_stream iterator via a queue."""
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[Any] = asyncio.Queue()
+        sentinel = object()
+
+        def _run() -> None:
+            try:
+                for chunk in iterator_factory():
+                    text = self._chunk_text(chunk)
+                    if text:
+                        loop.call_soon_threadsafe(queue.put_nowait, text)
+                loop.call_soon_threadsafe(queue.put_nowait, sentinel)
+            except Exception as exc:
+                loop.call_soon_threadsafe(queue.put_nowait, exc)
+
+        api_start = perf_counter()
+        worker = loop.run_in_executor(None, _run)
+        total_chars = 0
+        try:
+            while True:
+                item = await asyncio.wait_for(queue.get(), timeout=self.timeout)
+                if item is sentinel:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                total_chars += len(item)
+                yield item
+            await worker
+            api_duration_ms = (perf_counter() - api_start) * 1000
+            logger.info(
+                "[LLM] Stream done  %sms  response=%s chars",
+                sanitize_log_value(api_duration_ms),
+                sanitize_log_value(total_chars),
+            )
+            structured_logger.log_external_api_call(
+                service=service,
+                operation="generate_content_stream",
+                duration_ms=api_duration_ms,
+                success=True,
+            )
+        except Exception as e:
+            structured_logger.log_external_api_call(
+                service=service,
+                operation="generate_content_stream",
+                duration_ms=0,
+                success=False,
+                error=str(e),
+            )
+            if isinstance(e, LLMError):
+                raise
+            logger.error(
+                "Error in Gemini stream: %s",
+                sanitize_log_value(str(e)),
+                exc_info=True,
+            )
+            raise LLMError(
+                f"Gemini stream failed: {e}",
+                original_error=e if isinstance(e, Exception) else None,
+                provider="gemini",
+            ) from e
+
+    async def _stream_vertex_ai(
+        self,
+        *,
+        prompt: str,
+        model: Optional[str],
+        system: Optional[str],
+        temperature: float,
+        max_tokens: int,
+    ) -> AsyncIterator[str]:
+        from google import genai as google_genai
+
+        current_settings = get_settings()
+        model_to_use = model or current_settings.gemini_model
+        client = google_genai.Client(
+            vertexai=True,
+            project=self.vertex_project,
+            location=self.vertex_location,
+        )
+        combined_prompt = f"{system}\n\n{prompt}" if system else prompt
+        config = self._build_generate_config(
+            temperature=temperature,
+            max_tokens=max_tokens,
+            use_google_search_grounding=False,
+        )
+        logger.info(
+            "[LLM] Vertex AI stream  model=%s  prompt=%s chars",
+            sanitize_log_value(model_to_use),
+            sanitize_log_value(len(combined_prompt)),
+        )
+
+        def _factory():
+            return client.models.generate_content_stream(
+                model=model_to_use,
+                contents=combined_prompt,
+                config=config,
+            )
+
+        async for delta in self._stream_sync_iterator(
+            iterator_factory=_factory,
+            service="vertex_ai",
+            model_to_use=model_to_use,
+        ):
+            yield delta
+
+    async def _stream_google_ai(
+        self,
+        *,
+        prompt: str,
+        model: Optional[str],
+        system: Optional[str],
+        temperature: float,
+        max_tokens: int,
+        user_api_key: Optional[str],
+    ) -> AsyncIterator[str]:
+        from google import genai as google_genai
+
+        current_settings = get_settings()
+        effective_api_key = user_api_key or self.api_key
+        if not effective_api_key:
+            raise LLMError(
+                "No API key available. Please configure your Gemini API key in Settings.",
+                provider="gemini",
+            )
+        client = google_genai.Client(api_key=effective_api_key)
+        model_to_use = model or current_settings.gemini_model
+        combined_prompt = f"{system}\n\n{prompt}" if system else prompt
+        config = self._build_generate_config(
+            temperature=temperature,
+            max_tokens=max_tokens,
+            use_google_search_grounding=False,
+        )
+        logger.info(
+            "[LLM] Google AI Studio stream  model=%s  prompt=%s chars",
+            sanitize_log_value(model_to_use),
+            sanitize_log_value(len(combined_prompt)),
+        )
+
+        def _factory():
+            return client.models.generate_content_stream(
+                model=model_to_use,
+                contents=combined_prompt,
+                config=config,
+            )
+
+        async for delta in self._stream_sync_iterator(
+            iterator_factory=_factory,
+            service="gemini",
+            model_to_use=model_to_use,
+        ):
+            yield delta
 
     @staticmethod
     def _build_generate_config(

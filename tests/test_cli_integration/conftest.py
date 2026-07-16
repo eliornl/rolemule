@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
 from typing import Generator
+from urllib.parse import urlparse
 
 import pytest
+
+logger = logging.getLogger(__name__)
 
 _plugins = ["tests.test_cli.conftest"]
 # test_api/conftest.py is auto-loaded when tests/test_api/ is collected; do not
@@ -13,14 +18,57 @@ _plugins = ["tests.test_cli.conftest"]
 pytest_plugins = _plugins
 
 
+def _session_loop() -> asyncio.AbstractEventLoop:
+    """
+    Return the pytest-asyncio session loop when available.
+
+    Do not create a new loop after async tests have bound the NullPool engine /
+    asyncpg driver to the session loop - Starlette TestClient does that and
+    causes "Event loop is closed" / "Future attached to a different loop".
+    """
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+    if loop.is_closed():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop
+
+
+def _run_on_session_loop(coro):
+    loop = _session_loop()
+    if loop.is_running():
+        # Sync code called from inside a running loop (rare for these tests).
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+
+            def _in_thread():
+                fresh = asyncio.new_event_loop()
+                try:
+                    return fresh.run_until_complete(coro)
+                finally:
+                    fresh.close()
+
+            return pool.submit(_in_thread).result()
+    return loop.run_until_complete(coro)
+
+
 @pytest.fixture
 def patch_httpx_asgi(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Route sync httpx.Client calls through Starlette TestClient (ASGI in-process)."""
-    from starlette.testclient import TestClient
+    """
+    Route sync httpx.Client through httpx.ASGITransport on the session event loop.
+
+    Avoids Starlette TestClient's private anyio loop, which conflicts with
+    pytest-asyncio's session-scoped loop after tests/test_api has run.
+    """
+    import httpx
+    from httpx import ASGITransport, AsyncClient
 
     from main import app
-
-    test_client = TestClient(app, base_url="http://localhost", raise_server_exceptions=True)
 
     class _HttpxAsgiBridge:
         def __init__(self, *args, **kwargs) -> None:
@@ -33,21 +81,27 @@ def patch_httpx_asgi(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def request(self, method: str, url: str, **kwargs):
-            from urllib.parse import urlparse
-
             parsed = urlparse(url)
             path = parsed.path or "/"
-            return test_client.request(
-                method,
-                path,
-                headers=kwargs.get("headers"),
-                json=kwargs.get("json"),
-                params=kwargs.get("params"),
-                data=kwargs.get("data"),
-                files=kwargs.get("files"),
-            )
+            if parsed.query:
+                path = f"{path}?{parsed.query}"
 
-    import httpx
+            async def _request():
+                transport = ASGITransport(app=app)
+                async with AsyncClient(
+                    transport=transport, base_url="http://localhost"
+                ) as ac:
+                    return await ac.request(
+                        method,
+                        path,
+                        headers=kwargs.get("headers"),
+                        json=kwargs.get("json"),
+                        params=kwargs.get("params"),
+                        data=kwargs.get("data"),
+                        files=kwargs.get("files"),
+                    )
+
+            return _run_on_session_loop(_request())
 
     monkeypatch.setattr(httpx, "Client", _HttpxAsgiBridge)
 
@@ -55,8 +109,6 @@ def patch_httpx_asgi(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def cli_user_token() -> Generator[dict, None, None]:
     """Create a real DB user and JWT without dependency overrides."""
-    import asyncio
-
     from sqlalchemy import delete
 
     from models.database import AuthMethod, User
@@ -89,9 +141,12 @@ def cli_user_token() -> Generator[dict, None, None]:
             await session.execute(delete(User).where(User.id == uid))
             await session.commit()
 
-    loop = asyncio.get_event_loop()
-    user = loop.run_until_complete(_create())
+    user = _run_on_session_loop(_create())
     try:
         yield user
     finally:
-        loop.run_until_complete(_cleanup(user["id"]))
+        try:
+            _run_on_session_loop(_cleanup(user["id"]))
+        except Exception:
+            # Teardown must not fail the test if the user row is already gone.
+            logger.debug("cli integration fixture cleanup failed", exc_info=True)

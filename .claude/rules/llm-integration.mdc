@@ -10,14 +10,15 @@ alwaysApply: false
 
 ```
 utils/llm/
-  client.py          # LLMClient facade (cache + retry + route by provider=)
+  client.py          # LLMClient facade (cache + retry + route by provider=); generate + generate_stream
   availability.py    # resolve_user_llm_context / CFG_6001 readiness
   registry.py        # provider name → factory
+  speak_stream.py    # SpeakFieldStreamer — progressive JSON "speak" extraction
   providers/
-    gemini.py        # Google AI Studio + optional Vertex + Google Search grounding
-    openai.py        # Chat Completions + Responses web_search when grounded
-    anthropic.py     # Messages API + web_search server tool when grounded
-    ollama.py        # Local /api/chat (no tools / no key)
+    gemini.py        # Google AI Studio + optional Vertex + Google Search grounding (+ stream)
+    openai.py        # Chat Completions + Responses web_search when grounded (+ stream)
+    anthropic.py     # Messages API + web_search server tool when grounded (+ stream)
+    ollama.py        # Local /api/chat (no tools / no key) (+ stream)
 utils/llm_client.py  # backward-compatible re-exports
 utils/llm_context.py # require_user_llm_context() for API gates
 ```
@@ -41,6 +42,32 @@ text = response.get("response", "")
 ```
 
 Stable response shape: `{ "response": str, "done": bool, "model"?: str, "filtered"?: bool, "from_cache"?: bool }`.
+
+## Streaming (`generate_stream`)
+
+Use for progressive UI (Practice Interview interviewer `speak`). **Not** cached and **not** retried like `generate()`.
+
+```python
+async for chunk in llm.generate_stream(
+    prompt=prompt,
+    system=system_message,
+    temperature=0.55,
+    max_tokens=16000,
+    user_api_key=user_api_key,
+    provider=llm_provider,
+    model=user_model,
+):
+    # chunk is a text delta (str)
+    ...
+```
+
+Providers implement `generate_stream` on Gemini / OpenAI / Anthropic / Ollama. On stream failure, callers should fall back to non-stream `generate()`.
+
+### Progressive JSON `"speak"` extraction
+
+`utils/llm/speak_stream.py` — `SpeakFieldStreamer` extracts the `"speak"` string value from a streaming JSON object as tokens arrive (including split `\uXXXX` / trailing `\` across chunks). Used by `MockInterviewAgent.open_session` / `next_turn` with `on_speak_delta` → WS `mock_interview_speak_delta`. **Debrief stays non-streaming.**
+
+Tests: `tests/test_utils/test_llm_streaming.py`, `tests/test_utils/test_speak_stream.py` (if present).
 
 ## Per-user provider + BYOK (product model)
 
@@ -118,12 +145,6 @@ Single source of truth for Settings dropdowns and `PATCH /preferences` validatio
 | `gemini` | `GEMINI_MODEL` → `gemini-3.5-flash` | `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`, `gemini-2.5-flash`, `gemini-2.5-pro` |
 | `openai` | `OPENAI_MODEL` → `gpt-5.6-luna` | `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4-mini` |
 | `anthropic` | `ANTHROPIC_MODEL` → `claude-sonnet-5` | `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5`, `claude-fable-5`, `claude-sonnet-4-6` |
-| `ollama` | `OLLAMA_MODEL` → `qwen3.6` | `qwen3.6`, `gemma4`, `glm-4.7-flash`, `granite4.1`, `nemotron3`, `phi4` |
+| `ollama` | `OLLAMA_MODEL` → `qwen3` | `qwen3`, `llama3.3`, `gemma3`, `mistral`, `deepseek-r1`, `phi4`, `gemma4`, `llama3.2` |
 
 `models_payload()` feeds `GET /api/v1/profile/api-key/status` → `models`. Resolver drops a stored `preferred_model` that is invalid for the active provider.
-
-## Provider request quirks
-
-- **OpenAI (GPT-5 / o-series):** Chat Completions must use `max_completion_tokens` (not `max_tokens`). Custom `temperature` is omitted for that family.
-- **Anthropic (Claude 5 / Opus 4.x / Haiku 4.5 / Fable):** omit `temperature` — those models reject it as deprecated.
-- **Ollama:** local library tags only (no `:cloud`). Users must `ollama pull` the chosen model.

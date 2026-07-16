@@ -41,7 +41,7 @@ All routes intercepted via `page.route()`. No live server, no database, no LLM n
 | `auth-pages.spec.ts` | 151 | Login/register/forgot/reset/verify — structure + validation |
 | `interview-prep.spec.ts` | 85 | Generate state, 4 question tabs, content validation, mobile layout |
 | `profile-setup.spec.ts` | 72 | 5-step wizard, field validation, step navigation, skills |
-| `application-detail.spec.ts` | 68 | 8 tabs, sub-tabs, cover letter, company research, mobile |
+| `application-detail.spec.ts` | 68 | **9 tabs** (Optimize CV + Practice Interview), sub-tabs, cover letter, company research, mobile |
 | `onboarding.spec.ts` | 45 | Auto-show, step navigation, skip/complete, `window.Onboarding` API, a11y |
 | `complete-coverage.spec.ts` | 42 | Authenticated page coverage: dashboard, settings, career tools, history |
 | `security.spec.ts` | 40 | XSS prevention, JWT format, CSP headers, API security |

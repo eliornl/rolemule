@@ -38,6 +38,7 @@ CACHE_PREFIX_INTERVIEW_PREP = "interview_prep"
 CACHE_PREFIX_INTERVIEW_PREP_GENERATING = "interview_prep_generating"
 CACHE_PREFIX_CV_OPTIMIZATION = "cv_optimization"
 CACHE_PREFIX_CV_OPTIMIZATION_RUNNING = "cv_optimization_running"
+CACHE_PREFIX_MOCK_INTERVIEW_THINKING = "mock_interview_thinking"
 CACHE_PREFIX_TOOL_RESULT = "tool_result"
 CACHE_PREFIX_COMPUTE_LOCK = "computing"
 
@@ -52,6 +53,7 @@ TTL_INTERVIEW_PREP = 60 * 60 * 24 * 7  # 7 days
 TTL_INTERVIEW_PREP_GENERATING = 60 * 10  # 10 minutes — auto-expires if background task crashes
 TTL_CV_OPTIMIZATION = 60 * 60 * 24  # 24 hours
 TTL_CV_OPTIMIZATION_RUNNING = 60 * 30  # 30 minutes — auto-expires if background task crashes
+TTL_MOCK_INTERVIEW_THINKING = 60 * 3  # 3 minutes — turn LLM lock
 TTL_TOOL_RESULT = 60 * 60  # 1 hour
 TTL_COMPUTE_LOCK = 60  # 1 minute — prevents stampede, auto-expires if compute crashes
 
@@ -1154,6 +1156,86 @@ async def is_cv_optimization_running(session_id: str) -> bool:
         return value is not None
     except Exception as e:
         logger.warning("Failed to check cv_optimization running flag: %s", sanitize_log_value(str(e)))
+        return False
+
+
+# =============================================================================
+# MOCK INTERVIEW TURN LOCK
+# =============================================================================
+
+
+async def set_mock_interview_thinking(session_id: str) -> bool:
+    """
+    Atomically claim the mock-interview turn lock (SET NX).
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if lock acquired, False if already thinking
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return True
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_MOCK_INTERVIEW_THINKING}:{session_id}"
+        was_set = await redis.set(key, "1", nx=True, ex=TTL_MOCK_INTERVIEW_THINKING)
+        return bool(was_set)
+    except Exception as e:
+        logger.warning(
+            "Failed to set mock_interview thinking flag: %s",
+            sanitize_log_value(str(e)),
+        )
+        return True
+
+
+async def clear_mock_interview_thinking(session_id: str) -> bool:
+    """
+    Clear the mock-interview turn lock.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True on success
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return True
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_MOCK_INTERVIEW_THINKING}:{session_id}"
+        await redis.delete(key)
+        return True
+    except Exception as e:
+        logger.warning(
+            "Failed to clear mock_interview thinking flag: %s",
+            sanitize_log_value(str(e)),
+        )
+        return False
+
+
+async def is_mock_interview_thinking(session_id: str) -> bool:
+    """
+    Check whether a mock-interview turn LLM call is in progress.
+
+    Args:
+        session_id: Workflow session ID
+
+    Returns:
+        True if thinking lock is held
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return False
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_MOCK_INTERVIEW_THINKING}:{session_id}"
+        value = await redis.get(key)
+        return value is not None
+    except Exception as e:
+        logger.warning(
+            "Failed to check mock_interview thinking flag: %s",
+            sanitize_log_value(str(e)),
+        )
         return False
 
 

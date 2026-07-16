@@ -1,13 +1,13 @@
 ---
-description: Application detail page — 8-tab layout, render functions, CSS classes, data field mappings, content regeneration
-globs: ui/dashboard/application.html,ui/src/pages/application-detail.ts,ui/src/application-detail/**/*.ts
+description: Application detail page — 9-tab layout, render functions, CSS classes, data field mappings, content regeneration
+globs: ui/dashboard/application.html,ui/src/pages/application-detail.ts,ui/src/application-detail/**/*.ts,ui/src/pages/mock-interview.ts,ui/src/mock-interview/**/*.ts
 alwaysApply: false
 ---
 
 # Application Detail Page
 
 ## Tab Architecture
-Tab order (left to right): Job Details → Your Fit → Strategy → Company → Cover Letter → Resume → Interview → **Optimize CV**
+Tab order (left to right): Job Details → Your Fit → Strategy → Company → Cover Letter → Resume → Interview → **Optimize CV** → **Practice Interview**
 
 | Tab | Pane ID | Container | Sub-tabs? |
 |-----|---------|-----------|-----------|
@@ -19,8 +19,19 @@ Tab order (left to right): Job Details → Your Fit → Strategy → Company →
 | Resume | `pane-resume` | `#resumeContent` | **Yes: Overview, Experience, Keywords & ATS, Summary** |
 | Interview | `pane-interview` | `#interviewContent` | Yes: Process, Questions, Preparation |
 | **Optimize CV** | `pane-optimize` | `#cvOptimizeContent` | No — see **`cv-optimizer-feature.mdc`** |
+| **Practice Interview** | `pane-practice` | `#mockInterviewContent` | No — see **`mock-interview-feature.mdc`** |
 
-**First active tab is `jobdetails`** (not `company`). `pane-jobdetails` carries the `active` class in HTML.
+**First active tab is `jobdetails`** (not `company`). `pane-jobdetails` carries the `active` class in HTML. Page tab bar uses **9-column CSS grid**.
+
+## Practice Interview Tab
+
+Conversational mock interview (HR / Pro / Manager; 10/15/20 minutes). Browser STT/TTS with typed fallback. See **`mock-interview-feature.mdc`**.
+
+`ui/src/pages/application-detail.ts` calls `window.initMockInterviewTab(currentSessionId)` on `data-tab="practice"`.
+
+Sections: `#mi-setup`, `#mi-active`, `#mi-results`. Setup uses flex → require `#mi-setup.mi-setup-empty.is-hidden { display: none; }`.
+
+UI aligns with **Optimize CV**: centered empty-state + config selects + AI Setup warning; live session uses `apply-decision-banner` + `content-section` + `regen-btn` / `cl-copy-btn`; debrief uses results banner + score chips.
 
 ## CV Optimizer Tab
 
@@ -30,7 +41,7 @@ Standalone on-demand feature — **not** part of the 5-agent LangGraph workflow.
 
 State sections inside `#cvOptimizeContent`: `#cvo-setup`, `#cvo-progress`, `#cvo-results` — only one visible at a time via `.is-hidden`. **`#cvo-setup.cvo-setup-empty.is-hidden { display: none; }`** required (setup uses `display: flex`; global `.is-hidden` alone is insufficient).
 
-Setup UI matches Cover Letter / Resume empty states (centered icon, `empty-state-title`, `regen-btn`). Shared empty-state layout tokens in `:root`: `--tab-empty-padding-x`, `--tab-empty-min-height`. Page tab bar uses **8-column CSS grid** for equal tab widths.
+Setup UI matches Cover Letter / Resume empty states (centered icon, `empty-state-title`, `regen-btn`). Shared empty-state layout tokens in `:root`: `--tab-empty-padding-x`, `--tab-empty-min-height`.
 
 | `data-action` | Purpose |
 |---|---|

@@ -104,9 +104,14 @@ def second_authenticated_user(http_client: httpx.Client):
 class TestWebSocketStats:
     """Tests for GET /api/ws/stats endpoint."""
 
-    def test_get_stats(self, http_client: httpx.Client):
+    def test_get_stats(
+        self, http_client: httpx.Client, authenticated_user: Dict[str, Any]
+    ):
         """Test getting WebSocket connection statistics."""
-        response = http_client.get("/api/ws/stats")
+        response = http_client.get(
+            "/api/ws/stats",
+            headers=authenticated_user["headers"],
+        )
         
         assert response.status_code == 200
         data = response.json()
@@ -126,12 +131,11 @@ class TestWebSocketStats:
         assert data["total_connections"] >= 0
         assert data["total_sessions"] >= 0
 
-    def test_get_stats_no_auth_required(self, http_client: httpx.Client):
-        """Test that stats endpoint doesn't require authentication."""
+    def test_get_stats_requires_auth(self, http_client: httpx.Client):
+        """Test that stats endpoint requires authentication."""
         response = http_client.get("/api/ws/stats")
         
-        # Should succeed without auth
-        assert response.status_code == 200
+        assert response.status_code in [401, 403]
 
 
 # =============================================================================
@@ -502,24 +506,37 @@ class TestWebSocketIsolation:
 class TestWebSocketErrorHandling:
     """Tests for WebSocket error handling via HTTP stats endpoint."""
 
-    def test_stats_after_connections(self, http_client: httpx.Client):
+    def test_stats_after_connections(
+        self, http_client: httpx.Client, authenticated_user: Dict[str, Any]
+    ):
         """Test stats endpoint reflects connection count."""
         # Get initial stats
-        response1 = http_client.get("/api/ws/stats")
+        response1 = http_client.get(
+            "/api/ws/stats",
+            headers=authenticated_user["headers"],
+        )
         assert response1.status_code == 200
         response1.json()["total_connections"]
         
         # Get stats again (should be consistent)
-        response2 = http_client.get("/api/ws/stats")
+        response2 = http_client.get(
+            "/api/ws/stats",
+            headers=authenticated_user["headers"],
+        )
         assert response2.status_code == 200
         
         # Counts should be stable
         assert response2.json()["total_connections"] >= 0
 
-    def test_stats_valid_format(self, http_client: httpx.Client):
+    def test_stats_valid_format(
+        self, http_client: httpx.Client, authenticated_user: Dict[str, Any]
+    ):
         """Test that stats are always in valid format."""
         for _ in range(5):
-            response = http_client.get("/api/ws/stats")
+            response = http_client.get(
+                "/api/ws/stats",
+                headers=authenticated_user["headers"],
+            )
             assert response.status_code == 200
             data = response.json()
             

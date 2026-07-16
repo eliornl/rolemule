@@ -92,6 +92,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tabId === 'optimize' && typeof window.initCvOptimizerTab === 'function') {
         window.initCvOptimizerTab(getCurrentSessionId());
       }
+      if (tabId === 'practice' && typeof window.initMockInterviewTab === 'function') {
+        window.initMockInterviewTab(getCurrentSessionId());
+      }
     });
   });
 

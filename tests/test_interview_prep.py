@@ -57,7 +57,7 @@ def authenticated_user(http_client: httpx.Client, unique_email: str):
     """Create and authenticate a test user, return headers with token."""
     # Register a new user
     register_response = http_client.post(
-        "/api/auth/register",
+        "/api/v1/auth/register",
         json={
             "email": unique_email,
             "password": "SecurePass123!",
@@ -73,7 +73,9 @@ def authenticated_user(http_client: httpx.Client, unique_email: str):
 
 @pytest.fixture
 def user_with_profile(http_client: httpx.Client, authenticated_user: Dict[str, str]):
-    """Create an authenticated user with a complete profile."""
+    """Create an authenticated user with a fully completed profile (AUTH gate ready)."""
+    from tests.live_server_helpers import ensure_llm_ready
+
     # Update basic info
     basic_info = {
         "city": "San Francisco",
@@ -120,6 +122,14 @@ def user_with_profile(http_client: httpx.Client, authenticated_user: Dict[str, s
         json=work_exp,
     )
     assert response.status_code == 200, f"Work experience update failed: {response.text}"
+
+    # Education step required for profile_completed (empty list = none to add)
+    response = http_client.put(
+        "/api/v1/profile/education",
+        headers=authenticated_user,
+        json={"education": []},
+    )
+    assert response.status_code == 200, f"Education update failed: {response.text}"
     
     # Update skills
     skills = {
@@ -141,6 +151,9 @@ def user_with_profile(http_client: httpx.Client, authenticated_user: Dict[str, s
         "work_arrangements": ["Remote", "Hybrid"],
         "willing_to_relocate": False,
         "requires_visa_sponsorship": False,
+        "work_authorization": "has_work_authorization",
+        "has_security_clearance": False,
+        "max_travel_preference": "25",
     }
     
     response = http_client.put(
@@ -149,20 +162,18 @@ def user_with_profile(http_client: httpx.Client, authenticated_user: Dict[str, s
         json=prefs,
     )
     assert response.status_code == 200, f"Career preferences update failed: {response.text}"
-    
-    # Trigger profile completion status update by getting the profile
-    response = http_client.get(
-        "/api/v1/profile",
+
+    # Persist users.profile_completed for get_current_user_with_complete_profile
+    complete_response = http_client.post(
+        "/api/v1/profile/complete",
         headers=authenticated_user,
     )
-    assert response.status_code == 200, f"Get profile failed: {response.text}"
-    
-    # Verify profile is marked as complete
-    profile_data = response.json()
-    completion = profile_data.get("completion_status", {})
-    if not completion.get("profile_completed", False):
-        # Try calling status endpoint to trigger update
-        http_client.get("/api/v1/profile/status", headers=authenticated_user)
+    assert complete_response.status_code == 200, (
+        f"Profile complete failed: {complete_response.text}"
+    )
+
+    # Avoid CFG_6001 on workflow start / interview-prep generate
+    ensure_llm_ready(http_client, authenticated_user)
     
     return authenticated_user
 
@@ -180,6 +191,11 @@ def completed_workflow_session(
     Note: Creating a workflow requires LLM processing which takes 1-2 minutes.
     This is normal for integration tests involving AI agents.
     """
+    from tests.live_server_helpers import skip_unless_real_gemini
+
+    # A completed workflow needs a real upstream LLM; skip early without one.
+    skip_unless_real_gemini()
+
     # First, try to get an existing completed workflow for this user
     list_response = http_client.get(
         "/api/v1/workflow/list",
@@ -845,7 +861,7 @@ class TestAuthorization:
         # Create a second user
         second_email = f"test_second_{uuid.uuid4().hex[:8]}@example.com"
         register_response = http_client.post(
-            "/api/auth/register",
+            "/api/v1/auth/register",
             json={
                 "email": second_email,
                 "password": "SecurePass123!",
@@ -950,7 +966,9 @@ class TestCacheFunctions:
         session_id = "test-session-123"
         key = _get_interview_prep_cache_key(session_id)
         
-        assert key == "interview_prep:test-session-123"
+        from utils.cache import CACHE_VERSION
+
+        assert key == f"{CACHE_VERSION}:interview_prep:test-session-123"
         assert session_id in key
 
     def test_cache_key_different_sessions(self):

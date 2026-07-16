@@ -20,6 +20,7 @@ All keys are prefixed with `CACHE_VERSION` (currently `v1`). Bump `CACHE_VERSION
 | Interview prep | 7d | `v1:interview_prep:{session_id}` |
 | CV optimization result | 24h | `v1:cv_optimization:{session_id}` — `get_cached_cv_optimization()` unwraps `cache_set` `{"data": ...}` wrapper |
 | CV optimization running | 30min | `v1:cv_optimization_running:{session_id}` — atomic `SET NX` lock |
+| Mock interview thinking | 3min | `v1:mock_interview_thinking:{session_id}` — atomic `SET NX` turn lock |
 | Tool result | 1h | `v1:tool_result:{tool_name}:{hash}` |
 
 ## Auth-Specific Redis Keys (managed by `api/auth.py` and `utils/auth.py`)
@@ -152,6 +153,9 @@ response.headers["X-RateLimit-Reset"]     = str(result.reset_seconds)
 | Salary coach | `POST /tools/salary-coach` | 5/hour | user_id |
 | Interview prep generate | `POST /interview-prep/{id}/generate` | 5/hour | user_id |
 | CV optimizer start | `POST /cv-optimizer/{id}/start` | 10/hour | `{user_id}:cv_optimizer` |
+| Mock interview start | `POST /mock-interview/{id}/start` | 10/hour | `{user_id}:mock_interview_start` |
+| Mock interview turn | `POST /mock-interview/{id}/turn` | 40/hour | `{user_id}:mock_interview_turn` |
+| Mock interview finish | `POST /mock-interview/{id}/finish` | 10/hour | `{user_id}:mock_interview_finish` |
 | CV optimizer CV download | `GET /cv-optimizer/{id}/download-cv` | 10/hour | `{user_id}:cv_optimizer_download` |
 | BYOK API key validate | `POST /profile/api-key/validate` | 10/hour | user_id |
 | Delete account | `DELETE /profile/delete-account` | 3/hour | user_id |
