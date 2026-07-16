@@ -10,10 +10,10 @@ Standalone on-demand feature — **not** in the LangGraph workflow. Finds hiring
 
 ## Product summary
 
-- **Tab:** 10th application-detail tab **Outreach** (`data-tab="outreach"`, `#pane-outreach`) — after Practice Interview
+- **Tab:** 10th application-detail tab **Outreach** (`data-tab="outreach"`, `#pane-outreach`) — after Mock Session
 - **BYOK:** `require_user_llm_context()` → `CFG_6001` when user is not LLM-ready
 - **Prerequisite:** `workflow_session.job_analysis` must exist (workflow completed at least Job Analyzer)
-- **UX:** Same family as Optimize CV / Practice Interview — empty-state CTA, AI Setup warning, progress spinner, results with **Copy** buttons per draft (email subject+body, short message)
+- **UX:** Same family as Optimize CV / Mock Session — empty-state CTA, AI Setup warning, progress spinner, results with **Copy** buttons per draft (email subject+body, short message)
 - **No LinkedIn:** Agent strips networking profile URLs; prompts forbid citing professional networking sites by name
 
 ## Standalone Agent (NOT in LangGraph workflow)
@@ -95,9 +95,9 @@ async def _generate_hiring_outreach_background(...):
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/{session_id}` | Get outreach (cache first, then DB) |
+| `GET` | `/{session_id}` | Get outreach (**ownership first**, then cache, then DB) |
 | `GET` | `/{session_id}/status` | Poll generation status (`is_generating`) |
-| `POST` | `/{session_id}/generate` | Start background generation (`?regenerate=true` to replace existing) |
+| `POST` | `/{session_id}/generate` | Start background generation (`?regenerate=true` to replace existing). Rate limit runs only when generation will start (not on `exists` no-op). |
 | `DELETE` | `/{session_id}` | Delete outreach (DB + cache) |
 
 **Guards:** ownership → rate limit → `job_analysis` present → `require_user_llm_context()` (`CFG_6001`) → Redis generating lock.

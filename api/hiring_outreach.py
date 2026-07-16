@@ -140,17 +140,7 @@ async def get_hiring_outreach(
     try:
         user_id = _get_user_uuid(current_user)
 
-        # Check cache first
-        cached = await get_cached_hiring_outreach(session_id)
-        if cached and "data" in cached:
-            return HiringOutreachResponse(
-                session_id=session_id,
-                has_hiring_outreach=True,
-                hiring_outreach=cached["data"],
-                generated_at=cached.get("cached_at"),
-            )
-
-        # Query database
+        # Verify ownership first, then serve from cache if available
         result = await db.execute(
             select(WorkflowSession).where(
                 and_(
@@ -163,6 +153,15 @@ async def get_hiring_outreach(
 
         if not workflow_session:
             raise not_found_error("Workflow session not found")
+
+        cached = await get_cached_hiring_outreach(session_id)
+        if cached and "data" in cached:
+            return HiringOutreachResponse(
+                session_id=session_id,
+                has_hiring_outreach=True,
+                hiring_outreach=cached["data"],
+                generated_at=cached.get("cached_at"),
+            )
 
         hiring_outreach = workflow_session.hiring_outreach
         generated_at = None
@@ -273,17 +272,6 @@ async def generate_hiring_outreach(
     try:
         user_id = _get_user_uuid(current_user)
 
-        # Rate limiting
-        is_allowed, remaining = await check_rate_limit(
-            identifier=f"{user_id}:hiring_outreach",
-            limit=RATE_LIMIT_HIRING_OUTREACH,
-            window_seconds=RATE_LIMIT_WINDOW_SECONDS,
-        )
-        if not is_allowed:
-            raise rate_limit_error(
-                f"Rate limit exceeded. Maximum {RATE_LIMIT_HIRING_OUTREACH} generations per hour."
-            )
-
         # Query workflow session
         result = await db.execute(
             select(WorkflowSession).where(
@@ -305,12 +293,24 @@ async def generate_hiring_outreach(
                 "Please complete the workflow first."
             )
 
-        # Check if already exists (unless regenerating)
+        # Check if already exists (unless regenerating) — before rate limit so
+        # no-op exists responses do not consume the hourly budget.
         if workflow_session.hiring_outreach and not regenerate:
             return HiringOutreachGenerateResponse(
                 session_id=session_id,
                 status="exists",
                 message="Hiring outreach already exists. Use regenerate=true to regenerate.",
+            )
+
+        # Rate limiting (only when we will actually generate)
+        is_allowed, remaining = await check_rate_limit(
+            identifier=f"{user_id}:hiring_outreach",
+            limit=RATE_LIMIT_HIRING_OUTREACH,
+            window_seconds=RATE_LIMIT_WINDOW_SECONDS,
+        )
+        if not is_allowed:
+            raise rate_limit_error(
+                f"Rate limit exceeded. Maximum {RATE_LIMIT_HIRING_OUTREACH} generations per hour."
             )
 
         # Resolve LLM context (BYOK / Ollama / Vertex)

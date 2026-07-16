@@ -55,7 +55,7 @@ Three more agents run **on demand** from the application detail page (after the 
 |-------|-----------------|
 | **Interview Prep** | Role-specific questions, model answers, STAR frameworks, and process tips (static guide on the Interview tab) |
 | **CV Optimizer** | Iterative evaluate→revise loop: AI hiring manager scores your CV, AI applicant rewrites it, repeats until score threshold or max iterations. Outputs an optimized CV, cover letter, and **Download CV** (`.odt` via LibreOffice + HTML normalizer on server when available, else `.docx`; see [USER_GUIDE.md](USER_GUIDE.md#cv-optimization)). |
-| **Practice Interview** | Timed conversational mock interview (HR / Pro / Manager; 10/15/20 min) with browser voice or typed answers and a scored debrief — see [USER_GUIDE.md](USER_GUIDE.md#practice-interview) |
+| **Mock Session** | Timed conversational mock session (HR / Pro / Manager; 10/15/20 min) with browser voice or typed answers and a scored debrief — see [USER_GUIDE.md](USER_GUIDE.md#practice-interview) |
 | **Hiring Outreach** | Public web contact suggestions and copy-ready outreach drafts on the Outreach tab — see [USER_GUIDE.md](USER_GUIDE.md#hiring-outreach) |
 
 ## Six career tools
@@ -458,7 +458,7 @@ Browser / Chrome Extension
                        │ stop
                Cover Letter Finalizer → optimized CV + cover letter
 
-        Practice Interview  ← standalone timed conversational mock (HR/Pro/Manager)
+        Mock Session       ← standalone timed conversational mock (HR/Pro/Manager)
 
         Hiring Outreach  ← standalone public-web contacts + copy-only draft messages
         Six career tools (Follow-up Email, Thank You Note, Salary Coach,

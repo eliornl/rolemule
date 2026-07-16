@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Interview Prep Feature
 
-Static on-demand guide on the **Interview** tab (process / questions / preparation). **Not** the timed conversational **Practice Interview** tab — see **`mock-interview-feature.mdc`**.
+Static on-demand guide on the **Interview** tab (process / questions / preparation). **Not** the timed conversational **Mock Session** tab — see **`mock-interview-feature.mdc`**.
 
 ## Standalone Agent (NOT in LangGraph workflow)
 `InterviewPrepAgent` in `agents/interview_prep.py` is invoked **on-demand**, independently of the main 5-agent LangGraph workflow. It is called from `api/interview_prep.py` via `BackgroundTasks`.

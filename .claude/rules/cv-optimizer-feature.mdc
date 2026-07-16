@@ -98,7 +98,7 @@ Frontend listens on `window` event `applypilot:ws` (same WS as workflow). Pollin
 
 ## Application Detail Tab (UI)
 
-8th tab: **Optimize CV** (`data-tab="optimize"`, `#pane-optimize`, `#cvOptimizeContent`).
+7th tab: **Optimize CV** (`data-tab="optimize"`, `#pane-optimize`, `#cvOptimizeContent`) — after Resume.
 
 **Setup state** (`#cvo-setup.cvo-setup-empty`) matches Cover Letter / Resume empty states: centered icon, `empty-state-title` / `empty-state-desc`, config grid, **`regen-btn`** “Start Optimization” (not gradient `btn-primary`). Copy uses full tab width via `--tab-empty-padding-x` (same as other empty tabs).
 

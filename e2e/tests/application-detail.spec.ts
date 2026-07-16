@@ -298,7 +298,18 @@ test.describe('E. Main Tab Navigation', () => {
     await page.locator('#mainContent').waitFor({ state: 'visible', timeout: 10000 });
   });
 
-  const TABS = ['company', 'fit', 'strategy', 'jobdetails', 'cover', 'resume', 'interview'];
+  const TABS = [
+    'jobdetails',
+    'fit',
+    'strategy',
+    'company',
+    'cover',
+    'resume',
+    'optimize',
+    'interview',
+    'practice',
+    'outreach',
+  ];
 
   for (const tab of TABS) {
     test(`"${tab}" tab button is present`, async ({ page }) => {
@@ -337,9 +348,26 @@ test.describe('E. Main Tab Navigation', () => {
     await expect(page.locator('#pane-resume')).toBeVisible({ timeout: 3000 });
   });
 
+  test('clicking "optimize" tab shows pane-optimize', async ({ page }) => {
+    await page.locator('[data-tab="optimize"]').click();
+    await expect(page.locator('#pane-optimize')).toBeVisible({ timeout: 3000 });
+  });
+
   test('clicking "interview" tab shows pane-interview', async ({ page }) => {
     await page.locator('[data-tab="interview"]').click();
     await expect(page.locator('#pane-interview')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('clicking "practice" tab shows pane-practice labeled Mock Session', async ({ page }) => {
+    const practiceTab = page.locator('[data-tab="practice"]');
+    await expect(practiceTab).toContainText('Mock Session');
+    await practiceTab.click();
+    await expect(page.locator('#pane-practice')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('clicking "outreach" tab shows pane-outreach', async ({ page }) => {
+    await page.locator('[data-tab="outreach"]').click();
+    await expect(page.locator('#pane-outreach')).toBeVisible({ timeout: 3000 });
   });
 
   test('switching tabs deactivates previous tab button', async ({ page }) => {
@@ -348,7 +376,7 @@ test.describe('E. Main Tab Navigation', () => {
     await expect(page.locator('[data-tab="fit"]')).toHaveClass(/active/);
   });
 
-  test('all 7 tab pane containers exist in DOM', async ({ page }) => {
+  test('all 10 tab pane containers exist in DOM', async ({ page }) => {
     for (const tab of TABS) {
       await expect(page.locator(`#pane-${tab}`)).toBeAttached();
     }
@@ -605,8 +633,19 @@ test.describe('J. Additional Tab Navigation', () => {
     await expect(page.locator('#pane-fit')).toBeVisible({ timeout: 3000 });
   });
 
-  test('all 7 tab containers exist in DOM', async ({ page }) => {
-    const tabIds = ['company', 'fit', 'strategy', 'jobdetails', 'cover', 'resume', 'interview'];
+  test('all 10 tab containers exist in DOM', async ({ page }) => {
+    const tabIds = [
+      'jobdetails',
+      'fit',
+      'strategy',
+      'company',
+      'cover',
+      'resume',
+      'optimize',
+      'interview',
+      'practice',
+      'outreach',
+    ];
     for (const id of tabIds) {
       await expect(page.locator(`#pane-${id}`)).toBeAttached();
     }

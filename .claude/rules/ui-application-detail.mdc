@@ -7,7 +7,7 @@ alwaysApply: false
 # Application Detail Page
 
 ## Tab Architecture
-Tab order (left to right): Job Details → Your Fit → Strategy → Company → Cover Letter → Resume → Interview → **Optimize CV** → **Practice Interview** → **Outreach**
+Tab order (left to right): Job Details → Your Fit → Strategy → Company → Cover Letter → Resume → **Optimize CV** → Interview → **Mock Session** → **Outreach**
 
 | Tab | Pane ID | Container | Sub-tabs? |
 |-----|---------|-----------|-----------|
@@ -17,14 +17,14 @@ Tab order (left to right): Job Details → Your Fit → Strategy → Company →
 | Company | `pane-company` | `#companyContent` | No |
 | Cover Letter | `pane-cover` | `#coverContent` | No |
 | Resume | `pane-resume` | `#resumeContent` | **Yes: Overview, Experience, Keywords & ATS, Summary** |
-| Interview | `pane-interview` | `#interviewContent` | Yes: Process, Questions, Preparation |
 | **Optimize CV** | `pane-optimize` | `#cvOptimizeContent` | No — see **`cv-optimizer-feature.mdc`** |
-| **Practice Interview** | `pane-practice` | `#mockInterviewContent` | No — see **`mock-interview-feature.mdc`** |
+| Interview | `pane-interview` | `#interviewContent` | Yes: Process, Questions, Preparation |
+| **Mock Session** | `pane-practice` | `#mockInterviewContent` | No — see **`mock-interview-feature.mdc`** |
 | **Outreach** | `pane-outreach` | `#ho-setup` / `#ho-progress` / `#ho-results` | No — see **`hiring-outreach-feature.mdc`** |
 
 **First active tab is `jobdetails`** (not `company`). `pane-jobdetails` carries the `active` class in HTML. Page tab bar uses **10-column CSS grid**.
 
-## Practice Interview Tab
+## Mock Session Tab
 
 Conversational mock interview (HR / Pro / Manager; 10/15/20 minutes). Browser STT/TTS with typed fallback. See **`mock-interview-feature.mdc`**.
 
@@ -42,7 +42,7 @@ Public web contact finder + copy-only draft messages (no send integration, no pr
 
 Sections: `#ho-setup`, `#ho-progress`, `#ho-results` — only one visible at a time via `.is-hidden`. **`#ho-setup.ho-setup-empty.is-hidden { display: none; }`** required when setup uses `display: flex`.
 
-UI aligns with **Optimize CV** / **Practice Interview**: centered empty-state, AI Setup warning (`#ho-ai-setup-warning`), progress spinner, contact cards with **Copy** buttons for email drafts and short messages.
+UI aligns with **Optimize CV** / **Mock Session**: centered empty-state, AI Setup warning (`#ho-ai-setup-warning`), progress spinner, contact cards with **Copy** buttons for email drafts and short messages.
 
 ## CV Optimizer Tab
 

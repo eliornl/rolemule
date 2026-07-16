@@ -454,3 +454,50 @@ class TestHiringOutreachPostProcessing:
 
         assert result["contacts"][0]["confidence"] == "high"
         assert result["contacts"][1]["confidence"] == "medium"
+
+
+# =============================================================================
+# Helper unit tests (coverage for normalize / sanitize edge paths)
+# =============================================================================
+
+
+class TestHiringOutreachHelpers:
+    def test_strip_and_reject_empty_and_non_string(self):
+        from agents.hiring_outreach import (
+            _reject_placeholders,
+            _sanitize_string_field,
+            _strip_linkedin_urls,
+        )
+
+        assert _strip_linkedin_urls("") == ""
+        assert _reject_placeholders("") == ""
+        assert _sanitize_string_field(None) is None
+        assert _sanitize_string_field(12) == 12
+
+    def test_normalize_confidence_aliases(self):
+        from agents.hiring_outreach import _normalize_confidence
+
+        assert _normalize_confidence(None) == "low"
+        assert _normalize_confidence("") == "low"
+        assert _normalize_confidence("HIGH") == "high"
+        assert _normalize_confidence("h") == "high"
+        assert _normalize_confidence("strong") == "high"
+        assert _normalize_confidence("m") == "medium"
+        assert _normalize_confidence("moderate") == "medium"
+        assert _normalize_confidence("unknown") == "low"
+
+    def test_normalize_role_and_source_aliases(self):
+        from agents.hiring_outreach import _normalize_role_type, _normalize_source_hint
+
+        assert _normalize_role_type(None) == "generic"
+        assert _normalize_role_type("") == "generic"
+        assert _normalize_role_type("Hiring Manager") == "hiring_manager"
+        assert _normalize_role_type("talent-recruiter") == "recruiter"
+        assert _normalize_role_type("team peer engineer") == "team_peer"
+        assert _normalize_role_type("something else") == "generic"
+
+        assert _normalize_source_hint(None) == "other_public"
+        assert _normalize_source_hint("") == "other_public"
+        assert _normalize_source_hint("Press release") == "news"
+        assert _normalize_source_hint("Company Website") == "company website"
+        assert _normalize_source_hint("blog") == "other_public"

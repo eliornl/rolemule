@@ -108,11 +108,58 @@ function formatRoleType(roleType: string | undefined): string {
   return ROLE_LABELS[roleType] || roleType.replace(/_/g, ' ');
 }
 
-function confidenceClass(confidence: string | undefined): string {
+function confidenceBadgeClass(confidence: string | undefined): string {
   const c = (confidence || 'low').toLowerCase();
-  if (c === 'high') return 'ho-badge-confidence-high';
-  if (c === 'medium') return 'ho-badge-confidence-medium';
-  return 'ho-badge-confidence-low';
+  if (c === 'high') return 'badge-good';
+  if (c === 'medium') return 'badge-review';
+  return 'badge-muted';
+}
+
+function confidenceLabel(confidence: string | undefined): string {
+  const c = (confidence || 'low').toLowerCase();
+  if (c === 'high') return 'High confidence';
+  if (c === 'medium') return 'Medium confidence';
+  return 'Low confidence';
+}
+
+function renderDraftBox(
+  label: string,
+  bodyHtml: string,
+  copyAction: string,
+  copyLabel: string,
+  indexAttr: string,
+): string {
+  return `
+    <div class="ho-draft-block">
+      <div class="section-title">${escapeHtml(label)}</div>
+      <div class="cover-letter-wrapper">
+        <div class="cover-letter-box">
+          <div class="cover-letter-body">${bodyHtml}</div>
+          <div class="cover-letter-box-footer">
+            <div class="cl-footer-meta">
+              <span><i class="fas fa-paper-plane" aria-hidden="true"></i> ${escapeHtml(label)}</span>
+            </div>
+            <div class="cl-footer-actions">
+              <button type="button" class="cl-copy-btn" data-action="${escapeHtml(copyAction)}"${indexAttr} aria-label="${escapeHtml(copyLabel)}">
+                <i class="fas fa-copy" aria-hidden="true"></i> ${escapeHtml(copyLabel)}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderInsights(why: string, evidence: string): string {
+  if (!why && !evidence) return '';
+  return `
+    <details class="ho-contact-insights">
+      <summary>Why this contact</summary>
+      <div class="ho-contact-insights-body">
+        ${why ? `<p class="ho-contact-meta"><span class="ho-contact-meta-label">Why them:</span> ${escapeHtml(why)}</p>` : ''}
+        ${evidence ? `<p class="ho-contact-meta"><span class="ho-contact-meta-label">Evidence:</span> ${escapeHtml(evidence)}</p>` : ''}
+      </div>
+    </details>`;
 }
 
 function renderContactCard(contact: HoContact, index: number): string {
@@ -129,6 +176,15 @@ function renderContactCard(contact: HoContact, index: number): string {
   const shortMsg = contact.short_message || '';
   const subject = contact.subject_line || '';
   const body = contact.email_body || '';
+  const indexAttr = ` data-index="${index}"`;
+
+  const emailBodyParts: string[] = [];
+  if (subject) {
+    emailBodyParts.push(`<strong>Subject:</strong> ${escapeHtml(subject)}`);
+  }
+  if (body) {
+    emailBodyParts.push(escapeHtml(body));
+  }
 
   return `
     <article class="ho-contact-card" data-contact-index="${index}">
@@ -138,34 +194,30 @@ function renderContactCard(contact: HoContact, index: number): string {
           ${title ? `<p class="ho-contact-title">${escapeHtml(title)}</p>` : ''}
         </div>
         <div class="ho-contact-badges">
-          <span class="ho-badge ${confidenceClass(confidence)}">${escapeHtml(confidence)} confidence</span>
-          <span class="ho-badge ho-badge-role">${escapeHtml(roleType)}</span>
-          ${sourceHint ? `<span class="ho-badge ho-badge-source">${escapeHtml(sourceHint)}</span>` : ''}
+          <span class="fit-badge ${confidenceBadgeClass(confidence)}">${escapeHtml(confidenceLabel(confidence))}</span>
+          <span class="fit-badge badge-muted">${escapeHtml(roleType)}</span>
+          ${sourceHint ? `<span class="fit-badge badge-muted">${escapeHtml(sourceHint)}</span>` : ''}
         </div>
       </div>
-      ${why ? `<p class="ho-contact-meta"><span class="ho-contact-meta-label">Why them:</span> ${escapeHtml(why)}</p>` : ''}
-      ${evidence ? `<p class="ho-contact-meta"><span class="ho-contact-meta-label">Evidence:</span> ${escapeHtml(evidence)}</p>` : ''}
-      ${shortMsg ? `
-        <div class="ho-draft-block">
-          <div class="ho-draft-label">Short message</div>
-          <p class="ho-draft-text">${escapeHtml(shortMsg)}</p>
-          <div class="ho-draft-actions">
-            <button type="button" class="cl-copy-btn" data-action="copyHoShort" data-index="${index}" aria-label="Copy short message">
-              <i class="fas fa-copy" aria-hidden="true"></i> Copy note
-            </button>
-          </div>
-        </div>` : ''}
-      ${subject || body ? `
-        <div class="ho-draft-block">
-          <div class="ho-draft-label">Email draft</div>
-          ${subject ? `<p class="ho-draft-text"><strong>Subject:</strong> ${escapeHtml(subject)}</p>` : ''}
-          ${body ? `<p class="ho-draft-text">${escapeHtml(body)}</p>` : ''}
-          <div class="ho-draft-actions">
-            <button type="button" class="cl-copy-btn" data-action="copyHoEmail" data-index="${index}" aria-label="Copy email draft">
-              <i class="fas fa-copy" aria-hidden="true"></i> Copy email
-            </button>
-          </div>
-        </div>` : ''}
+      ${renderInsights(why, evidence)}
+      ${shortMsg
+        ? renderDraftBox(
+            'Short message',
+            escapeHtml(shortMsg),
+            'copyHoShort',
+            'Copy note',
+            indexAttr,
+          )
+        : ''}
+      ${subject || body
+        ? renderDraftBox(
+            'Email draft',
+            emailBodyParts.join('\n\n'),
+            'copyHoEmail',
+            'Copy email',
+            indexAttr,
+          )
+        : ''}
     </article>`;
 }
 
@@ -190,28 +242,33 @@ function renderFallbackSection(fallback: HoFallback | undefined): void {
   const subject = fallback.subject_line || '';
   const body = fallback.email_body || '';
 
+  const emailBodyParts: string[] = [];
+  if (subject) {
+    emailBodyParts.push(`<strong>Subject:</strong> ${escapeHtml(subject)}`);
+  }
+  if (body) {
+    emailBodyParts.push(escapeHtml(body));
+  }
+
   bodyEl.innerHTML = `
-    ${shortMsg ? `
-      <div class="ho-draft-block">
-        <div class="ho-draft-label">Short message</div>
-        <p class="ho-draft-text">${escapeHtml(shortMsg)}</p>
-        <div class="ho-draft-actions">
-          <button type="button" class="cl-copy-btn" data-action="copyHoFallbackShort" aria-label="Copy generic short message">
-            <i class="fas fa-copy" aria-hidden="true"></i> Copy note
-          </button>
-        </div>
-      </div>` : ''}
-    ${subject || body ? `
-      <div class="ho-draft-block">
-        <div class="ho-draft-label">Email draft</div>
-        ${subject ? `<p class="ho-draft-text"><strong>Subject:</strong> ${escapeHtml(subject)}</p>` : ''}
-        ${body ? `<p class="ho-draft-text">${escapeHtml(body)}</p>` : ''}
-        <div class="ho-draft-actions">
-          <button type="button" class="cl-copy-btn" data-action="copyHoFallbackEmail" aria-label="Copy generic email draft">
-            <i class="fas fa-copy" aria-hidden="true"></i> Copy email
-          </button>
-        </div>
-      </div>` : ''}`;
+    ${shortMsg
+      ? renderDraftBox(
+          'Short message',
+          escapeHtml(shortMsg),
+          'copyHoFallbackShort',
+          'Copy note',
+          '',
+        )
+      : ''}
+    ${subject || body
+      ? renderDraftBox(
+          'Email draft',
+          emailBodyParts.join('\n\n'),
+          'copyHoFallbackEmail',
+          'Copy email',
+          '',
+        )
+      : ''}`;
 }
 
 export function renderResults(data: HoOutreachData): void {

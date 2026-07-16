@@ -21,6 +21,9 @@ from api.websocket import (
     broadcast_cv_optimization_started,
     broadcast_document_generation_started,
     broadcast_gate_decision,
+    broadcast_hiring_outreach_complete,
+    broadcast_hiring_outreach_error,
+    broadcast_hiring_outreach_started,
     broadcast_interview_prep_complete,
     broadcast_interview_prep_error,
     broadcast_interview_prep_started,
@@ -305,9 +308,12 @@ class TestBroadcastHelpers:
             await broadcast_cv_optimization_iteration(uid, sid, 1, 7.5, [], [], [])
             await broadcast_cv_optimization_complete(uid, sid, 8.0, "score_threshold", 3)
             await broadcast_cv_optimization_error(uid, sid, "quota")
+            await broadcast_hiring_outreach_started(uid, sid)
+            await broadcast_hiring_outreach_complete(uid, sid)
+            await broadcast_hiring_outreach_error(uid, sid, "failed")
 
-        assert sess.await_count == 14
-        assert user.await_count == 14
+        assert sess.await_count == 17
+        assert user.await_count == 17
         first_payload = sess.await_args_list[0].args[1]
         assert first_payload["type"] == "agent_update"
 

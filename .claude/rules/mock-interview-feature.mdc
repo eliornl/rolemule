@@ -10,7 +10,7 @@ Standalone on-demand feature — **not** in the LangGraph workflow. Conversation
 
 ## Product summary
 
-- **Tab:** 9th application-detail tab **Practice Interview** (`data-tab="practice"`, `#pane-practice`) — after Optimize CV
+- **Tab:** 9th application-detail tab **Mock Session** (`data-tab="practice"`, `#pane-practice`) — after Interview (Optimize CV sits after Resume)
 - **Styles:** `hr` | `pro` | `manager` (required at start)
 - **Duration:** `10` | `15` | `20` minutes (default 15) — countdown from server `ends_at`, not fixed round count
 - Voice: browser Web Speech API (STT) + `speechSynthesis` (TTS); typed fallback always available

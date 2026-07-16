@@ -10,7 +10,7 @@ Welcome to ApplyPilot! This guide walks you through every feature so you can get
 - [Creating Applications](#creating-applications)
 - [Chrome Extension](#chrome-extension)
 - [Interview Preparation](#interview-preparation)
-- [Practice Interview](#practice-interview)
+- [Mock Session](#practice-interview)
 - [Hiring Outreach](#hiring-outreach)
 - [CV Optimization](#cv-optimization)
 - [Career Tools](#career-tools)
@@ -207,7 +207,7 @@ After submitting, five AI agents run across four steps with a gate check mid-way
 
 The **CV Optimizer** also runs on demand from the **Optimize CV** tab after the workflow completes. See [CV Optimization](#cv-optimization).
 
-The **Practice Interview** tab runs a timed conversational mock interview (HR / Pro / Manager) using your API key. See [Practice Interview](#practice-interview).
+The **Mock Session** tab runs a timed conversational mock session (HR / Pro / Manager) using your API key. See [Mock Session](#practice-interview).
 
 The **Outreach** tab finds hiring contacts from public web sources and drafts copy-ready outreach messages you send yourself. See [Hiring Outreach](#hiring-outreach).
 
@@ -225,7 +225,7 @@ The application details page opens with a **10-tab layout**. When a posting URL 
 | **Resume** | 4 sub-tabs: Overview, Experience, Keywords & ATS, Summary |
 | **Interview** | 3 sub-tabs: Process, Questions, Preparation |
 | **Optimize CV** | Iterative AI CV optimization loop — optimized CV, cover letter, gap analysis |
-| **Practice Interview** | Timed conversational practice (HR / Pro / Manager) with voice or typed answers |
+| **Mock Session** | Timed conversational practice (HR / Pro / Manager) with voice or typed answers |
 | **Outreach** | Public web contact suggestions and copy-ready email / short-message drafts (no send integration) |
 
 The **Cover Letter** tab has a **Copy** button. The Cover Letter, Resume, and Interview tabs each have a **Regenerate** button (rate limited to 5/hour).
@@ -313,22 +313,22 @@ Content is organized across the three sub-tabs:
 
 ---
 
-## Practice Interview
+## Mock Session
 
 Practice a timed conversational mock interview grounded in this application's job analysis, company research, and your profile. Uses your own API key (Settings → AI Setup).
 
-### Accessing Practice Interview
+### Accessing Mock Session
 
 1. Open a completed application's detail page
-2. Click the **Practice Interview** tab (after Optimize CV)
+2. Click the **Mock Session** tab (after Interview)
 3. Choose style (**HR — screening**, **Pro — peer technical**, or **Manager — hiring manager**) and length (**10**, **15**, or **20** minutes)
-4. Click **Start Practice Interview** (STAR follow-ups are always on)
+4. Click **Start mock session** (STAR follow-ups are always on)
 5. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
 6. While the question is composing, you may see **Loading…** as it streams in; speech plays when the full line is ready
 7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score). If you End early while an answer is still processing, ApplyPilot waits for that answer, then scores.
 8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out (or you End early) with text still in the answer box, ApplyPilot includes that draft in your debrief. The debrief shows an overall summary, score dimensions with short explanations, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
 
-Optional interview prep content from the Interview tab is used when available to steer questions. Practice Interview is a live conversation — different from the static **Interview** tab guide.
+Optional interview prep content from the Interview tab is used when available to steer questions. Practice is a live conversation — different from the static **Interview** tab guide.
 
 Voice uses free browser APIs (no audio uploaded to ApplyPilot). The mic pauses while the interviewer is speaking so it does not capture TTS. Typed answers always work if mic/speech is unavailable.
 
@@ -341,7 +341,7 @@ After you apply, the **Outreach** tab helps you find people who may be involved 
 ### Accessing Outreach
 
 1. Open a completed application's detail page (job analysis must be finished)
-2. Click the **Outreach** tab (after Practice Interview)
+2. Click the **Outreach** tab (after Mock Session)
 3. Confirm your API key is set in **Settings → AI Setup**
 4. Click **Find contacts & draft messages**
 5. Review contact cards (name, title, confidence) and copy email or short-message drafts with the **Copy** buttons

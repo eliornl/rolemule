@@ -81,7 +81,45 @@ class TestGetHiringOutreach:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_cache_hit_returns_200(self, authed_client):
+    async def test_unowned_session_returns_404_without_reading_cache(self, authed_client):
+        """Ownership is verified before cache — foreign session_id must not leak cached drafts."""
+        foreign_session = str(uuid.uuid4())
+        cache_mock = AsyncMock(
+            return_value={
+                "data": SAMPLE_OUTREACH,
+                "cached_at": "2026-01-01T00:00:00+00:00",
+            }
+        )
+        with patch("api.hiring_outreach.get_cached_hiring_outreach", cache_mock):
+            resp = await authed_client.get(f"{BASE}/{foreign_session}")
+
+        assert resp.status_code == 404
+        cache_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_returns_200(self, authed_client_with_user):
+        token = authed_client_with_user.headers["Authorization"].split(" ", 1)[1]
+        sec = get_security_settings()
+        uid = uuid.UUID(
+            jwt.decode(
+                token,
+                sec.jwt_config["secret_key"],
+                algorithms=[sec.jwt_config["algorithm"]],
+            )["sub"]
+        )
+        session_id = str(uuid.uuid4())
+        async with _NullSessionLocal() as db:
+            db.add(
+                WorkflowSession(
+                    id=uuid.uuid4(),
+                    session_id=session_id,
+                    user_id=uid,
+                    workflow_status="completed",
+                    job_analysis={"job_title": "Engineer", "company_name": "Co"},
+                )
+            )
+            await db.commit()
+
         mock_cached = {
             "data": SAMPLE_OUTREACH,
             "cached_at": "2026-01-01T00:00:00+00:00",
@@ -90,12 +128,12 @@ class TestGetHiringOutreach:
             "api.hiring_outreach.get_cached_hiring_outreach",
             AsyncMock(return_value=mock_cached),
         ):
-            resp = await authed_client.get(f"{BASE}/{SESSION_ID}")
+            resp = await authed_client_with_user.get(f"{BASE}/{session_id}")
 
         assert resp.status_code == 200
         data = resp.json()
         assert data["has_hiring_outreach"] is True
-        assert data["session_id"] == SESSION_ID
+        assert data["session_id"] == session_id
         assert data["hiring_outreach"]["contacts"]
 
 
@@ -131,15 +169,6 @@ class TestGenerateHiringOutreach:
     async def test_no_auth_returns_401_or_403(self, api_client):
         resp = await api_client.post(f"{BASE}/{SESSION_ID}/generate")
         assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_rate_limited_returns_429(self, authed_client):
-        with patch(
-            "api.hiring_outreach.check_rate_limit",
-            AsyncMock(return_value=(False, 0)),
-        ):
-            resp = await authed_client.post(f"{BASE}/{SESSION_ID}/generate")
-        assert resp.status_code == 429
 
 
 # ---------------------------------------------------------------------------
@@ -278,9 +307,23 @@ class TestHiringOutreachWithSession:
             )
             await db.commit()
 
-        resp = await authed_client_with_user.post(f"{BASE}/{session_id}/generate")
+        rate_mock = AsyncMock(return_value=(True, 4))
+        with patch("api.hiring_outreach.check_rate_limit", rate_mock):
+            resp = await authed_client_with_user.post(f"{BASE}/{session_id}/generate")
         assert resp.status_code == 200
         assert resp.json()["status"] == "exists"
+        rate_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_rate_limited_returns_429(
+        self, authed_client_with_user, session_id,
+    ):
+        with patch(
+            "api.hiring_outreach.check_rate_limit",
+            AsyncMock(return_value=(False, 0)),
+        ):
+            resp = await authed_client_with_user.post(f"{BASE}/{session_id}/generate")
+        assert resp.status_code == 429
 
     @pytest.mark.asyncio
     async def test_generate_happy_path_returns_generating(
