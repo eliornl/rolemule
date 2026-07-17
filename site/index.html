@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoleMule | One mule for every role</title>
+    <meta name="description" content="One mule for every role. Paste a job, run five AI agents in ~30 seconds, then optimize your CV, practice interviews, draft outreach, and use career tools — self-hosted, BYOK, 100% local data.">
+    <link rel="canonical" href="https://eliornl.github.io/rolemule/">
+
+    <meta property="og:title" content="RoleMule | One mule for every role">
+    <meta property="og:description" content="Self-hosted AI job companion. Five agents analyze the role, score fit, research the company, write a cover letter, and produce resume tips in ~30s. BYOK. Open source.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://eliornl.github.io/rolemule/">
+    <meta property="og:image" content="https://eliornl.github.io/rolemule/assets/img/rolemule-icon.png">
+    <meta name="twitter:card" content="summary">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/base/variables.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+</head>
+<body class="landing-page">
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <nav class="navbar navbar-expand-xl navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <div class="brand-icon">
+                    <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                </div>
+                <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item"><a class="nav-link" href="#problem">Why RoleMule</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#features">Workflow</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#after-apply">On Demand</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#extension">Extension</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tools">Career Tools</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#cli">CLI</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#example">Example</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#pricing">Pricing</a></li>
+                </ul>
+                <div class="nav-cta">
+                    <a class="btn btn-ghost" href="https://github.com/eliornl/rolemule#quick-start" target="_blank" rel="noopener noreferrer">Quick Start</a>
+                    <a class="btn btn-primary-glow" href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer">
+                        View on GitHub
+                        <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+    <!-- Hero Section - Lead with the Problem/Solution -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-7 hero-content">
+                    <h1 class="hero-title animate-fade-up">
+                        One mule for
+                        <span class="text-gradient">every role.</span>
+                    </h1>
+                    
+                    <p class="hero-subtitle animate-fade-up delay-1">
+                        Paste a job description, upload a PDF/TXT/DOCX, or use our Chrome extension — and get full AI-powered insights in ~30 seconds. Then track the application, optionally optimize your CV, draft outreach, and prepare for the interview. Bring your own AI key, automate with the CLI (Claude, Cursor, and more), and keep your data 100% local.
+                    </p>
+
+                </div>
+
+                <div class="col-lg-5 hero-visual">
+                    <div class="hero-steps animate-fade-up delay-2">
+                        <div class="hero-step">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <h2 class="h4">Add Any Job Posting</h2>
+                                <p>Paste the job description, upload a PDF, TXT, or DOCX, or use our Chrome extension to extract it from any job site.</p>
+                            </div>
+                        </div>
+                        <div class="hero-step-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="hero-step">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <h2 class="h4">AI Works in the Background</h2>
+                                <p>No waiting. Specialized AI agents instantly start analyzing the job, matching your profile, researching the company, and writing your documents — while you keep browsing.</p>
+                            </div>
+                        </div>
+                        <div class="hero-step-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="hero-step">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <h2 class="h4">Review &amp; Apply with Confidence</h2>
+                                <p>Get notified when your analysis is ready. Review the job analysis, your fit, strategy, company, cover letter, and resume tips. Optionally optimize your CV — then apply.</p>
+                            </div>
+                        </div>
+                        <div class="hero-step-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="hero-step">
+                            <div class="step-num">4</div>
+                            <div class="step-content">
+                                <h2 class="h4">Continue Your Journey</h2>
+                                <p>Draft hiring outreach, prepare for interviews (guide + mock session), and use 6 career tools — follow-ups, thank you notes, salary coach, and more.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow section-arrow--hero" aria-hidden="true"><a href="#section-tech-bar"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Tech Stack Bar -->
+    <section class="section-tech-bar" id="section-tech-bar">
+        <div class="container">
+            <div class="tech-bar-content">
+                <span class="tech-bar-label">Built with</span>
+                <div class="tech-bar-tags">
+                    <span>Python</span>
+                    <span>FastAPI</span>
+                    <span>PostgreSQL</span>
+                    <span>Redis</span>
+                    <span>Google Gemini</span>
+                    <span>OpenAI</span>
+                    <span>Anthropic</span>
+                    <span>Ollama</span>
+                    <span>LangGraph</span>
+                    <span>Docker</span>
+                </div>
+                <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer" class="tech-bar-link">
+                    <i class="fab fa-github"></i>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#problem"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Problem Section -->
+    <section id="problem" class="section-problem">
+        <div class="container">
+            <div class="problem-content">
+                <h2 class="problem-title animate-fade-up">
+                    Job searching is <span class="text-gradient">exhausting</span>
+                </h2>
+                <div class="problem-stats animate-fade-up delay-1">
+                    <div class="problem-stat highlight">
+                        <span class="stat-number">~150</span>
+                        <span class="stat-desc">Applications needed on average to land one job offer</span>
+                    </div>
+                </div>
+
+                <div class="impact-comparison animate-fade-up delay-2">
+                    <div class="comparison-header">
+                        <span>For each application, you typically spend:</span>
+                    </div>
+                    <div class="comparison-grid">
+                        <div class="comparison-item manual">
+                            <div class="comparison-label">Manual</div>
+                            <div class="comparison-tasks">
+                                <div class="task-row">
+                                    <span class="task-name">Read & analyze job posting</span>
+                                    <span class="task-time">5 min</span>
+                                </div>
+                                <div class="task-row">
+                                    <span class="task-name">Research the company</span>
+                                    <span class="task-time">20 min</span>
+                                </div>
+                                <div class="task-row">
+                                    <span class="task-name">Tailor your resume</span>
+                                    <span class="task-time">20 min</span>
+                                </div>
+                                <div class="task-row">
+                                    <span class="task-name">Write cover letter</span>
+                                    <span class="task-time">20 min</span>
+                                </div>
+                                <div class="task-row">
+                                    <span class="task-name">Interview prep</span>
+                                    <span class="task-time">30 min</span>
+                                </div>
+                            </div>
+                            <div class="comparison-total">
+                                <span>Total:</span>
+                                <span class="total-time bad">~1.5 hours</span>
+                </div>
+                        </div>
+                        <div class="comparison-vs">VS</div>
+                        <div class="comparison-item ai">
+                            <div class="comparison-label">With AI</div>
+                            <div class="comparison-tasks">
+                                <div class="task-row">
+                                    <span class="task-name">Paste job posting</span>
+                                    <span class="task-time">5 sec</span>
+                                </div>
+                                <div class="task-row">
+                                    <span class="task-name">AI does everything</span>
+                                    <span class="task-time">30 sec</span>
+                                </div>
+                                <div class="task-row">
+                                    <span class="task-name">Review & apply</span>
+                                    <span class="task-time">5 min</span>
+                                </div>
+                                <div class="task-row task-row-bonus">
+                                    <span class="task-time bonus">+ Optimize CV &amp; hiring outreach</span>
+                                </div>
+                                <div class="task-row task-row-bonus">
+                                    <span class="task-time bonus">+ Interview prep &amp; mock sessions</span>
+                                </div>
+                                <div class="task-row task-row-bonus">
+                                    <span class="task-time bonus">+ 6 career tools included</span>
+                                </div>
+                            </div>
+                            <div class="comparison-total">
+                                <span>Total:</span>
+                                <span class="total-time good">~6 minutes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="problem-solution animate-fade-up delay-3">
+                    <strong>That's 15x faster.</strong> Focus on what matters: <strong>preparing for interviews</strong>.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#features"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Features Section — workflow AI agents -->
+    <section id="features" class="section-features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">Workflow Agents</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    Five AI Agents Working
+                    <span class="text-gradient">For You</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    Each job analysis runs through our multi-agent pipeline — sequential where it must be, parallel where it can — so you get comprehensive intelligence in seconds.
+                </p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card animate-fade-up delay-1">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3>Job Analyzer</h3>
+                    <p>
+                        Parses every detail from the posting: required vs. nice-to-have skills, 
+                        salary range, seniority level, work arrangement, and ATS keywords.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-2">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h3>Profile Matcher</h3>
+                    <p>
+                        Deep semantic analysis of your profile against every job requirement. 
+                        Surfaces a match score, deal-breakers, strengths, skill gaps, 
+                        and a clear recommendation on whether to apply.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-3">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h3>Company Researcher</h3>
+                    <p>
+                        Researches culture, values, recent news, business model, products, 
+                        hiring practices, and typical interview process — 
+                        so you walk in knowing more than most candidates.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-4">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>Resume Advisor</h3>
+                    <p>
+                        Priority-ranked, ATS-aware tips for this specific role. 
+                        Tells you exactly which sections to rework, which keywords are missing, 
+                        what metrics to add, and how to reframe your experience.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-5">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-envelope-open-text"></i>
+                    </div>
+                    <h3>Cover Letter Writer</h3>
+                    <p>
+                        Writes a fully personalized letter that connects your actual experience 
+                        to the role's specific requirements. Adapts tone and style 
+                        to match the company culture.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#after-apply"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- On-demand AI agents (same role, after the workflow) -->
+    <section id="after-apply" class="section-after-apply">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">On-Demand Agents</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    More AI Agents For The
+                    <span class="text-gradient">Same Role</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    When the workflow finishes, run these agents on demand from the application.
+                </p>
+            </div>
+
+            <div class="after-apply-grid">
+                <div class="feature-card animate-fade-up delay-1">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <h3>Optimize CV</h3>
+                    <p>
+                        Runs a hiring-manager evaluate → revise loop on your CV for this role.
+                        Improves bullets, keywords, and positioning until the score levels out —
+                        then you download the optimized CV and a matching cover letter.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-2">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h3>Interview Prep</h3>
+                    <p>
+                        Builds a role-specific interview guide from your profile and the posting:
+                        predicted questions, STAR answers grounded in your experience,
+                        process map, and a day-before checklist.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-3">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Mock Session</h3>
+                    <p>
+                        Runs a timed mock interview for this role — HR, hiring manager, or peer styles.
+                        Speak or type your answers, then get a scored debrief covering what went well
+                        and what to fix next.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-4">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <h3>Hiring Outreach</h3>
+                    <p>
+                        Finds public contacts for the role and drafts copy-ready outreach —
+                        email plus a short note. You review and send yourself.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#extension"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Chrome Extension Section -->
+    <section id="extension" class="section-extension">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 animate-fade-up">
+                    <span class="section-label">Chrome Extension</span>
+                    <h2 class="section-title">
+                        Analyze jobs and match forms
+                        <span class="text-gradient">On any job site</span>
+                    </h2>
+                    <p class="section-subtitle">
+                        Browse jobs naturally. When you find one you like, use Analyze This Job to send the posting to your
+                        dashboard for the full AI workflow, or use Match Form To Profile to fill application forms from your profile.
+                    </p>
+                </div>
+                <div class="col-lg-6 animate-fade-up delay-1">
+                    <div class="extension-preview">
+                        <div class="popup-mockup">
+                            <!-- Header -->
+                            <div class="pm-header">
+                                <div class="pm-logo">
+                                    <div class="pm-logo-icon">
+                                        <img src="assets/img/rolemule-icon.png" alt="" width="28" height="28">
+                                    </div>
+                                    <span>Role<span class="text-gradient">Mule</span></span>
+                                </div>
+                                <span class="pm-status-dot"></span>
+                            </div>
+                            <!-- User card -->
+                            <div class="pm-user-card">
+                                <div class="pm-avatar">JD</div>
+                                <div class="pm-user-info">
+                                    <span class="pm-user-name">Jane Doe</span>
+                                    <span class="pm-user-email">jane@example.com</span>
+                                </div>
+                            </div>
+                            <!-- Job detection -->
+                            <div class="pm-job-row">
+                                <i class="fas fa-briefcase pm-job-icon"></i>
+                                <span class="pm-job-label">Job detected on</span>
+                                <span class="pm-job-source">this page</span>
+                            </div>
+                            <!-- Button -->
+                            <button type="button" class="pm-btn" tabindex="-1" aria-hidden="true">
+                                <i class="fas fa-bolt" aria-hidden="true"></i>
+                                <span>Analyze This Job</span>
+                            </button>
+                            <p class="pm-hint">Extracts page content and sends it to AI for analysis</p>
+                            <button type="button" class="pm-btn-outline pm-btn-outline--mock" tabindex="-1" aria-hidden="true">
+                                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                                <span>Match Form To Profile</span>
+                            </button>
+                            <p class="pm-hint pm-hint--wrap">Fills application forms from your profile. Review before submit.</p>
+                            <!-- Quick links -->
+                            <div class="pm-links">
+                                <span><i class="fas fa-chart-line"></i> Dashboard</span>
+                                <span><i class="fas fa-gear"></i> Settings</span>
+                                <span><i class="fas fa-circle-question"></i> Help</span>
+                                <span><i class="fas fa-right-from-bracket"></i> Logout</span>
+                            </div>
+                            <!-- Footer -->
+                            <div class="pm-footer">v2.0.0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#tools"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Career Tools Section -->
+    <section id="tools" class="section-tools">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">Beyond Applications</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    Career Tools for
+                    <span class="text-gradient">Every Stage</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    From your first application to salary negotiation — AI-powered tools for your entire job search journey.
+                </p>
+            </div>
+
+            <div class="tools-grid">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="tool-card animate-fade-up delay-1">
+                            <div class="tool-icon">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <h3>Thank You Notes</h3>
+                            <p>Write personalized post-interview emails that reference what was actually discussed — not a generic template.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card animate-fade-up delay-2">
+                            <div class="tool-icon">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                            <h3>Job Comparison</h3>
+                            <p>Compare 2–3 opportunities side-by-side with AI scoring across compensation, career growth, work-life balance, culture fit, and more.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card animate-fade-up delay-3">
+                            <div class="tool-icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <h3>Salary Coach</h3>
+                            <p>Get a full negotiation strategy: opening script, counter-offer responses, alternative asks, and tactics to maximize your total package.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="tool-card animate-fade-up delay-4">
+                            <div class="tool-icon">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <h3>Follow-up Emails</h3>
+                            <p>Tailored follow-ups for every stage — after applying, after a phone screen, after interviews, after a final round, or when you've been ghosted.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card animate-fade-up delay-5">
+                            <div class="tool-icon">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <h3>Reference Requests</h3>
+                            <p>Generate warm, professional emails to ask former colleagues or managers to serve as references — personalized to your relationship with them.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card animate-fade-up delay-6">
+                            <div class="tool-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <h3>Rejection Analysis</h3>
+                            <p>Paste a rejection email and get honest analysis: what likely went wrong, what to improve, and concrete actions to strengthen your next application.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#cli"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- CLI Section -->
+    <section id="cli" class="section-cli">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">CLI</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    Automate RoleMule from the
+                    <span class="text-gradient">terminal</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    Start jobs, check status, and pull results with <code>rolemule</code> —
+                    yourself, or through Claude and Cursor.
+                </p>
+            </div>
+            <pre class="cli-strip-code animate-fade-up delay-2" tabindex="0"><code>rolemule auth login
+rolemule workflow analyze job.txt --wait
+rolemule workflow results SESSION --section cover-letter</code></pre>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#example"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Real Example Section -->
+    <section id="example" class="section-example">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">See It In Action</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    Real Job. Real Results.
+                    <span class="text-gradient">See What You'll Get.</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    This is the actual output for a real job posting — Applied AI Engineer at Anthropic. Explore every tab, including Optimize CV, Mock Session, and Outreach.
+                </p>
+            </div>
+
+            <div class="screenshot-showcase animate-fade-up delay-2">
+                <!-- Tab click hint -->
+                <div class="ss-click-hint">
+                    <span><i class="fas fa-hand-pointer"></i> Click a tab to explore</span>
+                    <span><i class="fas fa-arrows-up-down"></i> Scroll to read</span>
+                </div>
+                <!-- Tab bar -->
+                <div class="ss-tabs" role="tablist" aria-label="Application tabs demo">
+                    <button class="ss-tab active" data-ss-tab="job-details" role="tab" aria-selected="true">
+                        <i class="fas fa-briefcase"></i>
+                        <span>Job Details</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="your-fit" role="tab" aria-selected="false">
+                        <i class="fas fa-user-check"></i>
+                        <span>Your Fit</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="strategy" role="tab" aria-selected="false">
+                        <i class="fas fa-bullseye"></i>
+                        <span>Strategy</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="company" role="tab" aria-selected="false">
+                        <i class="fas fa-building"></i>
+                        <span>Company</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="cover-letter" role="tab" aria-selected="false">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <span>Cover Letter</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="resume" role="tab" aria-selected="false">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Resume</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="optimize-cv" role="tab" aria-selected="false">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Optimize CV</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="interview" role="tab" aria-selected="false">
+                        <i class="fas fa-comments"></i>
+                        <span>Interview</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="mock-session" role="tab" aria-selected="false">
+                        <i class="fas fa-headset"></i>
+                        <span>Mock Session</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="outreach" role="tab" aria-selected="false">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Outreach</span>
+                    </button>
+                </div>
+
+                <!-- Screenshot frame -->
+                <div class="ss-frame">
+                    <!-- Browser chrome -->
+                    <div class="ss-browser-chrome">
+                        <div class="ss-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <div class="ss-url-bar">
+                            <i class="fas fa-lock"></i>
+                            <span>rolemule.app / dashboard / applications / applied-ai-engineer</span>
+                        </div>
+                    </div>
+                    <!-- Screenshot panels -->
+                    <div class="ss-panels">
+                        <div class="ss-panel active" id="ss-panel-job-details">
+                            <img src="assets/img/screenshots/tab-job-details.png"
+                                 alt="Job Details — At a Glance grid, requirements, ATS keywords, skills and benefits"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-your-fit">
+                            <img src="assets/img/screenshots/tab-your-fit.png"
+                                 alt="Your Fit — match scores, qualification breakdown, competitive position and employer concerns"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-strategy">
+                            <img src="assets/img/screenshots/tab-strategy.png"
+                                 alt="Strategy — action plan, talking points, cover letter angle and risk assessment"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-company">
+                            <img src="assets/img/screenshots/tab-company.png"
+                                 alt="Company — mission, values, culture, leadership, benefits and market context"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-cover-letter">
+                            <img src="assets/img/screenshots/tab-cover-letter.png"
+                                 alt="Cover Letter — fully personalized AI-generated cover letter for the Anthropic role"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-resume">
+                            <img src="assets/img/screenshots/tab-resume.png"
+                                 alt="Resume — ATS Pass Rate HIGH, Interview Likelihood HIGH, quick wins and tips"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-optimize-cv">
+                            <img src="assets/img/screenshots/tab-optimize-cv.png"
+                                 alt="Optimize CV — iterative hiring-manager score loop and downloadable optimized CV"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-interview">
+                            <img src="assets/img/screenshots/tab-interview.png"
+                                 alt="Interview — 5-stage process with timeline, predicted questions and prep checklist"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-mock-session">
+                            <img src="assets/img/screenshots/tab-mock-session.png"
+                                 alt="Mock Session — timed conversational practice with scored debrief"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-outreach">
+                            <img src="assets/img/screenshots/tab-outreach.png"
+                                 alt="Hiring Outreach — public contacts and copy-ready outreach drafts"
+                                 loading="lazy">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#pricing"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- Pricing/CTA Section -->
+    <section id="pricing" class="section-pricing">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">Always Free</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    Open Source.
+                    <span class="text-gradient">BYOK. No Catch.</span>
+                </h2>
+                        </div>
+
+            <div class="pricing-card animate-fade-up delay-2">
+                <div class="pricing-description">
+                    This is an open-source project. You bring your own AI API key (Gemini, OpenAI, or Anthropic — or use local Ollama) and pay
+                    the provider directly for usage (typically <strong>less than $0.01 per job analysis</strong> on cloud providers).
+                    No subscription fee — you only pay for what you use.
+                </div>
+                <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer" class="btn btn-primary-glow btn-lg">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    Get Started Free
+                </a>
+            </div>
+        </div>
+    </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand-icon">
+                        <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                    </div>
+                    <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+                </div>
+                <div class="footer-links">
+                    <a href="https://github.com/eliornl/rolemule/blob/main/ui/help.html" target="_blank" rel="noopener noreferrer">Help & FAQ</a>
+                    <a href="https://github.com/eliornl/rolemule/blob/main/ui/legal/privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
+                    <a href="https://github.com/eliornl/rolemule/blob/main/ui/legal/terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
+                </div>
+                <div class="footer-meta">
+                    <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer" class="footer-github">
+                        <i class="fab fa-github"></i> Open Source on GitHub
+                    </a>
+                    <p>© 2026 RoleMule</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/landing.js"></script>
+</body>
+</html>
