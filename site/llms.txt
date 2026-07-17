@@ -1,0 +1,32 @@
+# RoleMule
+
+> One mule for every role.
+
+Self-hosted AI job application companion. Paste a job posting (or use the Chrome extension), and five agents analyze the role, score your fit, research the company, write a cover letter, and produce resume tips — typically in about 30 seconds. Dashboard, interview prep, mock sessions, hiring outreach, six career tools, and a CLI. Bring your own API key (Gemini, OpenAI, Anthropic) or use local Ollama. Your data stays on your machine.
+
+## What it is
+
+- Open-source, self-hosted job search companion
+- Multi-agent LangGraph workflow (Job Analyzer → Profile Matcher → Company Research → Cover Letter + Resume Advisor)
+- On-demand: Optimize CV, Interview Prep, Mock Session, Hiring Outreach
+- Six standalone career tools (follow-up, thank you, salary coach, job comparison, rejection analysis, references)
+- Chrome extension: analyze a posting or match application forms to your profile
+- CLI (`rolemule`) for automation from the terminal or coding agents
+
+## What it is not
+
+- Not an auto-apply / mass-apply bot
+- Not a hosted SaaS with subscriptions (you self-host; you pay your LLM provider directly)
+- Does not submit applications for you
+
+## Links
+
+- Home: https://eliornl.github.io/rolemule/
+- Source: https://github.com/eliornl/rolemule
+- README / Quick Start: https://github.com/eliornl/rolemule#quick-start
+- User guide: https://github.com/eliornl/rolemule/blob/main/USER_GUIDE.md
+- CLI reference: https://github.com/eliornl/rolemule/blob/main/docs/cli-reference.md
+
+## Stack
+
+Python, FastAPI, LangGraph, PostgreSQL, Redis, TypeScript/Vite UI, Chrome extension. LLM providers: Gemini, OpenAI, Anthropic, Ollama (BYOK).

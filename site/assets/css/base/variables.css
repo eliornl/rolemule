@@ -1,0 +1,99 @@
+/* ==========================================================================
+   RoleMule - Main Stylesheet
+   A powerful, modern design with dark theme and accent colors
+   ========================================================================== */
+
+/* CSS Variables */
+:root {
+    /* Colors - Dark Theme with Cyan Accent */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #0a0a0f;
+    --bg-tertiary: #1a1a24;
+    --bg-card: rgba(26, 26, 36, 0.8);
+    --bg-card-hover: rgba(30, 30, 42, 0.9);
+    
+    --accent-primary: #00d4ff;
+    --accent-secondary: #7c3aed;
+    --accent-gradient: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+    --accent-gradient-hover: linear-gradient(135deg, #00e5ff 0%, #8b5cf6 100%);
+    
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --text-accent: #00d4ff;
+    
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    
+    --border-color: rgba(255, 255, 255, 0.1);
+    --border-accent: rgba(0, 212, 255, 0.3);
+    
+    /* Shadows & Effects */
+    --glow-accent: 0 0 40px rgba(0, 212, 255, 0.3);
+    --glow-accent-strong: 0 0 60px rgba(0, 212, 255, 0.5);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.6);
+    
+    /* Typography */
+    --font-primary: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    
+    /* Spacing & Sizing */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Legacy Support Variables */
+    --primary-color: #00d4ff;
+    --secondary-color: #7c3aed;
+    --gradient-primary: var(--accent-gradient);
+    --border-radius: var(--radius-md);
+    --box-shadow: var(--shadow-md);
+}
+
+/* Reset & Base */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-primary);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-primary);
+}
+
+.text-gradient {
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
