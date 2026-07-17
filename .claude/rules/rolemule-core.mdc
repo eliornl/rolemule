@@ -1,12 +1,12 @@
 ---
-description: Core ApplyPilot conventions — app name, error system, JSON serialization, background tasks
+description: Core RoleMule conventions — app name, error system, JSON serialization, background tasks
 alwaysApply: true
 ---
 
-# ApplyPilot Core Conventions
+# RoleMule Core Conventions
 
 ## App Name
-The product name is **ApplyPilot**. Use `settings.app_name` in templates. The repo/folder name is `applypilot`.
+The product name is **RoleMule**. Use `settings.app_name` in templates. The repo/folder name is `rolemule`.
 
 ## Standardized Error System
 **Never raise bare `HTTPException` — always use `APIError` or the factory functions from `utils/error_responses.py`.**
@@ -36,7 +36,7 @@ Error codes follow a namespace pattern:
 
 ### Personal access tokens (PAT)
 
-Long-lived CLI/automation auth (`ap_pat_` prefix). Implementation: `utils/personal_access_tokens.py`, migration `20260708_024`, API `POST/GET/DELETE /api/v1/auth/tokens`. `get_current_user` and WebSocket auth check PAT before JWT. Plaintext shown once on create; SHA-256 hash stored. Revoke all user PATs on password change, password reset, and account delete (with JWT invalidation).
+Long-lived CLI/automation auth (`rm_pat_` prefix). Implementation: `utils/personal_access_tokens.py`, migration `20260708_024`, API `POST/GET/DELETE /api/v1/auth/tokens`. `get_current_user` and WebSocket auth check PAT before JWT. Plaintext shown once on create; SHA-256 hash stored. Revoke all user PATs on password change, password reset, and account delete (with JWT invalidation).
 
 ### `CFG_6001` — No API Key (`no_api_key_error()`)
 Use `no_api_key_error()` (HTTP 422, `error_code: "CFG_6001"`) whenever an LLM-backed endpoint is called but the user is not ready to run LLM. **Never use `validation_error()` for this case** — the dedicated code lets the frontend detect it and render a targeted "Add your API key → Settings" prompt instead of a generic error toast.

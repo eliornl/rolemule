@@ -49,7 +49,7 @@ class TestPersonalAccessTokens:
         assert create.status_code == 200, create.text
         body = create.json()
         assert body["name"] == "Automation"
-        assert body["token"].startswith("ap_pat_")
+        assert body["token"].startswith("rm_pat_")
         assert "token_prefix" in body
         token_id = body["id"]
         plaintext = body["token"]
@@ -99,7 +99,7 @@ class TestPersonalAccessTokens:
         _clear_auth_overrides()
         resp = await api_client.get(
             f"{BASE}/verify",
-            headers={"Authorization": "Bearer ap_pat_notvalid"},
+            headers={"Authorization": "Bearer rm_pat_notvalid"},
         )
         assert resp.status_code == 401
         assert resp.json().get("error_code") == "AUTH_1003"
@@ -143,7 +143,7 @@ class TestPersonalAccessTokens:
                 current_user,
                 db,
             )
-            assert created.token.startswith("ap_pat_")
+            assert created.token.startswith("rm_pat_")
             listed = await list_personal_access_tokens_endpoint(current_user, db)
             assert any(t["id"] == created.id for t in listed["tokens"])
             revoked = await revoke_personal_access_token_endpoint(created.id, current_user, db)

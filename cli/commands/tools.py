@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError
+from rolemule_client.errors import ApiClientError
 from cli.context import CliContext
 from cli.formatters.tools import format_tool_result
 from cli.output import emit, emit_workflow_error, require_client
@@ -279,7 +279,7 @@ def job_comparison(
     """Compare multiple job offers side by side."""
     cli_ctx: CliContext = ctx.obj
     if not file:
-        raise typer.BadParameter("Provide --file with a JSON request (see: applypilot tools schema job-comparison).")
+        raise typer.BadParameter("Provide --file with a JSON request (see: rolemule tools schema job-comparison).")
     payload = payload_from_file(file)
     _run_tool(cli_ctx, "job-comparison", payload, require_client(cli_ctx).tools.job_comparison)
 

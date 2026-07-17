@@ -1,17 +1,17 @@
-"""Tests for applypilot_client."""
+"""Tests for rolemule_client."""
 
 from __future__ import annotations
 
 import httpx
 import pytest
 
-from applypilot_client.client import ApplyPilotClient, DEFAULT_TIMEOUT_SECONDS
-from applypilot_client.errors import ApiClientError, ExitCode, parse_error_response
+from rolemule_client.client import RoleMuleClient, DEFAULT_TIMEOUT_SECONDS
+from rolemule_client.errors import ApiClientError, ExitCode, parse_error_response
 
 
-def _client_with_transport(handler) -> ApplyPilotClient:
+def _client_with_transport(handler) -> RoleMuleClient:
     """Build client whose requests go through a mock transport."""
-    client = ApplyPilotClient("http://localhost:8000", access_token="tok123")
+    client = RoleMuleClient("http://localhost:8000", access_token="tok123")
 
     def _request(method, path, **kwargs):
         url = f"{client.base_url}{path}"
@@ -23,7 +23,7 @@ def _client_with_transport(handler) -> ApplyPilotClient:
             body = response.json()
         except Exception:
             body = response.text
-        from applypilot_client.errors import parse_error_response
+        from rolemule_client.errors import parse_error_response
 
         raise parse_error_response(response.status_code, body)
 
@@ -93,7 +93,7 @@ def test_parse_error_response_auth() -> None:
 
 
 def test_connection_error() -> None:
-    client = ApplyPilotClient("http://127.0.0.1:1", timeout=0.5)
+    client = RoleMuleClient("http://127.0.0.1:1", timeout=0.5)
     with pytest.raises(ApiClientError, match="Cannot connect"):
         client.health()
 

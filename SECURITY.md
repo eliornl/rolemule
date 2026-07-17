@@ -1,6 +1,6 @@
 # Security Policy
 
-ApplyPilot is a self-hosted application that handles authentication, user profiles, resume uploads, and encrypted BYOK (bring-your-own-key) API keys. We take security reports seriously.
+RoleMule is a self-hosted application that handles authentication, user profiles, resume uploads, and encrypted BYOK (bring-your-own-key) API keys. We take security reports seriously.
 
 ## Supported Versions
 
@@ -82,7 +82,7 @@ When running your own instance:
 
 ## Automated Security Scanning
 
-ApplyPilot runs continuous security checks on `main`:
+RoleMule runs continuous security checks on `main`:
 
 | Check | Where | Notes |
 |-------|-------|-------|

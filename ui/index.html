@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ app_name or "ApplyPilot" }} | Your AI-Powered Job Search Companion{% endblock %}
-{% block description %}Your complete AI assistant for job searching. Analyze any job posting, research companies, see if you're a good fit, get resume tips, and generate tailored cover letters — all in 30 seconds.{% endblock %}
+{% block title %}{{ app_name or "RoleMule" }} | One mule for every role{% endblock %}
+{% block description %}One mule for every role. Paste a job, run five AI agents in ~30 seconds, then optimize your CV, practice interviews, draft outreach, and use career tools — self-hosted, BYOK, 100% local data.{% endblock %}
 {% block body_attrs %} class="landing-page"{% endblock %}
 {% block bg_effects %}
     <div class="bg-grid"></div>
@@ -21,12 +21,12 @@
             <div class="row align-items-center min-vh-100">
                 <div class="col-lg-7 hero-content">
                     <h1 class="hero-title animate-fade-up">
-                        Your AI-Powered
-                        <span class="text-gradient">Job Search Companion</span>
+                        One mule for
+                        <span class="text-gradient">every role.</span>
                     </h1>
                     
                     <p class="hero-subtitle animate-fade-up delay-1">
-                        Paste a job description, upload a file, or use our Chrome extension — and get full AI-powered insights in 30 seconds. Track applications, access career tools for every stage, and keep your data 100% local.
+                        Paste a job description, upload a PDF/TXT/DOCX, or use our Chrome extension — and get full AI-powered insights in ~30 seconds. Then track the application, optionally optimize your CV, draft outreach, and prepare for the interview. Bring your own AI key, automate with the CLI (Claude, Cursor, and more), and keep your data 100% local.
                     </p>
 
                 </div>
@@ -37,7 +37,7 @@
                             <div class="step-num">1</div>
                             <div class="step-content">
                                 <h2 class="h4">Add Any Job Posting</h2>
-                                <p>Paste the job description text, upload a file, or use our Chrome extension to extract it from any job site.</p>
+                                <p>Paste the job description, upload a PDF, TXT, or DOCX, or use our Chrome extension to extract it from any job site.</p>
                             </div>
                         </div>
                         <div class="hero-step-arrow">
@@ -47,7 +47,7 @@
                             <div class="step-num">2</div>
                             <div class="step-content">
                                 <h2 class="h4">AI Works in the Background</h2>
-                                <p>No waiting. Specialized AI agents instantly start analyzing the job, researching the company, matching your profile, and writing your documents — while you keep browsing.</p>
+                                <p>No waiting. Specialized AI agents instantly start analyzing the job, matching your profile, researching the company, and writing your documents — while you keep browsing.</p>
                             </div>
                         </div>
                         <div class="hero-step-arrow">
@@ -57,7 +57,7 @@
                             <div class="step-num">3</div>
                             <div class="step-content">
                                 <h2 class="h4">Review &amp; Apply with Confidence</h2>
-                                <p>Get notified when your analysis is ready. Review your match score, tailored cover letter, resume tips, and predicted interview questions — then apply.</p>
+                                <p>Get notified when your analysis is ready. Review the job analysis, your fit, strategy, company, cover letter, and resume tips. Optionally optimize your CV — then apply.</p>
                             </div>
                         </div>
                         <div class="hero-step-arrow">
@@ -67,7 +67,7 @@
                             <div class="step-num">4</div>
                             <div class="step-content">
                                 <h2 class="h4">Continue Your Journey</h2>
-                                <p>Use 6 career tools for follow-up emails, thank you notes, salary negotiations, job comparisons, and more — throughout your entire job search.</p>
+                                <p>Draft hiring outreach, prepare for interviews (guide + mock session), and use 6 career tools — follow-ups, thank you notes, salary coach, and more.</p>
                             </div>
                         </div>
                     </div>
@@ -89,16 +89,21 @@
                     <span>PostgreSQL</span>
                     <span>Redis</span>
                     <span>Google Gemini</span>
+                    <span>OpenAI</span>
+                    <span>Anthropic</span>
+                    <span>Ollama</span>
                     <span>LangGraph</span>
                     <span>Docker</span>
                 </div>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="tech-bar-link">
+                <a href="https://github.com/eliornl/applypilot" target="_blank" rel="noopener noreferrer" class="tech-bar-link">
                     <i class="fab fa-github"></i>
                     View on GitHub
                 </a>
             </div>
         </div>
     </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#problem"><i class="fas fa-chevron-down"></i></a></div>
 
     <!-- Problem Section -->
     <section id="problem" class="section-problem">
@@ -165,7 +170,10 @@
                                     <span class="task-time">5 min</span>
                                 </div>
                                 <div class="task-row task-row-bonus">
-                                    <span class="task-time bonus">+ AI interview coaching</span>
+                                    <span class="task-time bonus">+ Optimize CV &amp; hiring outreach</span>
+                                </div>
+                                <div class="task-row task-row-bonus">
+                                    <span class="task-time bonus">+ Interview prep &amp; mock sessions</span>
                                 </div>
                                 <div class="task-row task-row-bonus">
                                     <span class="task-time bonus">+ 6 career tools included</span>
@@ -188,17 +196,17 @@
 
     <div class="section-arrow" aria-hidden="true"><a href="#features"><i class="fas fa-chevron-down"></i></a></div>
 
-    <!-- Features Section - The 6 AI Agents -->
+    <!-- Features Section — workflow AI agents -->
     <section id="features" class="section-features">
         <div class="container">
             <div class="section-header">
-                <span class="section-label animate-fade-up">What You Get</span>
+                <span class="section-label animate-fade-up">Workflow Agents</span>
                 <h2 class="section-title animate-fade-up delay-1">
-                    Six AI Agents Working
+                    Five AI Agents Working
                     <span class="text-gradient">For You</span>
                 </h2>
                 <p class="section-subtitle animate-fade-up delay-2">
-                    Each job analysis runs through our multi-agent pipeline, giving you comprehensive intelligence in seconds.
+                    Each job analysis runs through our multi-agent pipeline — sequential where it must be, parallel where it can — so you get comprehensive intelligence in seconds.
                 </p>
             </div>
 
@@ -210,8 +218,7 @@
                     <h3>Job Analyzer</h3>
                     <p>
                         Parses every detail from the posting: required vs. nice-to-have skills, 
-                        salary range, seniority level, work arrangement, and ATS keywords — 
-                        from pasted text, an uploaded file, or via the Chrome extension.
+                        salary range, seniority level, work arrangement, and ATS keywords.
                     </p>
                 </div>
 
@@ -259,19 +266,74 @@
                     <p>
                         Writes a fully personalized letter that connects your actual experience 
                         to the role's specific requirements. Adapts tone and style 
-                        to match the company culture — startup, enterprise, or anything in between.
+                        to match the company culture.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-arrow" aria-hidden="true"><a href="#after-apply"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- On-demand AI agents (same role, after the workflow) -->
+    <section id="after-apply" class="section-after-apply">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">On-Demand Agents</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    More AI Agents For The
+                    <span class="text-gradient">Same Role</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    When the workflow finishes, run these agents on demand from the application.
+                </p>
+            </div>
+
+            <div class="after-apply-grid">
+                <div class="feature-card animate-fade-up delay-1">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <h3>Optimize CV</h3>
+                    <p>
+                        Runs a hiring-manager evaluate → revise loop on your CV for this role.
+                        Improves bullets, keywords, and positioning until the score levels out —
+                        then you download the optimized CV and a matching cover letter.
                     </p>
                 </div>
 
-                <div class="feature-card animate-fade-up delay-6">
+                <div class="feature-card animate-fade-up delay-2">
                     <div class="feature-icon-wrap">
-                        <i class="fas fa-user-tie"></i>
+                        <i class="fas fa-clipboard-list"></i>
                     </div>
-                    <h3>Interview Coach</h3>
+                    <h3>Interview Prep</h3>
                     <p>
-                        Predicts the questions this company will ask, builds STAR-method answers 
-                        from your own experience, maps out the interview process, 
-                        and gives you a ready-to-use prep checklist.
+                        Builds a role-specific interview guide from your profile and the posting:
+                        predicted questions, STAR answers grounded in your experience,
+                        process map, and a day-before checklist.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-3">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Mock Session</h3>
+                    <p>
+                        Runs a timed mock interview for this role — HR, hiring manager, or peer styles.
+                        Speak or type your answers, then get a scored debrief covering what went well
+                        and what to fix next.
+                    </p>
+                </div>
+
+                <div class="feature-card animate-fade-up delay-4">
+                    <div class="feature-icon-wrap">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <h3>Hiring Outreach</h3>
+                    <p>
+                        Finds public contacts for the role and drafts copy-ready outreach —
+                        email plus a short note. You review and send yourself.
                     </p>
                 </div>
             </div>
@@ -294,20 +356,6 @@
                         Browse jobs naturally. When you find one you like, use Analyze This Job to send the posting to your
                         dashboard for the full AI workflow, or use Match Form To Profile to fill application forms from your profile.
                     </p>
-                    <div class="extension-features">
-                        <div class="ext-feature">
-                            <i class="fas fa-check-circle"></i>
-                            <span>One-click</span>
-                        </div>
-                        <div class="ext-feature">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Auto-detects job posting pages</span>
-                        </div>
-                        <div class="ext-feature">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Syncs seamlessly with your account</span>
-                        </div>
-                    </div>
                 </div>
                 <div class="col-lg-6 animate-fade-up delay-1">
                     <div class="extension-preview">
@@ -316,9 +364,9 @@
                             <div class="pm-header">
                                 <div class="pm-logo">
                                     <div class="pm-logo-icon">
-                                        <i class="fas fa-rocket"></i>
+                                        <img src="{{ asset_url('img/rolemule-icon.png') }}?v=6" alt="" width="28" height="28">
                                     </div>
-                                    <span>Apply<span class="text-gradient">Pilot</span></span>
+                                    <span>Role<span class="text-gradient">Mule</span></span>
                                 </div>
                                 <span class="pm-status-dot"></span>
                             </div>
@@ -346,7 +394,7 @@
                                 <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
                                 <span>Match Form To Profile</span>
                             </button>
-                            <p class="pm-hint pm-hint--wrap">Profile-backed form fill with AI and deterministic screening rules. Review before submit.</p>
+                            <p class="pm-hint pm-hint--wrap">Fills application forms from your profile. Review before submit.</p>
                             <!-- Quick links -->
                             <div class="pm-links">
                                 <span><i class="fas fa-chart-line"></i> Dashboard</span>
@@ -442,6 +490,28 @@
         </div>
     </section>
 
+    <div class="section-arrow" aria-hidden="true"><a href="#cli"><i class="fas fa-chevron-down"></i></a></div>
+
+    <!-- CLI Section -->
+    <section id="cli" class="section-cli">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label animate-fade-up">CLI</span>
+                <h2 class="section-title animate-fade-up delay-1">
+                    Automate RoleMule from the
+                    <span class="text-gradient">terminal</span>
+                </h2>
+                <p class="section-subtitle animate-fade-up delay-2">
+                    Start jobs, check status, and pull results with <code>rolemule</code> —
+                    yourself, or through Claude and Cursor.
+                </p>
+            </div>
+            <pre class="cli-strip-code animate-fade-up delay-2" tabindex="0"><code>rolemule auth login
+rolemule workflow analyze job.txt --wait
+rolemule workflow results SESSION --section cover-letter</code></pre>
+        </div>
+    </section>
+
     <div class="section-arrow" aria-hidden="true"><a href="#example"><i class="fas fa-chevron-down"></i></a></div>
 
     <!-- Real Example Section -->
@@ -454,7 +524,7 @@
                     <span class="text-gradient">See What You'll Get.</span>
                 </h2>
                 <p class="section-subtitle animate-fade-up delay-2">
-                    This is the actual output for a real job posting — Applied AI Engineer at Anthropic. Every tab, every insight, generated in 30 seconds.
+                    This is the actual output for a real job posting — Applied AI Engineer at Anthropic. Explore every tab, including Optimize CV, Mock Session, and Outreach.
                 </p>
             </div>
 
@@ -490,9 +560,21 @@
                         <i class="fas fa-file-alt"></i>
                         <span>Resume</span>
                     </button>
+                    <button class="ss-tab" data-ss-tab="optimize-cv" role="tab" aria-selected="false">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Optimize CV</span>
+                    </button>
                     <button class="ss-tab" data-ss-tab="interview" role="tab" aria-selected="false">
                         <i class="fas fa-comments"></i>
                         <span>Interview</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="mock-session" role="tab" aria-selected="false">
+                        <i class="fas fa-headset"></i>
+                        <span>Mock Session</span>
+                    </button>
+                    <button class="ss-tab" data-ss-tab="outreach" role="tab" aria-selected="false">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Outreach</span>
                     </button>
                 </div>
 
@@ -505,7 +587,7 @@
                         </div>
                         <div class="ss-url-bar">
                             <i class="fas fa-lock"></i>
-                            <span>applypilot.app / dashboard / applications / applied-ai-engineer</span>
+                            <span>rolemule.app / dashboard / applications / applied-ai-engineer</span>
                         </div>
                     </div>
                     <!-- Screenshot panels -->
@@ -540,9 +622,24 @@
                                  alt="Resume — ATS Pass Rate HIGH, Interview Likelihood HIGH, quick wins and tips"
                                  loading="lazy">
                         </div>
+                        <div class="ss-panel" id="ss-panel-optimize-cv">
+                            <img src="/static/img/screenshots/tab-optimize-cv.png"
+                                 alt="Optimize CV — iterative hiring-manager score loop and downloadable optimized CV"
+                                 loading="lazy">
+                        </div>
                         <div class="ss-panel" id="ss-panel-interview">
                             <img src="/static/img/screenshots/tab-interview.png"
                                  alt="Interview — 5-stage process with timeline, predicted questions and prep checklist"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-mock-session">
+                            <img src="/static/img/screenshots/tab-mock-session.png"
+                                 alt="Mock Session — timed conversational practice with scored debrief"
+                                 loading="lazy">
+                        </div>
+                        <div class="ss-panel" id="ss-panel-outreach">
+                            <img src="/static/img/screenshots/tab-outreach.png"
+                                 alt="Hiring Outreach — public contacts and copy-ready outreach drafts"
                                  loading="lazy">
                         </div>
                     </div>
@@ -572,7 +669,7 @@
                     No subscription fee — you only pay for what you use.
                 </div>
                 <a href="/auth/register" class="btn btn-primary-glow btn-lg">
-                    <i class="fas fa-rocket me-2"></i>
+                    <i class="fas fa-arrow-right me-2"></i>
                     Get Started Free
                 </a>
             </div>
@@ -587,9 +684,9 @@
             <div class="footer-content">
                 <div class="footer-brand">
                     <div class="brand-icon">
-                        <i class="fas fa-rocket"></i>
+                        <img src="{{ asset_url('img/rolemule-icon.png') }}?v=6" alt="" width="36" height="36">
                     </div>
-                    <span class="brand-text">Apply<span class="brand-accent">Pilot</span></span>
+                    <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
                 </div>
                 <div class="footer-links">
                     <a href="/help">Help & FAQ</a>
@@ -600,7 +697,7 @@
                     <a href="https://github.com/eliornl/applypilot" target="_blank" rel="noopener noreferrer" class="footer-github">
                         <i class="fab fa-github"></i> Open Source on GitHub
                     </a>
-                    <p>© 2026 ApplyPilot</p>
+                    <p>© 2026 RoleMule</p>
                 </div>
             </div>
         </div>

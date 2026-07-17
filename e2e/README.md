@@ -1,4 +1,4 @@
-# ApplyPilot — E2E Test Suite
+# RoleMule — E2E Test Suite
 
 End-to-end browser tests using [Playwright](https://playwright.dev/).
 

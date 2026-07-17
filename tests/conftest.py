@@ -1,5 +1,5 @@
 """
-Pytest configuration and fixtures for the ApplyPilot tests.
+Pytest configuration and fixtures for the RoleMule tests.
 
 Uses local PostgreSQL and Redis for testing to match production environment.
 """

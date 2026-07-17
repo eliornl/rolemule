@@ -204,7 +204,7 @@ jobs:
       - name: Run CLI ASGI integration tests
         run: pytest tests/test_cli_integration/ -v --override-ini="addopts="
       - name: CLI help smoke
-        run: applypilot --help && applypilot workflow --help
+        run: rolemule --help && rolemule workflow --help
 
   dependency-audit:
     name: Dependency audit (advisory)

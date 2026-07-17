@@ -10,7 +10,7 @@ gracefully — all public helpers become no-ops, nothing in the call-path raises
 
 Setup (called once at startup):
     from utils.tracing import setup_tracing
-    setup_tracing(service_name="applypilot", environment="production")
+    setup_tracing(service_name="rolemule", environment="production")
 
 Adding a custom span around an agent call:
     from utils.tracing import trace_span
@@ -63,7 +63,7 @@ _tracer: Optional[Any] = None  # opentelemetry.trace.Tracer | None
 
 
 def setup_tracing(
-    service_name: str = "applypilot",
+    service_name: str = "rolemule",
     service_version: str = "1.0.0",
     environment: str = "production",
 ) -> None:

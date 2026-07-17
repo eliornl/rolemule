@@ -7,7 +7,7 @@ import stat
 from unittest.mock import MagicMock, patch
 
 
-from applypilot_client.errors import ApiClientError
+from rolemule_client.errors import ApiClientError
 from cli.config import credentials_path, load_credentials
 
 
@@ -41,7 +41,7 @@ def test_token_set_requires_tty_without_stdin(invoke) -> None:
     assert result.exit_code != 0
 
 
-def test_login_saves_credentials_with_mode_0600(invoke, applypilot_home) -> None:
+def test_login_saves_credentials_with_mode_0600(invoke, rolemule_home) -> None:
     mock_client = MagicMock()
     mock_client.auth.login.return_value = {
         "access_token": "jwt.login.token",
@@ -58,7 +58,7 @@ def test_login_saves_credentials_with_mode_0600(invoke, applypilot_home) -> None
     assert stat.S_IMODE(os.stat(cred_file).st_mode) == 0o600
 
 
-def test_register_never_persists_token_even_if_present(invoke, applypilot_home) -> None:
+def test_register_never_persists_token_even_if_present(invoke, rolemule_home) -> None:
     mock_client = MagicMock()
     mock_client.auth.register.return_value = {
         "access_token": "must-not-save",

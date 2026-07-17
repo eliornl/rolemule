@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Mobile Responsiveness
 
-ApplyPilot targets full mobile support down to 390px (iPhone 14). The viewport meta tag is set in `base.html`. Bootstrap 5 provides the grid and collapse utilities.
+RoleMule targets full mobile support down to 390px (iPhone 14). The viewport meta tag is set in `base.html`. Bootstrap 5 provides the grid and collapse utilities.
 
 ---
 

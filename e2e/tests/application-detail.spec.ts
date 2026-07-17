@@ -119,10 +119,10 @@ test.describe('A. Page Structure & Loading State', () => {
     }));
   });
 
-  test('page title contains "ApplyPilot"', async ({ page }) => {
+  test('page title contains "RoleMule"', async ({ page }) => {
     await page.goto(PAGE_URL);
     await page.waitForLoadState('domcontentloaded');
-    await expect(page).toHaveTitle(/ApplyPilot/i);
+    await expect(page).toHaveTitle(/RoleMule/i);
   });
 
   test('loading state container is present in DOM', async ({ page }) => {

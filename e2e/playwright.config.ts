@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for ApplyPilot E2E tests.
+ * Playwright configuration for RoleMule E2E tests.
  * 
  * Run all tests: npx playwright test
  * Run specific file: npx playwright test e2e/tests/auth.spec.ts

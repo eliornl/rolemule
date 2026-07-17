@@ -1,5 +1,5 @@
 /**
- * ApplyPilot — page extraction (injected into the active tab).
+ * RoleMule — page extraction (injected into the active tab).
  * Priority: user selection → schema.org JobPosting (JSON-LD) → site connectors → generic DOM heuristics.
  * Assigned on window so chrome.scripting.executeScript can invoke it after this file loads.
  */

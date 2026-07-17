@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="docs/logo.svg" width="280" height="64" alt="ApplyPilot">
+  <img src="docs/logo.svg" width="280" height="64" alt="RoleMule">
 </p>
+
+<p align="center"><em>One mule for every role.</em></p>
 
 [![Python](https://img.shields.io/badge/Python-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-green.svg)](https://fastapi.tiangolo.com/)
@@ -29,7 +31,7 @@ Runs on your machine. No subscriptions — each user picks Gemini, OpenAI, Anthr
 
 *Here's what a completed application looks like:*
 
-![ApplyPilot demo](docs/demo.gif)
+![RoleMule demo](docs/demo.gif)
 
 ---
 
@@ -131,7 +133,7 @@ make start-local
 
 `make start-local` handles everything on the first run:
 - Installs Homebrew, Python 3, and Node.js if not already present
-- Creates venv, installs Python and Node dependencies, **installs the `applypilot` CLI**, builds the frontend
+- Creates venv, installs Python and Node dependencies, **installs the `rolemule` CLI**, builds the frontend
 - Copies `.env.local.example` → `.env` and fills in strong random secrets automatically
 - Installs PostgreSQL 17 and Redis via Homebrew (first run only)
 - Creates the database and user, runs migrations
@@ -180,7 +182,7 @@ CREATE DATABASE applypilot OWNER applypilot;
 
 You can run these with `psql -U postgres` or any PostgreSQL client (pgAdmin, TablePlus, etc.).
 
-> **Tip:** Using `applypilot` as the password matches the default in `.env` — you can skip Step 3 entirely. If you choose a different password, update `DATABASE_URL` in Step 3.
+> **Tip:** Using `applypilot` as the password matches the default Postgres credentials in `.env.local.example` — you can skip Step 3 entirely. If you choose a different password, update `DATABASE_URL` in Step 3.
 
 **Step 3 — Edit `.env` with your connection strings** _(skip if you used the default password above)_
 
@@ -223,35 +225,35 @@ Terminal client for the same API — useful for scripting, AI assistants (Cursor
 
 ```bash
 source venv/bin/activate    # macOS/Linux
-applypilot doctor
+rolemule doctor
 ```
 
-Or without activating: `venv/bin/applypilot doctor` (Windows: `venv\Scripts\applypilot.exe`).
+Or without activating: `venv/bin/rolemule doctor` (Windows: `venv\Scripts\rolemule.exe`).
 
-**Docker only (`make start`):** the app runs in containers; run **`make setup` once on the host** if you also want the CLI on your machine (same venv + `applypilot` command).
+**Docker only (`make start`):** the app runs in containers; run **`make setup` once on the host** if you also want the CLI on your machine (same venv + `rolemule` command).
 
 **First session** (server must be running):
 
 ```bash
-applypilot auth login              # or: applypilot auth token set  (OAuth users)
-applypilot profile status          # complete profile if needed
-applypilot workflow analyze job.txt --wait --format json
-applypilot apps list
-applypilot apps show APP_ID        # summary + workflow session link
+rolemule auth login              # or: rolemule auth token set  (OAuth users)
+rolemule profile status          # complete profile if needed
+rolemule workflow analyze job.txt --wait --format json
+rolemule apps list
+rolemule apps show APP_ID        # summary + workflow session link
 ```
 
 **Automation / scripts:** create a personal access token (shown once) and save it locally:
 
 ```bash
-applypilot auth token create --name "CI" --save
-applypilot workflow results SESSION_ID --section cover-letter --out letter.md
-applypilot workflow watch SESSION_ID   # live WebSocket progress
-applypilot config set --base-url https://your-server.example.com
+rolemule auth token create --name "CI" --save
+rolemule workflow results SESSION_ID --section cover-letter --out letter.md
+rolemule workflow watch SESSION_ID   # live WebSocket progress
+rolemule config set --base-url https://your-server.example.com
 ```
 
 Use `--no-pager` when piping long human output. Destructive commands require `--confirm` (e.g. `profile resume delete --confirm`).
 
-**Shell completion:** run `applypilot --install-completion` from your terminal (auto-detects bash/zsh/fish).
+**Shell completion:** run `rolemule --install-completion` from your terminal (auto-detects bash/zsh/fish).
 
 Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** (shell aliases included) · Tests: `make cli-test`
 
@@ -312,7 +314,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-gmail@gmail.com
 SMTP_PASSWORD=your-app-password        # myaccount.google.com/apppasswords
 SMTP_FROM_EMAIL=your-gmail@gmail.com
-SMTP_FROM_NAME=ApplyPilot
+SMTP_FROM_NAME=RoleMule
 DISABLE_EMAIL_VERIFICATION=false       # require email verification on sign-up
 ```
 
@@ -473,10 +475,10 @@ Frontend: server-rendered HTML + **TypeScript** (Vite-bundled per page), no Reac
 ## Project Structure
 
 ```
-applypilot/
+applypilot/                 # clone folder (GitHub repo: eliornl/applypilot)
 ├── main.py               # FastAPI app entry point
-├── cli/                  # ApplyPilot CLI (Typer commands)
-├── applypilot_client/    # Sync HTTP client for CLI
+├── cli/                  # RoleMule CLI (Typer commands)
+├── rolemule_client/    # Sync HTTP client for CLI
 ├── agents/               # 5 workflow agents + interview prep + hiring outreach + CV optimizer loop + 6 career tool agents
 ├── workflows/            # LangGraph pipeline orchestration and state schema
 ├── api/                  # FastAPI route handlers

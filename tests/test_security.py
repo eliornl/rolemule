@@ -1,5 +1,5 @@
 """
-Security tests for the ApplyPilot.
+Security tests for the RoleMule.
 
 NOTE: Most authentication security tests are already covered in test_auth.py.
 This file contains additional security-focused tests.

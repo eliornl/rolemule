@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Optional live smoke test for the ApplyPilot CLI.
+# Optional live smoke test for the RoleMule CLI.
 # Requires: server running (make start-local), logged-in user with complete profile.
 #
 # Usage:
@@ -11,26 +11,26 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-if ! command -v applypilot >/dev/null 2>&1; then
+if ! command -v rolemule >/dev/null 2>&1; then
   pip install -e ".[cli]" -q
 fi
 
-echo "== applypilot version =="
-applypilot version
+echo "== rolemule version =="
+rolemule version
 
-echo "== applypilot --help =="
-applypilot --help >/dev/null
+echo "== rolemule --help =="
+rolemule --help >/dev/null
 
-echo "== applypilot doctor =="
-applypilot doctor
+echo "== rolemule doctor =="
+rolemule doctor
 
-if applypilot auth whoami >/dev/null 2>&1; then
+if rolemule auth whoami >/dev/null 2>&1; then
   echo "== authenticated: profile status =="
-  applypilot profile status || true
+  rolemule profile status || true
   echo "== apps list (first page) =="
-  applypilot apps list --per-page 3 || true
+  rolemule apps list --per-page 3 || true
 else
-  echo "== skip authenticated checks (run: applypilot auth login) =="
+  echo "== skip authenticated checks (run: rolemule auth login) =="
 fi
 
 echo "CLI smoke finished OK."

@@ -17,11 +17,11 @@ def cli_runner() -> CliRunner:
 
 
 @pytest.fixture
-def applypilot_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redirect ~/.applypilot to a temp directory."""
-    home = tmp_path / "applypilot_home"
+def rolemule_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirect ~/.rolemule to a temp directory."""
+    home = tmp_path / "rolemule_home"
     home.mkdir()
-    monkeypatch.setenv("APPLYPILOT_CONFIG_DIR", str(home))
+    monkeypatch.setenv("ROLEMULE_CONFIG_DIR", str(home))
     return home
 
 
@@ -34,9 +34,9 @@ def invoke(cli_runner: CliRunner):
 
 
 @pytest.fixture
-def write_credentials(applypilot_home: Path):
+def write_credentials(rolemule_home: Path):
     def _write(token: str = "test.jwt.token", email: str = "user@example.com") -> Path:
-        path = applypilot_home / "credentials.json"
+        path = rolemule_home / "credentials.json"
         path.write_text(
             json.dumps(
                 {

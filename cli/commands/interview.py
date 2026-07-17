@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
-from applypilot_client.polling import InterviewPollTimeout, wait_for_interview_prep
+from rolemule_client.errors import ApiClientError, ExitCode
+from rolemule_client.polling import InterviewPollTimeout, wait_for_interview_prep
 from cli.context import CliContext
 from cli.formatters.interview import format_interview_prep
 from cli.output import emit, emit_error, require_client

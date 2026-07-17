@@ -293,7 +293,7 @@ class TestResumeExtended:
                 return_value=MagicMock(
                     use_vertex_ai=True,
                     gemini_api_key=None,
-                    user_resume_storage_dir="/tmp/applypilot-test-resumes",
+                    user_resume_storage_dir="/tmp/rolemule-test-resumes",
                 ),
             ), patch(
                 "api.profile.save_resume_bytes", return_value=("rel/path", "sha", "txt")
@@ -371,7 +371,7 @@ class TestResumeExtended:
             ), patch("api.profile.invalidate_user_profile", AsyncMock(return_value=None)):
                 from pathlib import Path
 
-                tmp = Path("/tmp/applypilot-test-resume.txt")
+                tmp = Path("/tmp/rolemule-test-resume.txt")
                 tmp.write_text("resume content", encoding="utf-8")
                 mock_path.return_value = tmp
                 get_resp = await client.get(f"{BASE}/resume")

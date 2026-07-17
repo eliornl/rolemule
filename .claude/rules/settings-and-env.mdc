@@ -10,7 +10,7 @@ alwaysApply: false
 
 ```bash
 # App
-APP_NAME=ApplyPilot
+APP_NAME=RoleMule
 DEBUG=false
 BASE_URL=https://yourdomain.com  # Used in password-reset and verification emails
 ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
@@ -66,7 +66,7 @@ SMTP_PORT=587
 SMTP_USERNAME=you@gmail.com
 SMTP_PASSWORD=<App Password>
 SMTP_FROM_EMAIL=you@gmail.com
-SMTP_FROM_NAME=ApplyPilot
+SMTP_FROM_NAME=RoleMule
 
 # Analytics (optional — banner is hidden when POSTHOG_ENABLED=false)
 POSTHOG_API_KEY=phc_xxx
@@ -201,5 +201,5 @@ Set `CORS_ORIGINS` to an explicit comma-separated list of allowed origins.
 CORS_ORIGINS=http://localhost:3000,http://localhost:8000
 
 # Production (example)
-CORS_ORIGINS=https://applypilot.yourdomain.com
+CORS_ORIGINS=https://rolemule.yourdomain.com
 ```

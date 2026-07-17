@@ -24,8 +24,8 @@ from cli.commands.workflow import workflow_app
 from cli.context import build_context
 
 app = typer.Typer(
-    name="applypilot",
-    help="ApplyPilot CLI — manage job applications from your terminal.",
+    name="rolemule",
+    help="RoleMule CLI — manage job applications from your terminal.",
     no_args_is_help=True,
     add_completion=True,
 )
@@ -42,7 +42,7 @@ def main_callback(
     base_url: Optional[str] = typer.Option(
         None,
         "--base-url",
-        help="ApplyPilot server URL (default from ~/.applypilot/config.toml)",
+        help="RoleMule server URL (default from ~/.rolemule/config.toml)",
     ),
     output_format: Optional[str] = typer.Option(
         None,
@@ -54,7 +54,7 @@ def main_callback(
     no_color: bool = typer.Option(False, "--no-color", help="Disable colored output"),
     no_pager: bool = typer.Option(False, "--no-pager", help="Disable pager for long human output"),
 ) -> None:
-    """ApplyPilot command-line interface."""
+    """RoleMule command-line interface."""
     ctx.obj = build_context(
         base_url=base_url,
         output_format=output_format,

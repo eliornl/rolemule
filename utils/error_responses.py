@@ -1,5 +1,5 @@
 """
-Standardized error responses for the ApplyPilot.
+Standardized error responses for the RoleMule.
 Provides consistent error format across all API endpoints.
 """
 

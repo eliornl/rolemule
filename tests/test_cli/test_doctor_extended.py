@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError
+from rolemule_client.errors import ApiClientError
 
 
 def test_doctor_fails_on_loose_credentials_permissions(invoke, write_credentials) -> None:
@@ -20,7 +20,7 @@ def test_doctor_fails_on_loose_credentials_permissions(invoke, write_credentials
         "profile_completed": True,
     }
 
-    with patch("cli.commands.doctor.ApplyPilotClient", return_value=mock_client):
+    with patch("cli.commands.doctor.RoleMuleClient", return_value=mock_client):
         result = invoke("--format", "json", "doctor")
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
@@ -38,7 +38,7 @@ def test_doctor_human_shows_masked_token(invoke, write_credentials) -> None:
         "profile_completed": True,
     }
 
-    with patch("cli.commands.doctor.ApplyPilotClient", return_value=mock_client):
+    with patch("cli.commands.doctor.RoleMuleClient", return_value=mock_client):
         result = invoke("doctor")
     assert result.exit_code == 0
     assert "abcd...mnop" in result.stdout
@@ -50,7 +50,7 @@ def test_doctor_reports_invalid_token(invoke, write_credentials) -> None:
     mock_client.health.return_value = {"status": "healthy"}
     mock_client.verify_token.side_effect = ApiClientError("Invalid token", status_code=401)
 
-    with patch("cli.commands.doctor.ApplyPilotClient", return_value=mock_client):
+    with patch("cli.commands.doctor.RoleMuleClient", return_value=mock_client):
         result = invoke("--format", "json", "doctor")
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
@@ -59,7 +59,7 @@ def test_doctor_reports_invalid_token(invoke, write_credentials) -> None:
 
 
 def test_doctor_pat_token_type_and_metadata(invoke, write_credentials) -> None:
-    write_credentials(token="ap_pat_test_secret_value_here")
+    write_credentials(token="rm_pat_test_secret_value_here")
     mock_client = MagicMock()
     mock_client.health.return_value = {"status": "healthy"}
     mock_client.verify_token.return_value = {
@@ -72,14 +72,14 @@ def test_doctor_pat_token_type_and_metadata(invoke, write_credentials) -> None:
             {
                 "id": "pat-1",
                 "name": "CI",
-                "token_prefix": "ap_pat_test",
+                "token_prefix": "rm_pat_test",
                 "active": True,
                 "expires_at": "2026-12-01T00:00:00Z",
             }
         ]
     }
 
-    with patch("cli.commands.doctor.ApplyPilotClient", return_value=mock_client):
+    with patch("cli.commands.doctor.RoleMuleClient", return_value=mock_client):
         result = invoke("--format", "json", "doctor")
     assert result.exit_code == 0
     payload = json.loads(result.stdout)

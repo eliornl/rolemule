@@ -54,6 +54,6 @@ export function onWsEvent(e: Event): void {
 
 export function attachWsListener(): void {
   if (getWsListenerAttached()) return;
-  window.addEventListener('applypilot:ws', onWsEvent);
+  window.addEventListener('rolemule:ws', onWsEvent);
   setWsListenerAttached(true);
 }

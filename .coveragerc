@@ -6,7 +6,7 @@ omit =
     alembic/*
     _private/*
     cli/*
-    applypilot_client/*
+    rolemule_client/*
 
 [report]
 fail_under = 97

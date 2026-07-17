@@ -1,6 +1,6 @@
-# ApplyPilot Chrome Extension
+# RoleMule Chrome Extension
 
-A Chrome extension that connects your browsing to ApplyPilot in two ways: **Analyze This Job** sends a posting to your dashboard for the full multi-agent workflow, and **Match Form To Profile** fills application forms from your profile for you to review before you submit.
+A Chrome extension that connects your browsing to RoleMule in two ways: **Analyze This Job** sends a posting to your dashboard for the full multi-agent workflow, and **Match Form To Profile** fills application forms from your profile for you to review before you submit.
 
 ## Current Version
 
@@ -119,7 +119,7 @@ The popup is pixel-matched to the main app:
 - Font: **Outfit** (Google Fonts)
 - Icons: **Font Awesome 6** (CDN) — no emoji anywhere
 - Colors and CSS variables match `app.css` (e.g. `--accent-gradient`, `--bg-primary`)
-- Header logo: gradient rounded square + "Apply**Pilot**" wordmark
+- Header logo: mule icon + `Role<span class="brand-accent">Mule</span>` wordmark
 - Footer: version number only
 
 > Note: Chrome controls the outer shape of the popup window. CSS `border-radius` on the popup root is clipped by the browser and cannot be applied.

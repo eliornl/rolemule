@@ -11,6 +11,21 @@
     z-index: 1;
 }
 
+/* RoleMule mark in navbars — transparent so it matches any page bg (not favicon) */
+.brand-icon {
+    background: transparent;
+}
+
+.brand-icon img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    /* Zoom the mule so the mark fills the 36px tile (favicon assets unchanged) */
+    transform: scale(1.28);
+    transform-origin: center center;
+}
+
 @media (max-width: 768px) {
     .page-container {
         padding: 0 0.75rem;

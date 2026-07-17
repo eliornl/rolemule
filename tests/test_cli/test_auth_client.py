@@ -1,4 +1,4 @@
-"""Tests for applypilot_client.resources.auth."""
+"""Tests for rolemule_client.resources.auth."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import json
 
 import httpx
 
-from applypilot_client.client import ApplyPilotClient
+from rolemule_client.client import RoleMuleClient
 
 
-def _mock_client(handler) -> ApplyPilotClient:
-    client = ApplyPilotClient("http://localhost:8000", access_token="old-token")
+def _mock_client(handler) -> RoleMuleClient:
+    client = RoleMuleClient("http://localhost:8000", access_token="old-token")
 
     def _request(method, path, **kwargs):
         url = f"{client.base_url}{path}"
@@ -25,7 +25,7 @@ def _mock_client(handler) -> ApplyPilotClient:
         response = handler(req)
         if response.is_success:
             return response
-        from applypilot_client.errors import parse_error_response
+        from rolemule_client.errors import parse_error_response
 
         try:
             body = response.json()
@@ -84,7 +84,7 @@ def test_refresh_on_401_retry() -> None:
         return httpx.Response(404)
 
     saved: list[str] = []
-    client = ApplyPilotClient(
+    client = RoleMuleClient(
         "http://localhost:8000",
         access_token="old-jwt",
         on_token_refreshed=saved.append,
@@ -104,7 +104,7 @@ def test_refresh_on_401_retry() -> None:
                 return _request(method, path, **{**kwargs, "_allow_refresh": False})
         if response.is_success:
             return response
-        from applypilot_client.errors import parse_error_response
+        from rolemule_client.errors import parse_error_response
 
         raise parse_error_response(response.status_code, response.json())
 
@@ -127,15 +127,15 @@ def test_create_pat_posts_body() -> None:
             json={
                 "id": "pat-1",
                 "name": "CI",
-                "token_prefix": "ap_pat_ab",
-                "token": "ap_pat_secret",
+                "token_prefix": "rm_pat_ab",
+                "token": "rm_pat_secret",
                 "created_at": "2026-07-08T00:00:00Z",
             },
         )
 
     data = _mock_client(handler).auth.create_pat("CI", expires_days=14)
     assert seen[0] == {"name": "CI", "expires_days": 14}
-    assert data["token"].startswith("ap_pat_")
+    assert data["token"].startswith("rm_pat_")
 
 
 def test_list_pats_get() -> None:

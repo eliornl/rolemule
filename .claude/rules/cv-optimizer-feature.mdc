@@ -87,7 +87,7 @@ Frontend (`ui/src/pages/cv-optimizer.ts` + `ui/src/cv-optimizer/`) checks `/api/
 
 ## WebSocket Push
 
-Frontend listens on `window` event `applypilot:ws` (same WS as workflow). Polling fallback: status every few seconds while running.
+Frontend listens on `window` event `rolemule:ws` (same WS as workflow). Polling fallback: status every few seconds while running.
 
 | WS message type | Meaning |
 |---|---|

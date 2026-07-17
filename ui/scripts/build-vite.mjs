@@ -51,7 +51,7 @@ async function buildEntry(manifestKey, relSrc) {
       cssCodeSplit: false,
       lib: {
         entry: absSrc,
-        name: `ApplyPilot_${inputName.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        name: `RoleMule_${inputName.replace(/[^a-zA-Z0-9]/g, '_')}`,
         formats: ['iife'],
         fileName: () => `${inputName}.js`,
       },

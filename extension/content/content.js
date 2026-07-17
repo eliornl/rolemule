@@ -1,5 +1,5 @@
 /**
- * ApplyPilot - Content Script
+ * RoleMule - Content Script
  * Injected into job-related pages to enable content extraction
  * and provide visual feedback to the user
  */

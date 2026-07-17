@@ -20,8 +20,8 @@ try:
 except ImportError:  # pragma: no cover — optional until [cli] installed
     tomli_w = None  # type: ignore[assignment]
 
-CONFIG_DIR_ENV = "APPLYPILOT_CONFIG_DIR"
-DEFAULT_CONFIG_DIR = Path.home() / ".applypilot"
+CONFIG_DIR_ENV = "ROLEMULE_CONFIG_DIR"
+DEFAULT_CONFIG_DIR = Path.home() / ".rolemule"
 CONFIG_FILENAME = "config.toml"
 CREDENTIALS_FILENAME = "credentials.json"
 
@@ -77,7 +77,7 @@ class Credentials:
 
 
 def config_dir() -> Path:
-    """Resolve config directory (~/.applypilot or APPLYPILOT_CONFIG_DIR)."""
+    """Resolve config directory (~/.rolemule or ROLEMULE_CONFIG_DIR)."""
     override = os.environ.get(CONFIG_DIR_ENV)
     if override:
         return Path(override).expanduser()
@@ -129,7 +129,7 @@ def load_config() -> CliConfig:
 def save_config(cfg: CliConfig) -> None:
     """Write config.toml."""
     if tomli_w is None:
-        raise RuntimeError("tomli-w is required to save config (pip install applypilot[cli])")
+        raise RuntimeError("tomli-w is required to save config (pip install rolemule[cli])")
 
     ensure_config_dir()
     payload = {

@@ -13,5 +13,5 @@ import os
 
 
 def admin_help_visible() -> bool:
-    """Whether admin commands appear in top-level --help (requires APPLYPILOT_ADMIN=1)."""
-    return os.environ.get("APPLYPILOT_ADMIN") == "1"
+    """Whether admin commands appear in top-level --help (requires ROLEMULE_ADMIN=1)."""
+    return os.environ.get("ROLEMULE_ADMIN") == "1"

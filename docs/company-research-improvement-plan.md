@@ -29,7 +29,7 @@ Ensure **Company Research** describes the employer **for this specific job posti
 
 | Area | File |
 |------|------|
-| Core / workflow failure | `.cursor/rules/applypilot-core.mdc` |
+| Core / workflow failure | `.cursor/rules/rolemule-core.mdc` |
 | Agents | `.cursor/rules/agent-patterns.mdc` |
 | LLM / grounding | `.cursor/rules/llm-integration.mdc` |
 | Cache | `.cursor/rules/caching-redis.mdc` |

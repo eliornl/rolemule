@@ -136,7 +136,7 @@ Reuse `WS /api/v1/ws/workflow/{session_id}`. Frontend connects before calling ge
 Frontend pattern (`ui/src/pages/hiring-outreach.ts`, `ui/src/hiring-outreach/`):
 
 ```javascript
-attachWsListener();           // applypilot:ws before generate
+attachWsListener();           // rolemule:ws before generate
 await triggerGenerateApi();   // POST /generate
 startPollingFallback();       // 5 s poll as safety net
 // WS complete/error stops polling and calls loadAndRender()

@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from applypilot_client.errors import ApiClientError, ExitCode
-from applypilot_client.polling import WorkflowPollTimeout
+from rolemule_client.errors import ApiClientError, ExitCode
+from rolemule_client.polling import WorkflowPollTimeout
 
 
 def test_analyze_wait_awaiting_confirmation(invoke, write_credentials) -> None:
@@ -115,7 +115,7 @@ def test_interview_generate_timeout(invoke, write_credentials) -> None:
     write_credentials()
     mock_client = MagicMock()
     mock_client.interview_prep.generate.return_value = {"status": "generating"}
-    from applypilot_client.polling import InterviewPollTimeout
+    from rolemule_client.polling import InterviewPollTimeout
 
     with patch("cli.commands.interview.require_client", return_value=mock_client):
         with patch("cli.commands.interview.wait_for_interview_prep") as wait_mock:
@@ -144,7 +144,7 @@ def test_cv_start_wait_timeout(invoke, write_credentials) -> None:
     write_credentials()
     mock_client = MagicMock()
     mock_client.cv_optimizer.start.return_value = {"session_id": "sess-1", "status": "started"}
-    from applypilot_client.polling import CvPollTimeout
+    from rolemule_client.polling import CvPollTimeout
 
     with patch("cli.commands.cv.require_client", return_value=mock_client):
         with patch("cli.commands.cv.wait_for_cv_optimization") as wait_mock:

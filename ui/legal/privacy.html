@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Privacy Policy | {{ app_name or "ApplyPilot" }}{% endblock %}
-{% block description %}Privacy Policy for ApplyPilot - understand what data this self-hosted instance stores and how it is used.{% endblock %}
+{% block title %}Privacy Policy | {{ app_name or "RoleMule" }}{% endblock %}
+{% block description %}Privacy Policy for RoleMule - understand what data this self-hosted instance stores and how it is used.{% endblock %}
 {% block extra_head %}
 <style nonce="{{ request.state.csp_nonce | default('') }}">
         .navbar {
@@ -14,16 +14,25 @@
             gap: 0.75rem;
             text-decoration: none;
         }
-        .brand-icon {
+                .brand-icon {
             width: 36px;
             height: 36px;
             border-radius: var(--radius-md);
-            background: var(--accent-gradient);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
         }
         .brand-text {
             font-size: 1.2rem;
@@ -159,10 +168,10 @@
         <div class="page-container">
             <div class="legal-content">
                 <h1>Privacy Policy</h1>
-                <p class="last-updated">Last Updated: March 25, 2026</p>
+                <p class="last-updated">Last Updated: July 16, 2026</p>
 
                 <div class="highlight-box">
-                    <p><strong>Self-hosted software:</strong> ApplyPilot is open-source software that you run on your own computer or server. All your data stays in your own database — it is never sent to or stored by the project authors. The person or organisation who deployed this instance is the data controller for any personal data stored here.</p>
+                    <p><strong>Self-hosted software:</strong> RoleMule is open-source software that you run on your own computer or server. All your data stays in your own database — it is never sent to or stored by the project authors. The person or organisation who deployed this instance is the data controller for any personal data stored here.</p>
                 </div>
 
                 <div class="legal-toc">
@@ -188,7 +197,7 @@
                     <li><strong>Account Information:</strong> Email address, name, and password when you create an account</li>
                     <li><strong>Profile Data:</strong> Professional information including work experience, education, skills, and career preferences — entered manually or extracted from a resume you upload</li>
                     <li><strong>Job Application Data:</strong> Job postings and job descriptions you submit for analysis</li>
-                    <li><strong>API Keys:</strong> If you use Bring Your Own Key (BYOK) mode, your API key is stored encrypted in the local database</li>
+                    <li><strong>API Keys:</strong> If you use Bring Your Own Key (BYOK), encrypted API keys for the providers you configure (Gemini, OpenAI, and/or Anthropic) are stored in the local database. Ollama uses no API key.</li>
                 </ul>
 
                 <h3>1.2 Log Data</h3>
@@ -206,12 +215,13 @@
                 <p>Your information is used solely to:</p>
                 <ul>
                     <li>Analyze job postings, match your profile against job requirements, and generate personalized application materials</li>
-                    <li>Keep you authenticated across sessions</li>
+                    <li>Run on-demand tools such as CV optimization, interview prep, mock sessions, hiring outreach, and career tools</li>
+                    <li>Keep you authenticated across sessions (including the optional CLI)</li>
                     <li>Send email verification and password reset messages (only if SMTP is configured on this instance)</li>
                 </ul>
 
                 <div class="highlight-box">
-                    <p><strong>Your data never leaves this instance</strong> except when job descriptions and profile data are sent to the Google Gemini API to generate AI output (see Section 4). No data is sent to the project authors.</p>
+                    <p><strong>Your data never leaves this instance</strong> except when job descriptions and profile data are sent to the AI provider you (or the instance operator) configured — Gemini, OpenAI, Anthropic, or a local Ollama server (see Section 4). No data is sent to the project authors.</p>
                 </div>
 
                 <h2 id="data-storage">3. Data Storage and Security</h2>
@@ -226,7 +236,15 @@
                 <h2 id="third-party">4. Third-Party Services</h2>
                 <p>Depending on how this instance is configured, the following external services may be contacted:</p>
                 <ul>
-                    <li><strong>Google Gemini API:</strong> Job descriptions and your profile data are sent to Google's Gemini API to generate AI analysis. This is governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a>. The instance operator's server API key or your own BYOK key is used.</li>
+                    <li><strong>AI providers (BYOK or operator-configured):</strong> Job descriptions, profile data, and related prompts are sent to the provider selected in Settings → AI Setup (or the operator’s server default) to generate analysis and tools output:
+                        <ul>
+                            <li><strong>Google Gemini</strong> — governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a></li>
+                            <li><strong>OpenAI</strong> — governed by <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer">OpenAI's Privacy Policy</a></li>
+                            <li><strong>Anthropic</strong> — governed by <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer">Anthropic's Privacy Policy</a></li>
+                            <li><strong>Ollama (local)</strong> — requests stay on the machine or network where Ollama is running; no cloud API key is used</li>
+                        </ul>
+                        The instance may use an operator-managed key (for example Gemini / Vertex AI) and/or your own encrypted BYOK keys.
+                    </li>
                     <li><strong>Google OAuth:</strong> If Google sign-in is enabled on this instance, authentication is handled by Google's OAuth service. Only your email address and name are stored locally.</li>
                     <li><strong>Analytics (optional):</strong> If PostHog analytics are enabled by the instance operator, usage events are sent to PostHog only with your explicit consent via cookie preferences. This is disabled by default in the self-hosted configuration.</li>
                 </ul>

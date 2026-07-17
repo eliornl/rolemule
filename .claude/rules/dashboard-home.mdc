@@ -30,7 +30,7 @@ The backend uses `func.lower().contains()` (parameterised — no SQL injection r
 
 `GET /api/v1/applications/` and `GET /api/v1/applications/stats/overview` **outerjoin** `workflow_sessions` on `job_applications.session_id` and exclude rows where `workflow_sessions.workflow_status = 'failed'` (in addition to `deleted_at IS NULL` and `job_applications.status != 'failed'`).
 
-**Why:** `job_applications` can remain `processing` for a short window after the workflow session is already `failed`, while `_format_application_response()` maps that pair to a **failed** badge for the API consumer — which used to show a phantom FAILED card. Filtering on workflow status keeps failed analyses off the list and aligns counts with the empty state. See **`applypilot-core.mdc`** (workflow failure — no partial client data).
+**Why:** `job_applications` can remain `processing` for a short window after the workflow session is already `failed`, while `_format_application_response()` maps that pair to a **failed** badge for the API consumer — which used to show a phantom FAILED card. Filtering on workflow status keeps failed analyses off the list and aligns counts with the empty state. See **`rolemule-core.mdc`** (workflow failure — no partial client data).
 
 ### Stats overview (`GET /api/v1/applications/stats/overview`)
 
@@ -291,7 +291,7 @@ The `#statusFilter` dropdown only exposes **user-tracking stages** — not AI an
 | `agent_update` — session already in `_loadedApps` | Ignore (workflow progress update, no card action needed) |
 | `workflow_complete` / `workflow_error` | Mark notified → reload apps → fire `notifyReady` toast |
 
-**Critical ordering:** Do **not** call `_markAnalysisNotified` before `await loadApplications(true)` here — `notifyReady()` performs the mark internally; pre-marking blocked the completion toast. After reload, resolve title/company from `_loadedApps` (may be empty for failed workflows) and pass **`wsFailureDetail`** from `msg.data.error` when `type === 'workflow_error'`. **`notifyReady`** stores dedupe keys as **`c:{session_id}`** (completed) vs **`f:{session_id}`** (failed) in `applypilot_notified_analyses` so a failure toast is never suppressed by an unrelated completion for the same session.
+**Critical ordering:** Do **not** call `_markAnalysisNotified` before `await loadApplications(true)` here — `notifyReady()` performs the mark internally; pre-marking blocked the completion toast. After reload, resolve title/company from `_loadedApps` (may be empty for failed workflows) and pass **`wsFailureDetail`** from `msg.data.error` when `type === 'workflow_error'`. **`notifyReady`** stores dedupe keys as **`c:{session_id}`** (completed) vs **`f:{session_id}`** (failed) in `rolemule_notified_analyses` so a failure toast is never suppressed by an unrelated completion for the same session.
 
 ```javascript
 async function handleUserWsMessage(msg) {
@@ -340,7 +340,7 @@ function notifyReady(jobTitle, companyName, detailId, failed, failureDetail) {
 
 ## Duplicate workflow start — `RES_3002`
 
-When `POST /api/v1/workflow/start` returns **409** with `error_code === 'RES_3002'`, the user already has a non-deleted application for the same job (URL, title+company, or long-text fingerprint — see `applypilot-core.mdc`).
+When `POST /api/v1/workflow/start` returns **409** with `error_code === 'RES_3002'`, the user already has a non-deleted application for the same job (URL, title+company, or long-text fingerprint — see `rolemule-core.mdc`).
 
 - **`ui/src/pages/dashboard-new-application.ts`** — show a **warning**-style alert with the API message; optionally set `sessionStorage` keys (`new_application_toast`, `new_application_session_id`) so a post-redirect toast can deep-link to the existing application when `details` include `session_id`.
 - Shared API errors attach `errorCode` via **`ui/src/shared/api.ts`** — treat `RES_3002` as a warning, not a red failure banner.
@@ -349,7 +349,7 @@ Integration coverage: `tests/test_api/test_workflow.py` (duplicate URL / duplica
 
 ### Duplicate after analysis starts (not HTTP 409)
 
-If **`POST /workflow/start` did not return `RES_3002`** (e.g. missing URL/title at submit, or fingerprint mismatch), the server can still detect a duplicate **after** the Job Analyzer resolves title+company or when applying the final **`job_applications`** row hits **`uq_user_job_company`**. The run ends as **`workflow_error`** with the same user-facing copy as **`RES_3002`**. The dashboard shows the duplicate headline above; **`applypilot-core.mdc`** documents backend behavior (`utils/application_dedupe.py`, `_update_job_application_with_final_state`).
+If **`POST /workflow/start` did not return `RES_3002`** (e.g. missing URL/title at submit, or fingerprint mismatch), the server can still detect a duplicate **after** the Job Analyzer resolves title+company or when applying the final **`job_applications`** row hits **`uq_user_job_company`**. The run ends as **`workflow_error`** with the same user-facing copy as **`RES_3002`**. The dashboard shows the duplicate headline above; **`rolemule-core.mdc`** documents backend behavior (`utils/application_dedupe.py`, `_update_job_application_with_final_state`).
 
 ## "Application submitted!" — `_submittedToastShownForSession`
 
@@ -391,14 +391,14 @@ The skeleton classes (`.skeleton-line`, `.skeleton-title`, `.skeleton-subtitle`)
 ### localStorage keys
 | Key | Purpose |
 |---|---|
-| `applypilot_tracked_sessions` | `[{sessionId}]` — sessions to watch; added by `ui/src/pages/dashboard-new-application.ts` on submit |
-| `applypilot_badge` | `'1'` when a completed analysis hasn't been toasted yet on the dashboard |
-| `applypilot_notified_analyses` | JSON array of keys: **`c:{sessionId}`** / **`f:{sessionId}`** (plus legacy bare `sessionId` = completion only). Managed by `ui/src/pages/dashboard-home.ts`; **`ui/src/pages/navbar-notifications.ts`** treats bare, `c:`, and `f:` as “already notified” for the badge |
+| `rolemule_tracked_sessions` | `[{sessionId}]` — sessions to watch; added by `ui/src/pages/dashboard-new-application.ts` on submit |
+| `rolemule_badge` | `'1'` when a completed analysis hasn't been toasted yet on the dashboard |
+| `rolemule_notified_analyses` | JSON array of keys: **`c:{sessionId}`** / **`f:{sessionId}`** (plus legacy bare `sessionId` = completion only). Managed by `ui/src/pages/dashboard-home.ts`; **`ui/src/pages/navbar-notifications.ts`** treats bare, `c:`, and `f:` as “already notified” for the badge |
 
 ### Behaviour
-- **On subpages**: opens the same `/api/v1/ws/user` WebSocket as `ui/src/pages/dashboard-home.ts`; on `workflow_complete` / `workflow_error` sets `applypilot_badge = '1'` and shows the dot
+- **On subpages**: opens the same `/api/v1/ws/user` WebSocket as `ui/src/pages/dashboard-home.ts`; on `workflow_complete` / `workflow_error` sets `rolemule_badge = '1'` and shows the dot
 - **One-shot load check**: on page load, checks any tracked sessions once (catches completions while browser was closed)
-- **On `/dashboard`**: clears `applypilot_badge` immediately and exits — `ui/src/pages/dashboard-home.ts` owns all toasts there
+- **On `/dashboard`**: clears `rolemule_badge` immediately and exits — `ui/src/pages/dashboard-home.ts` owns all toasts there
 - **`window.clearNavBadge()`**: exposed function; called by `ui/src/pages/dashboard-home.ts` `DOMContentLoaded` to clear the dot when user arrives on the dashboard
 
 ### Adding the session to tracked list (in `ui/src/pages/dashboard-new-application.ts`)
@@ -406,11 +406,11 @@ The skeleton classes (`.skeleton-line`, `.skeleton-title`, `.skeleton-subtitle`)
 const parsed = JSON.parse(responseText);
 const sessionId = parsed && parsed.session_id;
 if (sessionId) {
-    const raw = localStorage.getItem('applypilot_tracked_sessions') || '[]';
+    const raw = localStorage.getItem('rolemule_tracked_sessions') || '[]';
     const tracked = JSON.parse(raw);
     tracked.push({ sessionId });
     if (tracked.length > 20) tracked.splice(0, tracked.length - 20);
-    localStorage.setItem('applypilot_tracked_sessions', JSON.stringify(tracked));
+    localStorage.setItem('rolemule_tracked_sessions', JSON.stringify(tracked));
 }
 ```
 

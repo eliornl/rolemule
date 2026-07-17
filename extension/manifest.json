@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ApplyPilot",
-  "short_name": "ApplyPilot",
-  "description": "Send job postings to ApplyPilot for full AI analysis, or match application forms to your profile for suggested field values.",
+  "name": "RoleMule",
+  "short_name": "RoleMule",
+  "description": "One mule for every role. Analyze any job posting with AI, or match application forms to your profile.",
   "version": "2.0.0",
   "permissions": [
     "activeTab",
@@ -27,7 +27,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "ApplyPilot — AI-Powered Job Analysis"
+    "default_title": "RoleMule — One mule for every role."
   },
   "icons": {
     "16": "icons/icon16.png",

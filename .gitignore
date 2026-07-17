@@ -72,6 +72,7 @@ coverage.json
 coverage_test_api.json
 *.cover
 htmlcov/
+coverage_html/
 .pytest_cache/
 
 # Database

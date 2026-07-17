@@ -3,9 +3,9 @@
  * Keys must stay in sync with dashboard-home and dashboard-new-application.
  */
 
-export const TRACKED_SESSIONS_KEY = 'applypilot_tracked_sessions';
-export const NAV_BADGE_KEY = 'applypilot_badge';
-export const NOTIFIED_ANALYSES_KEY = 'applypilot_notified_analyses';
+export const TRACKED_SESSIONS_KEY = 'rolemule_tracked_sessions';
+export const NAV_BADGE_KEY = 'rolemule_badge';
+export const NOTIFIED_ANALYSES_KEY = 'rolemule_notified_analyses';
 
 export interface TrackedSession {
   sessionId: string;

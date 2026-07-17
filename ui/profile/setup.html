@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Profile Setup - {{ app_name or "ApplyPilot" }}{% endblock %}
-{% block description %}Your AI-Powered Job Search Companion{% endblock %}
+{% block title %}Profile Setup - {{ app_name or "RoleMule" }}{% endblock %}
+{% block description %}One mule for every role.{% endblock %}
 {% block extra_head %}
 <meta charset="UTF-8" />
 
@@ -1160,9 +1160,9 @@
             <div class="container">
                 <a class="navbar-brand" href="/">
                     <div class="brand-icon">
-                        <i class="fas fa-rocket"></i>
+                        <img src="{{ asset_url('img/rolemule-icon.png') }}?v=6" alt="" width="36" height="36">
                     </div>
-                    <span class="brand-text">Apply<span class="brand-accent">Pilot</span></span>
+                    <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
                 </a>
                 <div class="navbar-nav ms-auto">
                     <a class="nav-link" href="#" id="logout-btn">

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Terms of Service | {{ app_name or "ApplyPilot" }}{% endblock %}
-{% block description %}Terms of Service for ApplyPilot - Read our terms and conditions for using our AI-powered job search assistant.{% endblock %}
+{% block title %}Terms of Service | {{ app_name or "RoleMule" }}{% endblock %}
+{% block description %}Terms of Service for RoleMule - Read our terms and conditions for using RoleMule.{% endblock %}
 {% block extra_head %}
 <style nonce="{{ request.state.csp_nonce | default('') }}">
         .navbar {
@@ -14,16 +14,25 @@
             gap: 0.75rem;
             text-decoration: none;
         }
-        .brand-icon {
+                .brand-icon {
             width: 36px;
             height: 36px;
             border-radius: var(--radius-md);
-            background: var(--accent-gradient);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
         }
         .brand-text {
             font-size: 1.2rem;
@@ -170,10 +179,10 @@
         <div class="page-container">
             <div class="legal-content">
                 <h1>Terms of Use</h1>
-                <p class="last-updated">Last Updated: March 25, 2026</p>
+                <p class="last-updated">Last Updated: July 16, 2026</p>
 
                 <div class="highlight-box">
-                    <p><strong>The short version:</strong> ApplyPilot is free, open-source software you run on your own machine. Use it responsibly. The AI helps you apply for jobs, but you are responsible for reviewing everything before submitting it to an employer. You own your data and can export or delete it at any time.</p>
+                    <p><strong>The short version:</strong> RoleMule is free, open-source software you run on your own machine. Use it responsibly. The AI helps you apply for jobs, but you are responsible for reviewing everything before submitting it to an employer. You own your data and can export or delete it at any time.</p>
                 </div>
 
                 <div class="legal-toc">
@@ -196,20 +205,22 @@
                 </div>
 
                 <h2 id="acceptance">1. Acceptance of Terms</h2>
-                <p>By using this instance of ApplyPilot, you agree to these Terms of Use. If you do not agree, do not use the software. You must be at least 16 years old to create an account.</p>
+                <p>By using this instance of RoleMule, you agree to these Terms of Use. If you do not agree, do not use the software. You must be at least 16 years old to create an account.</p>
 
                 <h2 id="service-description">2. About This Software</h2>
-                <p>ApplyPilot is free, open-source software licensed under the MIT License. The source code is publicly available on <a href="https://github.com/eliornl/applypilot" target="_blank" rel="noopener noreferrer">GitHub</a>. You are running a self-hosted instance — all your data stays in your own database on the machine where this instance is deployed.</p>
+                <p>RoleMule is free, open-source software licensed under the MIT License. The source code is publicly available on <a href="https://github.com/eliornl/applypilot" target="_blank" rel="noopener noreferrer">GitHub</a>. You are running a self-hosted instance — all your data stays in your own database on the machine where this instance is deployed.</p>
                 <p>The software provides:</p>
                 <ul>
-                    <li>Job posting analysis and requirements extraction</li>
+                    <li>Job posting analysis and requirements extraction (including PDF, TXT, and DOCX uploads)</li>
                     <li>Company research and insights</li>
                     <li>Profile-to-job matching and fit assessment</li>
                     <li>AI-generated cover letters and application materials</li>
-                    <li>Resume optimization recommendations</li>
-                    <li>Interview preparation assistance</li>
+                    <li>Resume optimization recommendations and on-demand CV optimization</li>
+                    <li>Interview preparation guides and timed mock interview sessions</li>
+                    <li>Hiring outreach drafts (copy-only — you send messages yourself)</li>
                     <li>Career tools (thank you notes, follow-up emails, salary negotiation coaching, job comparison, and more)</li>
-                    <li>Chrome extension for analyzing job postings from pages you visit and suggesting application form values from your profile</li>
+                    <li>Chrome extension for analyzing job postings from pages you visit and matching application forms to your profile</li>
+                    <li>Optional command-line interface (<code>rolemule</code>) for the same workflows from a terminal or AI coding agents</li>
                 </ul>
 
                 <h2 id="account">3. Account Registration</h2>
@@ -238,12 +249,12 @@
                 <p>You retain full ownership of all content you submit — resumes, profile information, job descriptions, and generated outputs. Your data is processed locally on this instance to provide the service. You may export or delete all your data at any time from <strong>Dashboard → Settings</strong>.</p>
 
                 <h2 id="intellectual-property">6. Open Source License</h2>
-                <p>ApplyPilot is released under the MIT License. You are free to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, subject to the terms of the MIT License included in the source repository. Nothing in these Terms of Use restricts your rights under the MIT License.</p>
+                <p>RoleMule is released under the MIT License. You are free to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, subject to the terms of the MIT License included in the source repository. Nothing in these Terms of Use restricts your rights under the MIT License.</p>
 
                 <h2 id="ai-disclaimer">7. AI-Generated Content Disclaimer</h2>
 
                 <div class="warning-box">
-                    <p><strong>Important:</strong> All AI-generated content — match scores, company research, cover letters, resume tips, interview questions — is provided as a starting point only. It may contain errors, inaccuracies, or outdated information. You are responsible for reviewing and verifying everything before submitting it to an employer.</p>
+                    <p><strong>Important:</strong> All AI-generated content — match scores, company research, cover letters, resume tips, interview guides, mock-session feedback, outreach drafts, and career-tool output — is provided as a starting point only. It may contain errors, inaccuracies, or outdated information. You are responsible for reviewing and verifying everything before submitting it to an employer or contacting anyone.</p>
                 </div>
 
                 <p>By using the software, you acknowledge that:</p>
@@ -257,12 +268,13 @@
                 </ul>
 
                 <h2 id="api-keys">8. API Keys (BYOK)</h2>
-                <p>If you add your own Google AI Studio API key:</p>
+                <p>In Settings → AI Setup you choose a provider (Google Gemini, OpenAI, Anthropic, or local Ollama) and, for cloud providers, add your own API key:</p>
                 <ul>
-                    <li>You are responsible for obtaining and maintaining a valid key</li>
-                    <li>API usage is subject to Google's terms and pricing</li>
-                    <li>You are responsible for any costs incurred</li>
-                    <li>Your key is stored encrypted in the local database</li>
+                    <li>You are responsible for obtaining and maintaining valid credentials for the providers you use</li>
+                    <li>API usage is subject to each provider's terms and pricing (Ollama has no cloud API bill when run locally)</li>
+                    <li>You are responsible for any costs incurred with cloud providers</li>
+                    <li>Cloud API keys are stored encrypted in the local database</li>
+                    <li>Vertex AI, if enabled by the instance operator, is a server-side configuration — not a user BYOK path</li>
                 </ul>
 
                 <h2 id="privacy">9. Privacy</h2>

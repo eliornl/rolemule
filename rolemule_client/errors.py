@@ -26,7 +26,7 @@ class ExitCode(IntEnum):
 
 @dataclass
 class ApiClientError(Exception):
-    """Raised when the ApplyPilot API returns an error response."""
+    """Raised when the RoleMule API returns an error response."""
 
     message: str
     status_code: int

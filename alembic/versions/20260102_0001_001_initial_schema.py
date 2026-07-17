@@ -4,7 +4,7 @@ Revision ID: 001
 Revises: None
 Create Date: 2026-01-02
 
-This migration creates all tables for ApplyPilot:
+This migration creates all tables for RoleMule:
 - users: User authentication and basic identity
 - user_profiles: Extended profile information with JSONB fields
 - workflow_sessions: Workflow state and agent results

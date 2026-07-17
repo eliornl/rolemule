@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 
 
 @pytest.mark.parametrize(
@@ -162,12 +162,12 @@ def test_auth_whoami_logged_in(invoke, write_credentials) -> None:
     assert "user@example.com" in result.output
 
 
-def test_auth_refresh_persists_token(invoke, write_credentials, applypilot_home) -> None:
+def test_auth_refresh_persists_token(invoke, write_credentials, rolemule_home) -> None:
     write_credentials(token="old.jwt.token")
     mock_client = MagicMock()
     mock_client.auth.refresh.return_value = {"access_token": "new.jwt.token", "expires_in": 3600}
     with patch("cli.commands.auth.make_client", return_value=mock_client):
         result = invoke("auth", "refresh")
     assert result.exit_code == 0
-    saved = json.loads((applypilot_home / "credentials.json").read_text())
+    saved = json.loads((rolemule_home / "credentials.json").read_text())
     assert saved["access_token"] == "new.jwt.token"

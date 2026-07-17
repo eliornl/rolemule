@@ -40,7 +40,7 @@ All three emails — welcome, password reset, and verification code — share th
 | Header corner radius | `20px 20px 0 0` |
 | Footer corner radius | `0 0 20px 20px` |
 | Title (`h1`) font size | `28px` |
-| Subtitle text | `"Companion"` |
+| Subtitle text | `"One mule for every role."` |
 | Greeting (`h2`) font size | `22px`, `font-weight: 600` |
 | Page background | `#0d1117` |
 | Card background | `#161b22` |
@@ -101,7 +101,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password   # Gmail App Password, not login password — stored as SecretStr
 SMTP_FROM_EMAIL=your-email@gmail.com
-SMTP_FROM_NAME=ApplyPilot
+SMTP_FROM_NAME=RoleMule
 ```
 
 `SMTP_PASSWORD` is a `SecretStr` in settings. Always call `.get_secret_value()` before passing to `smtplib`:
@@ -156,7 +156,7 @@ parsed = await parse_resume_from_file(file_content: bytes, filename: str)
 
 ## Workflow job file (New Application)
 
-`POST /api/v1/workflow/start` accepts optional multipart **`job_file`** for the job description. Allowed extensions: **`.pdf`**, **`.txt`**, **`.docx`**; max **5 MB** (`api/workflow.py` — stricter than resume upload). Legacy **`.doc`** is not supported. See **`applypilot-core.mdc`** (`_JOB_FILE_MAGIC`, `_job_text_from_uploaded_file`).
+`POST /api/v1/workflow/start` accepts optional multipart **`job_file`** for the job description. Allowed extensions: **`.pdf`**, **`.txt`**, **`.docx`**; max **5 MB** (`api/workflow.py` — stricter than resume upload). Legacy **`.doc`** is not supported. See **`rolemule-core.mdc`** (`_JOB_FILE_MAGIC`, `_job_text_from_uploaded_file`).
 
 ## BYOK Encryption
 ```python

@@ -216,7 +216,7 @@ test.describe('Profile Management', () => {
       if (download) {
         // Verify download filename
         const filename = download.suggestedFilename();
-        expect(filename).toMatch(/job-assistant|export|data/i);
+        expect(filename).toMatch(/rolemule|export|data/i);
       }
     });
     

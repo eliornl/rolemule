@@ -13,7 +13,7 @@ Migration is done: page entries live in `ui/src/` and `ui/vite.entries.json`. Th
 
 ### 0.1 Goal
 
-Upgrade the ApplyPilot web frontend build and language toolchain so that:
+Upgrade the RoleMule web frontend build and language toolchain so that:
 
 1. Page scripts can use **ES modules** (`import` / `export`) and be **bundled** per page entry.
 2. Source is written in **TypeScript** with real compile-time checks (not JSDoc-only).
@@ -365,7 +365,7 @@ cd e2e && npx playwright test tests/smoke.spec.ts
 cd e2e && npx playwright test tests/visual-regression.spec.ts
 
 # 6) Docker frontend stage (if Docker available)
-docker build --target frontend-builder -t applypilot-fe-test .
+docker build --target frontend-builder -t rolemule-fe-test .
 ```
 
 **Pass criteria:** smoke + visual-regression green; manifest keys intact; no console CSP violations on spot-checked pages.
@@ -920,7 +920,7 @@ cd e2e && npx playwright test \
   tests/journey.spec.ts
 
 # Docker image build
-docker build -t applypilot:fe-migration .
+docker build -t rolemule:fe-migration .
 ```
 
 Optional live Tier 2 (manual): `auth.spec.ts` against local server.

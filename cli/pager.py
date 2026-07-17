@@ -43,7 +43,7 @@ def maybe_page(text: str, *, no_pager: bool = False, quiet: bool = False) -> Non
             sys.stdout.write("\n")
         return
 
-    pager_cmd = os.environ.get("APPLYPILOT_PAGER") or os.environ.get("PAGER") or "less"
+    pager_cmd = os.environ.get("ROLEMULE_PAGER") or os.environ.get("PAGER") or "less"
     parts = pager_cmd.split()
     executable = parts[0]
     if executable == "cat" or shutil.which(executable) is None:

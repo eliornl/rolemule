@@ -1,11 +1,11 @@
-"""Tests for applypilot interview commands."""
+"""Tests for rolemule interview commands."""
 
 from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 
 
 def test_interview_show_formats_questions(invoke, write_credentials) -> None:

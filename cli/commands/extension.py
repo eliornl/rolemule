@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError
+from rolemule_client.errors import ApiClientError
 from cli.context import CliContext
 from cli.formatters.extension import format_autofill_map
 from cli.output import emit, emit_workflow_error, require_client

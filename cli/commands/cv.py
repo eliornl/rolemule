@@ -9,8 +9,8 @@ from typing import Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
-from applypilot_client.polling import CvPollTimeout, wait_for_cv_optimization
+from rolemule_client.errors import ApiClientError, ExitCode
+from rolemule_client.polling import CvPollTimeout, wait_for_cv_optimization
 from cli.context import CliContext
 from cli.formatters.cv import format_cv_result
 from cli.output import emit, emit_error, emit_workflow_error, require_client

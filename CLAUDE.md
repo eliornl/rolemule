@@ -1,6 +1,6 @@
-# ApplyPilot — Claude Code Rules Index
+# RoleMule — Claude Code Rules Index
 
-**Product name:** ApplyPilot (repo folder: `applypilot`).
+**Product name:** RoleMule (repo folder: `rolemule`).
 
 All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before** working in that area. Never load all files — only pull what the task needs.
 
@@ -10,7 +10,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 
 | File | Read when... |
 |------|-------------|
-| `.claude/rules/applypilot-core.mdc` | any task — app name, `APIError`/`ErrorCode` (**`CFG_6001`**, **`RES_3002`**, content fingerprint NFKC + `utils/application_dedupe.py`, post-start duplicate / `uq_user_job_company`), **`POST /workflow/start` job file** (`.pdf`/`.txt`/`.docx`, 5 MB), background tasks, **workflow failure (no partial outputs, dashboard list join)**, route prefixes |
+| `.claude/rules/rolemule-core.mdc` | any task — app name, `APIError`/`ErrorCode` (**`CFG_6001`**, **`RES_3002`**, content fingerprint NFKC + `utils/application_dedupe.py`, post-start duplicate / `uq_user_job_company`), **`POST /workflow/start` job file** (`.pdf`/`.txt`/`.docx`, 5 MB), background tasks, **workflow failure (no partial outputs, dashboard list join)**, route prefixes |
 | `.claude/rules/python-conventions.mdc` | writing or editing any Python file |
 | `.claude/rules/database-patterns.mdc` | touching models, migrations, JSONB fields, SQLAlchemy queries |
 | `.claude/rules/auth-patterns.mdc` | auth endpoints, JWT, login, registration, token revocation, lockout |
@@ -40,7 +40,7 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/adding-new-features.mdc` | adding a new endpoint, agent, tool, migration, asset, or preference |
 | `.claude/rules/settings-page.mdc` | settings tabs, Preferences, AI Setup, auto-save, account-icon variants |
 | `.claude/rules/frontend-build-pipeline.mdc` | Vite+TS page entries + esbuild CSS, `asset_url()`, manifest, `make build-frontend` |
-| `.claude/rules/cli.mdc` | ApplyPilot CLI — Typer commands, `applypilot_client`, `tests/test_cli/`, docs |
+| `.claude/rules/cli.mdc` | RoleMule CLI — Typer commands, `rolemule_client`, `tests/test_cli/`, docs |
 | `.claude/rules/mobile-responsive.mdc` | breakpoints, navbar collapse, scrollable tab bars, mobile utilities |
 | `.claude/rules/unit-testing.mdc` | ~300 agent + ~1,050 API + **364** CLI + **6** ASGI CLI integration tests; `live_server_helpers`; ASGITransport (not TestClient) for CLI ASGI; cov ≥97% includes root `test_cv_*` |
 | `.claude/rules/e2e-testing.mdc` | ~1,380 Playwright specs; CI smoke-only (`e2e-smoke`); `setupAuth`, `page.route()`, JWT/cookie-consent setup |

@@ -52,7 +52,7 @@ Wrong-company research is mitigated before the full research call:
 
 Do not invent a specific employer when the posting only names a staffing agency. Prefer honesty (`research_quality=posting_only` / uncertainty banners) over a confident wrong company.
 
-**Any single agent failure fails the entire workflow** — the session ends `failed`, parallel document generation requires **both** agents to succeed, and partial agent JSON is not left on `workflow_sessions` for API clients (see **`applypilot-core.mdc`** workflow failure section).
+**Any single agent failure fails the entire workflow** — the session ends `failed`, parallel document generation requires **both** agents to succeed, and partial agent JSON is not left on `workflow_sessions` for API clients (see **`rolemule-core.mdc`** workflow failure section).
 
 The default gate threshold is **50%** (`workflow_gate_threshold: 0.5` in `DEFAULT_WORKFLOW_PREFERENCES`). Users can configure it in **Settings → Preferences**.
 

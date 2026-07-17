@@ -1,6 +1,6 @@
 # UI Static Assets
 
-Static assets for the ApplyPilot web frontend.
+Static assets for the RoleMule web frontend.
 
 > **Page scripts** live in **`ui/src/`** (TypeScript, Vite-bundled). This folder holds **CSS**, images, favicon, and build output.
 

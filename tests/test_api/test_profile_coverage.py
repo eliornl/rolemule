@@ -2431,7 +2431,7 @@ class TestProfileCoverageRemaining:
 
                 with patch(
                     "api.profile.resume_absolute_path",
-                    return_value=Path("/tmp/applypilot-missing-resume.bin"),
+                    return_value=Path("/tmp/rolemule-missing-resume.bin"),
                 ):
                     with pytest.raises(Exception) as exc2:
                         await download_stored_resume(_current_user(uid, email), db)

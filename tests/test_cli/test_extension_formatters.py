@@ -1,4 +1,4 @@
-"""Tests for applypilot extension formatters."""
+"""Tests for rolemule extension formatters."""
 
 from __future__ import annotations
 

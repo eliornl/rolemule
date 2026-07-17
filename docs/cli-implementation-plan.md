@@ -1,4 +1,4 @@
-# ApplyPilot CLI — Implementation Plan
+# RoleMule CLI — Implementation Plan
 
 **Status:** Implemented (Phases 0–9 complete on `feature/cli`, 2026-07-08)  
 **Last updated:** 2026-07-08  
@@ -10,7 +10,7 @@
 
 ## 1. Executive summary
 
-Build a **full-parity CLI** for ApplyPilot that talks to the existing FastAPI server over `/api/v1/*`. The CLI is a thin client — no agents, no database, no duplicate business logic. Same architecture as the Chrome extension.
+Build a **full-parity CLI** for RoleMule that talks to the existing FastAPI server over `/api/v1/*`. The CLI is a thin client — no agents, no database, no duplicate business logic. Same architecture as the Chrome extension.
 
 **Primary users:**
 - Developers using **AI coding assistants** (Claude Code, Cursor, Codex, Gemini CLI, etc.) — any tool that can run shell commands and read stdout
@@ -39,7 +39,7 @@ Build a **full-parity CLI** for ApplyPilot that talks to the existing FastAPI se
 | Safe defaults | Destructive commands require `--confirm` or an interactive Typer/Click confirmation prompt. |
 | Two output modes | `--format human` (default) and `--format json` (machine-readable for AI agents). |
 | Long jobs poll | `--wait` blocks with progress until a **stop state** (see §5.5 workflow statuses). |
-| Config on disk | `~/.applypilot/config.toml` + `~/.applypilot/credentials.json` (mode `0600`). |
+| Config on disk | `~/.rolemule/config.toml` + `~/.rolemule/credentials.json` (mode `0600`). |
 | No secrets in logs | Never print JWT, BYOK keys, or passwords except masked. |
 
 ---
@@ -48,12 +48,12 @@ Build a **full-parity CLI** for ApplyPilot that talks to the existing FastAPI se
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  applypilot (Typer CLI entry point)                         │
+│  rolemule (Typer CLI entry point)                         │
 │    commands/auth.py, workflow.py, apps.py, tools.py, ...    │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
-│  applypilot_client/ (shared HTTP library)                   │
+│  rolemule_client/ (shared HTTP library)                   │
 │    client.py      — httpx sync wrapper, auth header         │
 │    errors.py      — APIError parsing, exit codes            │
 │    polling.py     — wait_for_workflow, wait_for_cv, etc.    │
@@ -62,7 +62,7 @@ Build a **full-parity CLI** for ApplyPilot that talks to the existing FastAPI se
 └──────────────────────────┬──────────────────────────────────┘
                            │ HTTP or HTTPS
 ┌──────────────────────────▼──────────────────────────────────┐
-│  ApplyPilot server (existing FastAPI app)                     │
+│  RoleMule server (existing FastAPI app)                     │
 │    /api/v1/auth, profile, workflow, applications, ...         │
 └───────────────────────────────────────────────────────────────┘
 ```
@@ -70,12 +70,12 @@ Build a **full-parity CLI** for ApplyPilot that talks to the existing FastAPI se
 ### 3.1 Proposed directory layout
 
 ```
-applypilot/
+rolemule/
 ├── cli/
 │   ├── __init__.py
 │   ├── __main__.py              # python -m cli
 │   ├── main.py                  # Typer app root
-│   ├── config.py                # load/save ~/.applypilot/*
+│   ├── config.py                # load/save ~/.rolemule/*
 │   ├── context.py               # global flags: --base-url, --format, --no-color
 │   └── commands/
 │       ├── auth.py
@@ -87,7 +87,7 @@ applypilot/
 │       ├── tools.py
 │       ├── extension.py         # autofill map (power users)
 │       └── doctor.py            # health + config diagnostics
-├── applypilot_client/
+├── rolemule_client/
 │   ├── __init__.py
 │   ├── client.py
 │   ├── errors.py
@@ -108,7 +108,7 @@ applypilot/
 │       ├── test_client.py
 │       ├── test_auth_commands.py
 │       └── ...                  # one file per phase
-├── pyproject.toml               # [project.scripts] applypilot = "cli.main:main"
+├── pyproject.toml               # [project.scripts] rolemule = "cli.main:main"
 └── docs/
     └── cli-implementation-plan.md   # this file
 ```
@@ -120,7 +120,7 @@ Keep CLI deps out of the production server image. Use a `pyproject.toml` optiona
 ```toml
 [project]
 dependencies = [
-  "httpx>=0.28",   # shared with server; required by applypilot_client
+  "httpx>=0.28",   # shared with server; required by rolemule_client
 ]
 
 [project.optional-dependencies]
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 ```toml
 # pyproject.toml
 [project.scripts]
-applypilot = "cli.main:main"
+rolemule = "cli.main:main"
 ```
 
 Install locally: `pip install -e ".[cli]"` from repo root.
@@ -161,7 +161,7 @@ Install locally: `pip install -e ".[cli]"` from repo root.
 
 ## 4. Configuration and authentication
 
-### 4.1 Config file — `~/.applypilot/config.toml`
+### 4.1 Config file — `~/.rolemule/config.toml`
 
 ```toml
 [server]
@@ -176,9 +176,9 @@ poll_interval_seconds = 3
 poll_timeout_seconds = 600
 ```
 
-Override per invocation: `applypilot --base-url https://... workflow analyze ...`
+Override per invocation: `rolemule --base-url https://... workflow analyze ...`
 
-### 4.2 Credentials — `~/.applypilot/credentials.json`
+### 4.2 Credentials — `~/.rolemule/credentials.json`
 
 ```json
 {
@@ -190,8 +190,8 @@ Override per invocation: `applypilot --base-url https://... workflow analyze ...
 ```
 
 - File permissions: `0600` on write
-- `applypilot auth login` writes; `applypilot auth logout` deletes token key only
-- `applypilot auth token set --from-stdin` for Google OAuth users (paste JWT from browser DevTools)
+- `rolemule auth login` writes; `rolemule auth logout` deletes token key only
+- `rolemule auth token set --from-stdin` for Google OAuth users (paste JWT from browser DevTools)
 
 ### 4.3 Auth flows
 
@@ -220,8 +220,8 @@ Only some endpoints require a **completed profile** (403 otherwise). The CLI mus
 | | All `/profile/*` (read/update during setup — no complete profile required) |
 
 CLI helpers:
-- `applypilot profile status` — show completion breakdown
-- Exit code `2` — link to `applypilot profile complete` or web `/profile/setup`
+- `rolemule profile status` — show completion breakdown
+- Exit code `2` — link to `rolemule profile complete` or web `/profile/setup`
 
 ---
 
@@ -238,7 +238,7 @@ Legend: **Phase** = implementation phase number.
 | `--no-color` | Disable Rich styling |
 | `-q` / `-v` | Quiet / verbose |
 
-### 5.2 `applypilot doctor` — Phase 0
+### 5.2 `rolemule doctor` — Phase 0
 
 | Command | API | Notes |
 |---------|-----|-------|
@@ -246,7 +246,7 @@ Legend: **Phase** = implementation phase number.
 | `doctor` | `GET /api/v1/auth/verify` | Token valid? (if logged in) |
 | `doctor` | reads config files | Permissions, paths |
 
-### 5.3 `applypilot auth` — Phase 1
+### 5.3 `rolemule auth` — Phase 1
 
 | Command | API |
 |---------|-----|
@@ -266,7 +266,7 @@ Legend: **Phase** = implementation phase number.
 
 **Not in CLI:** OAuth browser redirects (`/auth/google`, callback, exchange-code), `google/link`, `google/unlink` — document token-import workaround via `auth token set`.
 
-### 5.4 `applypilot profile` — Phase 2
+### 5.4 `rolemule profile` — Phase 2
 
 | Command | API |
 |---------|-----|
@@ -294,7 +294,7 @@ Legend: **Phase** = implementation phase number.
 
 JSON profile sections: accept `--file data.json` or stdin (`--file -`).
 
-### 5.5 `applypilot workflow` — Phase 3
+### 5.5 `rolemule workflow` — Phase 3
 
 | Command | API |
 |---------|-----|
@@ -311,7 +311,7 @@ JSON profile sections: accept `--file data.json` or stdin (`--file -`).
 | `workflow generate-documents SESSION` | `POST /api/v1/workflow/generate-documents/{id}` |
 | `workflow regenerate cover-letter SESSION` | `POST .../regenerate-cover-letter/{id}` |
 | `workflow regenerate resume SESSION` | `POST .../regenerate-resume/{id}` |
-| `workflow generate-interview-prep SESSION` | `POST .../generate-interview-prep/{id}` (legacy path; prefer `applypilot interview generate`) |
+| `workflow generate-interview-prep SESSION` | `POST .../generate-interview-prep/{id}` (legacy path; prefer `rolemule interview generate`) |
 
 **Workflow statuses** (from `WorkflowStatus` enum — use these exact strings when polling):
 
@@ -331,9 +331,9 @@ JSON profile sections: accept `--file data.json` or stdin (`--file -`).
 
 **Error handling:**
 - `409 RES_3002` → exit `0` with warning; parse `details[]` where `field` is `application_id` or `session_id` (not a top-level object)
-- `422 CFG_6001` → “Add API key: applypilot profile api-key set” (or configure server `GEMINI_API_KEY` / Vertex)
+- `422 CFG_6001` → “Add API key: rolemule profile api-key set” (or configure server `GEMINI_API_KEY` / Vertex)
 
-### 5.6 `applypilot apps` — Phase 4
+### 5.6 `rolemule apps` — Phase 4
 
 | Command | API |
 |---------|-----|
@@ -358,7 +358,7 @@ JSON profile sections: accept `--file data.json` or stdin (`--file -`).
 
 Application detail view = combine `apps list` row + `workflow results` when `session_id` known.
 
-### 5.7 `applypilot interview` — Phase 5
+### 5.7 `rolemule interview` — Phase 5
 
 | Command | API |
 |---------|-----|
@@ -369,7 +369,7 @@ Application detail view = combine `apps list` row + `workflow results` when `ses
 
 Human output: sections for questions, model answers, checklist (match UI fields).
 
-### 5.8 `applypilot cv` — Phase 6
+### 5.8 `rolemule cv` — Phase 6
 
 | Command | API |
 |---------|-----|
@@ -381,7 +381,7 @@ Human output: sections for questions, model answers, checklist (match UI fields)
 
 Download: respect `Content-Disposition` filename; fallback `optimized-cv.odt` / `.docx`.
 
-### 5.9 `applypilot tools` — Phase 7
+### 5.9 `rolemule tools` — Phase 7
 
 | Command | API |
 |---------|-----|
@@ -396,15 +396,15 @@ Download: respect `Content-Disposition` filename; fallback `optimized-cv.odt` / 
 **Ergonomic shortcuts** (optional sugar, same endpoints):
 
 ```bash
-applypilot tools thank-you \
+rolemule tools thank-you \
   --application-id UUID \
   --interviewer "Jane Smith" \
   --highlights "Led migration project"
 ```
 
-Provide `applypilot tools schema thank-you` — print example JSON request.
+Provide `rolemule tools schema thank-you` — print example JSON request.
 
-### 5.10 `applypilot extension` — Phase 8 (power users)
+### 5.10 `rolemule extension` — Phase 8 (power users)
 
 | Command | API |
 |---------|-----|
@@ -423,7 +423,7 @@ For testing autofill rules without the browser. Requires **complete profile** (i
 
 **Not in CLI:** `POST /api/v1/admin/internal/cleanup/orphaned-sessions` — requires `X-Scheduler-Secret`; Cloud Scheduler only.
 
-Hidden behind `applypilot admin` — not in top-level help unless `APPLYPILOT_ADMIN=1`.
+Hidden behind `rolemule admin` — not in top-level help unless `ROLEMULE_ADMIN=1`.
 
 ### 5.12 Explicitly out of scope
 
@@ -497,11 +497,11 @@ Implement → Unit/CLI tests → Code review checklist → Sign-off → Next pha
 **Goal:** Empty CLI runs, talks to server, handles errors.
 
 **Deliverables:**
-- [ ] `pyproject.toml` with `applypilot` entry point
+- [ ] `pyproject.toml` with `rolemule` entry point
 - [ ] `cli/main.py` Typer root + global options
 - [ ] `cli/config.py` — load/save TOML + credentials
-- [ ] `applypilot_client/client.py` — sync `httpx.Client`, Bearer auth, timeout 30s
-- [ ] `applypilot_client/errors.py` — parse API error JSON, map to `CliError`
+- [ ] `rolemule_client/client.py` — sync `httpx.Client`, Bearer auth, timeout 30s
+- [ ] `rolemule_client/errors.py` — parse API error JSON, map to `CliError`
 - [ ] `cli/commands/doctor.py`
 - [ ] `Makefile` target: `make cli-test`
 
@@ -524,7 +524,7 @@ pytest tests/test_cli/test_config.py tests/test_cli/test_client.py tests/test_cl
 - [ ] httpx calls have explicit timeout
 - [ ] File permissions on credentials write
 
-**Exit criteria:** `applypilot doctor` works against local `make start-local`.
+**Exit criteria:** `rolemule doctor` works against local `make start-local`.
 
 ---
 
@@ -533,7 +533,7 @@ pytest tests/test_cli/test_config.py tests/test_cli/test_client.py tests/test_cl
 **Goal:** Login, logout, token management.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/auth.py`
+- [ ] `rolemule_client/resources/auth.py`
 - [ ] `cli/commands/auth.py` — login, logout, whoami, refresh, register, verify-code, change-password, resend-verification, verification-status, extension-status, token set/show
 - [ ] Password prompt via `getpass` (never argv)
 - [ ] `auth token set --from-stdin` for OAuth users
@@ -553,7 +553,7 @@ pytest tests/test_cli/test_config.py tests/test_cli/test_client.py tests/test_cl
 - [ ] Logout calls server before deleting local token
 - [ ] Google OAuth documented in command help, not half-implemented
 
-**Exit criteria:** `applypilot auth login && applypilot auth whoami` succeeds against dev server.
+**Exit criteria:** `rolemule auth login && rolemule auth whoami` succeeds against dev server.
 
 ---
 
@@ -562,7 +562,7 @@ pytest tests/test_cli/test_config.py tests/test_cli/test_client.py tests/test_cl
 **Goal:** Full profile CRUD, resume, API key, workflow preferences.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/profile.py`
+- [ ] `rolemule_client/resources/profile.py`
 - [ ] `cli/commands/profile.py`
 - [ ] JSON file helpers for work-experience / education arrays
 - [ ] Multipart upload for resume
@@ -590,8 +590,8 @@ pytest tests/test_cli/test_config.py tests/test_cli/test_client.py tests/test_cl
 **Goal:** Analyze jobs end-to-end from terminal — the main Claude Code workflow.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/workflow.py`
-- [ ] `applypilot_client/polling.py` — `wait_for_terminal_status()`
+- [ ] `rolemule_client/resources/workflow.py`
+- [ ] `rolemule_client/polling.py` — `wait_for_terminal_status()`
 - [ ] `cli/commands/workflow.py`
 - [ ] `workflow analyze` from stdin, `.txt`, `.pdf`, `.docx`
 - [ ] `--wait` progress UI
@@ -616,7 +616,7 @@ pytest tests/test_cli/test_config.py tests/test_cli/test_client.py tests/test_cl
 **Exit criteria:**
 
 ```bash
-cat job.txt | applypilot workflow analyze --wait --format json
+cat job.txt | rolemule workflow analyze --wait --format json
 ```
 
 returns full results JSON on a complete profile with API key configured.
@@ -628,7 +628,7 @@ returns full results JSON on a complete profile with API key configured.
 **Goal:** List, filter, update, delete, download applications.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/applications.py`
+- [ ] `rolemule_client/resources/applications.py`
 - [ ] `cli/commands/applications.py`
 - [ ] Table output for `apps list`
 - [ ] Binary download for `apps download`
@@ -645,7 +645,7 @@ returns full results JSON on a complete profile with API key configured.
 - [ ] Download uses streaming for large files
 - [ ] Soft-deleted apps not shown (server handles; CLI documents)
 
-**Exit criteria:** `applypilot apps list --search python` matches dashboard search.
+**Exit criteria:** `rolemule apps list --search python` matches dashboard search.
 
 ---
 
@@ -654,7 +654,7 @@ returns full results JSON on a complete profile with API key configured.
 **Goal:** Generate and display interview prep from CLI.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/interview_prep.py`
+- [ ] `rolemule_client/resources/interview_prep.py`
 - [ ] `cli/commands/interview.py`
 - [ ] `--wait` on generate (poll status endpoint)
 
@@ -678,7 +678,7 @@ returns full results JSON on a complete profile with API key configured.
 **Goal:** Start optimization loop, monitor, download CV file.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/cv_optimizer.py`
+- [ ] `rolemule_client/resources/cv_optimizer.py`
 - [ ] `cli/commands/cv.py`
 - [ ] Long `--wait` (up to 10+ min) with iteration progress
 - [ ] Download binary with correct extension
@@ -695,7 +695,7 @@ returns full results JSON on a complete profile with API key configured.
 - [ ] Download rate limit surfaced clearly
 - [ ] Partial/quota result shows notice in human mode
 
-**Exit criteria:** `applypilot cv start SESSION --wait && applypilot cv download SESSION -o cv.odt`
+**Exit criteria:** `rolemule cv start SESSION --wait && rolemule cv download SESSION -o cv.odt`
 
 ---
 
@@ -704,7 +704,7 @@ returns full results JSON on a complete profile with API key configured.
 **Goal:** All standalone tools invocable with JSON or flags.
 
 **Deliverables:**
-- [ ] `applypilot_client/resources/tools.py`
+- [ ] `rolemule_client/resources/tools.py`
 - [ ] `cli/commands/tools.py`
 - [ ] `tools schema <tool>` example JSON generator
 - [ ] Flag-based shortcuts for common fields
@@ -747,7 +747,7 @@ Reuse patterns from `tests/test_api/test_career_tools.py` for fixture payloads.
 - [ ] Admin commands hidden from default `--help`
 - [ ] Autofill docs say "for extension testing"
 
-**Exit criteria:** `applypilot extension autofill map --file fields.json` returns assignments JSON.
+**Exit criteria:** `rolemule extension autofill map --file fields.json` returns assignments JSON.
 
 ---
 
@@ -759,7 +759,7 @@ Reuse patterns from `tests/test_api/test_career_tools.py` for fixture payloads.
 - [x] `docs/cli-reference.md` — full command reference
 - [x] `USER_GUIDE.md` — new "CLI" section
 - [x] `README.md` — Quick Start CLI block
-- [x] Shell completion: `applypilot --install-completion`
+- [x] Shell completion: `rolemule --install-completion`
 - [x] CI job: `pytest tests/test_cli/ -v`
 - [x] `CHANGELOG.md` entry
 - [x] `.cursor/rules/cli.mdc` — conventions for future CLI changes
@@ -820,7 +820,7 @@ def cli_runner():
 
 @pytest.fixture
 def mock_config(tmp_path, monkeypatch):
-    # Redirect ~/.applypilot to tmp_path
+    # Redirect ~/.rolemule to tmp_path
     ...
 
 @pytest.fixture
@@ -831,7 +831,7 @@ def authed_client_transport():
 
 ### 8.4 Coverage target
 
-- `applypilot_client/`: **≥ 90%** line coverage
+- `rolemule_client/`: **≥ 90%** line coverage
 - `cli/commands/`: every command at least one happy-path + one error-path test
 - No coverage requirement on formatters if tested via snapshot strings
 
@@ -851,7 +851,7 @@ def authed_client_transport():
 - [ ] `pytest tests/test_cli/ -v` passes
 - [ ] No new bare `HTTPException` in any touched server code (CLI shouldn't touch server)
 - [ ] `--format json` output is valid JSON on stdout (stderr separate)
-- [ ] Help text exists for every command (`applypilot <cmd> --help`)
+- [ ] Help text exists for every command (`rolemule <cmd> --help`)
 - [ ] Destructive ops need `--confirm`
 - [ ] Claude Code example in PR description (one copy-paste command)
 
@@ -879,7 +879,7 @@ def authed_client_transport():
 
 ### Demo
 \`\`\`bash
-applypilot ...
+rolemule ...
 \`\`\`
 ```
 
@@ -900,7 +900,7 @@ Phase 9 adds:
 - name: Install CLI editable
   run: pip install -e ".[cli]"
 - name: CLI help smoke
-  run: applypilot --help && applypilot workflow --help
+  run: rolemule --help && rolemule workflow --help
 ```
 
 ---
@@ -911,29 +911,29 @@ Any agent with shell access can run the CLI. Document these in `docs/cli-referen
 
 ```bash
 # Analyze a job file and get JSON for the agent to read
-applypilot workflow analyze jobs/acme.txt --wait --format json
+rolemule workflow analyze jobs/acme.txt --wait --format json
 
 # List applications needing follow-up (--status is CLI flag → API status_filter)
-applypilot apps list --status applied --format json
+rolemule apps list --status applied --format json
 
 # Generate interview prep and save to file
-applypilot interview generate SESSION --wait --format json > prep.json
+rolemule interview generate SESSION --wait --format json > prep.json
 
 # Salary negotiation script
-applypilot tools salary-coach --file offer.json --format json
+rolemule tools salary-coach --file offer.json --format json
 
 # Check setup before a session
-applypilot doctor && applypilot profile status
+rolemule doctor && rolemule profile status
 ```
 
 **`CLAUDE.md` / project rules snippet** (Phase 9):
 
 ```markdown
-## ApplyPilot CLI
+## RoleMule CLI
 - Server must be running (`make start-local`)
-- Login once: `applypilot auth login` (or `auth token set` for Google OAuth users)
+- Login once: `rolemule auth login` (or `auth token set` for Google OAuth users)
 - Prefer `--format json` when parsing output in an AI session
-- Job analysis: `applypilot workflow analyze FILE --wait --format json`
+- Job analysis: `rolemule workflow analyze FILE --wait --format json`
 - Works from any AI tool that can run terminal commands — not Claude-specific
 ```
 
@@ -957,11 +957,11 @@ applypilot doctor && applypilot profile status
 **Implemented (2026-07-08):**
 
 - ✅ Personal access tokens — `POST/GET/DELETE /api/v1/auth/tokens`; CLI `auth token create|list|revoke`
-- ✅ `applypilot apps show APP_ID` — `GET /api/v1/applications/{id}`
+- ✅ `rolemule apps show APP_ID` — `GET /api/v1/applications/{id}`
 - ✅ `workflow results --out` / `--out-dir` — write cover letter, resume tips, etc. to files
-- ✅ `applypilot workflow watch SESSION` — WebSocket streaming progress (`websocket-client` extra)
-- ✅ Pager for long human output — `--no-pager` global flag; `$PAGER` / `$APPLYPILOT_PAGER`
-- ✅ `config` / `config set` — view and patch `~/.applypilot/config.toml`
+- ✅ `rolemule workflow watch SESSION` — WebSocket streaming progress (`websocket-client` extra)
+- ✅ Pager for long human output — `--no-pager` global flag; `$PAGER` / `$ROLEMULE_PAGER`
+- ✅ `config` / `config set` — view and patch `~/.rolemule/config.toml`
 - ✅ `--confirm` on `profile resume delete` and `profile api-key delete`
 - ✅ `auth token create --save` — write PAT to `credentials.json` for scripts
 
@@ -973,19 +973,19 @@ applypilot doctor && applypilot profile status
 | `doctor` PAT awareness | ~2 h | ✅ token type, expiry hint, refresh guidance |
 | `workflow watch` human mode | ~3 h | ✅ human lines; `--format json` for raw events |
 | Shell alias recipes in docs | ~1 h | ✅ `cli-reference.md` § Shell aliases |
-| MCP server over `applypilot_client` | ~2–3 days | Open — optional; CLI + shell is enough for self-hosted |
+| MCP server over `rolemule_client` | ~2–3 days | Open — optional; CLI + shell is enough for self-hosted |
 | pipx / Homebrew publish | ~1 day | **Not planned** — self-hosted users get CLI via `make setup` |
 
 **Deploy note:** run `make migrate` (revision `20260708_024`) on any environment before using PAT endpoints.
 
 ### Why MCP? (optional, not required)
 
-The CLI already works from any terminal (Cursor, Claude Code, scripts). **MCP** (Model Context Protocol) would wrap `applypilot_client` as a structured tool server so AI apps could call “analyze job” / “list applications” without shelling out. Useful for tighter IDE integration; **not** needed for correctness or parity.
+The CLI already works from any terminal (Cursor, Claude Code, scripts). **MCP** (Model Context Protocol) would wrap `rolemule_client` as a structured tool server so AI apps could call “analyze job” / “list applications” without shelling out. Useful for tighter IDE integration; **not** needed for correctness or parity.
 
 ### What is pipx / Homebrew publish?
 
-- **pipx** — installs Python CLI tools in isolated global venvs (`pipx install applypilot` → `applypilot` on PATH without cloning the repo).
-- **Homebrew** — macOS/Linux package manager (`brew install applypilot` from a tap). Same goal: one-command install for end users who are not developers.
+- **pipx** — installs Python CLI tools in isolated global venvs (`pipx install rolemule` → `rolemule` on PATH without cloning the repo).
+- **Homebrew** — macOS/Linux package manager (`brew install rolemule` from a tap). Same goal: one-command install for end users who are not developers.
 
 ---
 
@@ -1013,7 +1013,7 @@ Phases 4–7 can be parallelized after Phase 3 if multiple contributors.
 ```bash
 # 1. Add pyproject.toml + cli/ skeleton
 # 2. pip install -e ".[cli]"   # or editable install
-# 3. applypilot doctor
+# 3. rolemule doctor
 # 4. Open PR: "Phase 0: CLI foundation"
 ```
 

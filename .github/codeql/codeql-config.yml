@@ -1,4 +1,4 @@
-name: ApplyPilot CodeQL
+name: RoleMule CodeQL
 
 paths-ignore:
   - venv-clean/

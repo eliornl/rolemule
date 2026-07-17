@@ -10,7 +10,7 @@ from typing import Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.context import CliContext
 from cli.formatters.applications import format_application_show, format_applications_table, format_stats_human
 from cli.output import emit, emit_error, require_client

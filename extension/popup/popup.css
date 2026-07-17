@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ApplyPilot - Chrome Extension Popup Styles
+   RoleMule - Chrome Extension Popup Styles
    Matching the main app's dark theme design system
    ========================================================================== */
 
@@ -115,13 +115,25 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--accent-gradient);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 13px;
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.logo-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  /* Same zoom as app navbar — full mule + pack mark */
+  transform: scale(1.28);
+  transform-origin: center center;
 }
 
 .brand-accent {

@@ -10,8 +10,8 @@ from typing import Any, Dict, Optional
 
 import typer
 
-from applypilot_client.client import ApplyPilotClient
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.client import RoleMuleClient
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.config import Credentials, load_credentials, save_credentials
 from cli.context import CliContext
 
@@ -67,7 +67,7 @@ def persist_auth_response(data: Dict[str, Any], email_hint: Optional[str] = None
     )
 
 
-def make_client(ctx: CliContext) -> ApplyPilotClient:
+def make_client(ctx: CliContext) -> RoleMuleClient:
     """Build API client with token refresh persistence."""
 
     def _on_refresh(token: str) -> None:
@@ -80,20 +80,20 @@ def make_client(ctx: CliContext) -> ApplyPilotClient:
             )
         )
 
-    return ApplyPilotClient(
+    return RoleMuleClient(
         ctx.base_url,
         access_token=ctx.access_token,
         on_token_refreshed=_on_refresh,
     )
 
 
-def require_client(ctx: CliContext) -> ApplyPilotClient:
+def require_client(ctx: CliContext) -> RoleMuleClient:
     """Return an authenticated client or exit with AUTH_OR_PROFILE."""
     if not ctx.access_token:
         emit(
             ctx,
-            {"authenticated": False, "message": "Not logged in. Run: applypilot auth login"},
-            human="Not logged in. Run: applypilot auth login",
+            {"authenticated": False, "message": "Not logged in. Run: rolemule auth login"},
+            human="Not logged in. Run: rolemule auth login",
         )
         raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
     return make_client(ctx)
@@ -136,7 +136,7 @@ def emit_workflow_error(ctx: CliContext, exc: ApiClientError) -> None:
         emit_duplicate_application(ctx, exc)
     if exc.error_code == "CFG_6001":
         hint = (
-            "Configure AI: applypilot profile api-key set --provider gemini "
+            "Configure AI: rolemule profile api-key set --provider gemini "
             "(or openai/anthropic), or set preferred_provider=ollama / USE_VERTEX_AI"
         )
         if ctx.output_format == "json":

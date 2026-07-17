@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Sign Up - {{ app_name or "ApplyPilot" }}{% endblock %}
-{% block description %}Create your ApplyPilot account{% endblock %}
+{% block title %}Sign Up - {{ app_name or "RoleMule" }}{% endblock %}
+{% block description %}Create your RoleMule account{% endblock %}
 {% block extra_head %}
 <!-- Auth Page Specific Styles -->
     <style nonce="{{ request.state.csp_nonce | default('') }}">
@@ -436,7 +436,7 @@
             <div class="auth-card">
                 <div class="auth-header">
                     <h2>Create Account</h2>
-                    <p>Your AI-powered job search co-pilot</p>
+                    <p>One mule for every role.</p>
                 </div>
 
                 <!-- Error Alert -->

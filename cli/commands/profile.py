@@ -11,7 +11,7 @@ from typing import Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.context import CliContext
 from cli.output import emit, emit_error, require_client
 from cli.util import filename_from_headers, payload_from_file, require_confirm
@@ -316,7 +316,7 @@ def api_key_status(ctx: typer.Context) -> None:
         else:
             human = (
                 f"Not ready (provider={preferred}). "
-                "Pick a provider and set a key: applypilot profile api-key set --provider gemini"
+                "Pick a provider and set a key: rolemule profile api-key set --provider gemini"
             )
         emit(cli_ctx, data, human=human)
         return
@@ -474,7 +474,7 @@ def profile_export(
     except ApiClientError as exc:
         emit_error(cli_ctx, exc)
 
-    filename = filename_from_headers(headers, "applypilot-export.json")
+    filename = filename_from_headers(headers, "rolemule-export.json")
     if out is None:
         out = Path(filename)
 

@@ -1,4 +1,4 @@
-"""Tests for applypilot cv commands."""
+"""Tests for rolemule cv commands."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 
 
 def test_cv_start_wait(invoke, write_credentials) -> None:

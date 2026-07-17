@@ -536,7 +536,7 @@ test.describe('I. API Key Step — Conditional', () => {
       await page.locator('[data-action="onboarding-next"]').click();
       await page.waitForTimeout(200);
     }
-    expect(titles.some(t => /api key/i.test(t))).toBe(true);
+    expect(titles.some(t => /api key|ai provider/i.test(t))).toBe(true);
   });
 
   test('api-key step is skipped when server has key', async ({ page }) => {
@@ -558,7 +558,7 @@ test.describe('I. API Key Step — Conditional', () => {
       await page.locator('[data-action="onboarding-next"]').click();
       await page.waitForTimeout(200);
     }
-    expect(titles.some(t => /api key/i.test(t))).toBe(false);
+    expect(titles.some(t => /api key|ai provider/i.test(t))).toBe(false);
   });
 });
 

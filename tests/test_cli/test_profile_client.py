@@ -1,14 +1,14 @@
-"""Tests for applypilot_client.resources.profile."""
+"""Tests for rolemule_client.resources.profile."""
 
 from __future__ import annotations
 
 import httpx
 
-from applypilot_client.client import ApplyPilotClient
+from rolemule_client.client import RoleMuleClient
 
 
-def _mock_client(handler) -> ApplyPilotClient:
-    client = ApplyPilotClient("http://localhost:8000", access_token="jwt")
+def _mock_client(handler) -> RoleMuleClient:
+    client = RoleMuleClient("http://localhost:8000", access_token="jwt")
 
     def _request(method, path, **kwargs):
         url = f"{client.base_url}{path}"
@@ -19,7 +19,7 @@ def _mock_client(handler) -> ApplyPilotClient:
         response = handler(req, kwargs)
         if response.is_success:
             return response
-        from applypilot_client.errors import parse_error_response
+        from rolemule_client.errors import parse_error_response
 
         try:
             body = response.json()
@@ -67,7 +67,7 @@ def test_parse_resume_multipart(tmp_path) -> None:
         seen.append(True)
         return httpx.Response(200, json={"parsed": True})
 
-    client = ApplyPilotClient("http://localhost:8000", access_token="jwt")
+    client = RoleMuleClient("http://localhost:8000", access_token="jwt")
     client.request = handler  # type: ignore[method-assign]
     data = client.profile.parse_resume(str(resume))
     assert data["parsed"] is True

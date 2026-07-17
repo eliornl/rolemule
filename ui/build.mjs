@@ -1,5 +1,5 @@
 /**
- * ApplyPilot legacy CSS build script.
+ * RoleMule legacy CSS build script.
  *
  * Minifies and content-hashes CSS under ui/static/css/.
  * Page JavaScript is built by Vite from ui/src/ (see scripts/build-vite.mjs).

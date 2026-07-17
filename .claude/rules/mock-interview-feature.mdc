@@ -84,13 +84,13 @@ Reuse `WS /api/v1/ws/workflow/{session_id}`:
 
 **Streaming:** `start` / `turn` use `LLMClient.generate_stream` + `SpeakFieldStreamer` (`utils/llm/speak_stream.py`) to extract `"speak"` mid-JSON and broadcast deltas. Debrief stays non-streaming. Stream failure falls back to non-stream `generate()`.
 
-**Client WS guard:** `ui/src/mock-interview/ws-guard.ts` — `isMockInterviewMessageForSession` — ignore events whose `session_id` is not the open application (shared `applypilot:ws` bus).
+**Client WS guard:** `ui/src/mock-interview/ws-guard.ts` — `isMockInterviewMessageForSession` — ignore events whose `session_id` is not the open application (shared `rolemule:ws` bus).
 
 **Submit UX:** append/clear the answer box only after a **successful** turn HTTP response; on failure restore the last interviewer speak and keep the draft. Clear typing/thinking placeholders when the HTTP success path lands (not only on WS).
 
 **Streamer:** `SpeakFieldStreamer` must wait across chunks for incomplete `\uXXXX` / trailing `\` so split unicode escapes do not corrupt speak text.
 
-Frontend listens via `applypilot:ws` + 5s status polling fallback (stop polling on start/submit failure).
+Frontend listens via `rolemule:ws` + 5s status polling fallback (stop polling on start/submit failure).
 
 ## Frontend
 

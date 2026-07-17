@@ -2,7 +2,7 @@
 """
 Create a sibling copy of the repo for safe Just / Docker tests.
 
-Default destination: <parent>/applypilot-just-sandbox
+Default destination: <parent>/rolemule-just-sandbox
   - Separate folder from your main clone
   - Fresh .env (does not touch your real .env)
   - `just start` there uses a different Docker Compose project name → separate DB volumes
@@ -34,7 +34,7 @@ _SKIP_NAMES = frozenset(
         ".env.local",
         ".coverage",
         ".DS_Store",
-        "applypilot-just-sandbox",
+        "rolemule-just-sandbox",
         "sandbox-just-test",
     }
 )
@@ -61,7 +61,7 @@ def _copy_repo(src: Path, dst: Path) -> None:
 
 def _write_readme(dst: Path) -> None:
     dest_line = str(dst)
-    text = f"""# ApplyPilot — Just / Docker test sandbox
+    text = f"""# RoleMule — Just / Docker test sandbox
 
 This tree was created by `scripts/make_just_test_sandbox.py`.
 
@@ -97,12 +97,12 @@ def main() -> None:
         "--dest",
         type=Path,
         default=None,
-        help="Destination directory (default: sibling applypilot-just-sandbox)",
+        help="Destination directory (default: sibling rolemule-just-sandbox)",
     )
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parent.parent
-    dest = args.dest if args.dest is not None else repo.parent / "applypilot-just-sandbox"
+    dest = args.dest if args.dest is not None else repo.parent / "rolemule-just-sandbox"
 
     print(f"Source: {repo}")
     print(f"Destination: {dest}")

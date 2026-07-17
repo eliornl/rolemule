@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Verify Email | {{ app_name or "ApplyPilot" }}{% endblock %}
+{% block title %}Verify Email | {{ app_name or "RoleMule" }}{% endblock %}
 {% block description %}Verify your email address{% endblock %}
 {% block extra_head %}
 <style nonce="{{ request.state.csp_nonce | default('') }}">
@@ -40,16 +40,25 @@
             margin-bottom: 2rem;
         }
 
-        .brand-icon {
-            width: 60px;
-            height: 60px;
-            background: var(--accent-gradient);
-            border-radius: var(--radius-lg);
+                .brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
             color: white;
+            font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
         }
 
         .brand-text {
@@ -249,9 +258,9 @@
             <div class="auth-logo">
                 <a href="/" class="text-decoration-none">
                     <div class="brand-icon mx-auto mb-3">
-                        <i class="fas fa-rocket"></i>
+                        <img src="{{ asset_url('img/rolemule-icon.png') }}?v=6" alt="" width="36" height="36">
                     </div>
-                    <h1 class="brand-text">Apply<span class="brand-accent">Pilot</span></h1>
+                    <h1 class="brand-text">Role<span class="brand-accent">Mule</span></h1>
                 </a>
             </div>
 
@@ -297,7 +306,7 @@
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <h2 class="auth-title">Email Verified!</h2>
-                <p class="auth-subtitle" id="successMessage">Your email has been verified successfully. Welcome to ApplyPilot!</p>
+                <p class="auth-subtitle" id="successMessage">Your email has been verified successfully. Welcome to RoleMule!</p>
                 <a href="/profile/setup" id="continueBtn" class="btn btn-primary-glow w-100 mt-4">
                     <i class="fas fa-user-edit me-2"></i> Complete Your Profile
                 </a>

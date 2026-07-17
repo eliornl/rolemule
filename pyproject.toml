@@ -3,9 +3,9 @@ requires = ["setuptools>=83.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "applypilot"
+name = "rolemule"
 version = "0.0.0"
-description = "ApplyPilot — AI job application assistant (server + CLI client)"
+description = "RoleMule — AI job application assistant (server + CLI client)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -20,10 +20,10 @@ cli = [
 ]
 
 [project.scripts]
-applypilot = "cli.main:main"
+rolemule = "cli.main:main"
 
 [tool.setuptools.packages.find]
-include = ["cli*", "applypilot_client*"]
+include = ["cli*", "rolemule_client*"]
 
 [tool.setuptools.package-data]
 "*" = ["py.typed"]

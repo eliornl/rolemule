@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Help & FAQ | {{ app_name or "ApplyPilot" }}{% endblock %}
-{% block description %}Get help with ApplyPilot - FAQ, guides, and support{% endblock %}
+{% block title %}Help & FAQ | {{ app_name or "RoleMule" }}{% endblock %}
+{% block description %}Get help with RoleMule - FAQ, guides, and support{% endblock %}
 {% block extra_head %}
 <style nonce="{{ request.state.csp_nonce | default('') }}">
         .navbar {
@@ -16,16 +16,25 @@
             text-decoration: none;
         }
 
-        .brand-icon {
+                .brand-icon {
             width: 36px;
             height: 36px;
             border-radius: var(--radius-md);
-            background: var(--accent-gradient);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
         }
 
         .brand-text {
@@ -332,7 +341,7 @@
 
             <div class="help-header">
                 <h1>How can we help?</h1>
-                <p>Find answers to common questions and learn how to get the most out of ApplyPilot</p>
+                <p>Find answers to common questions and learn how to get the most out of RoleMule</p>
             </div>
 
             <!-- Search -->
@@ -344,7 +353,7 @@
             <!-- Quick Links -->
             <div class="quick-links">
                 <a href="#getting-started" class="quick-link-card">
-                    <i class="fas fa-rocket"></i>
+                    <i class="fas fa-flag"></i>
                     <h3>Getting Started</h3>
                     <p>Set up your account and analyze your first job in minutes.</p>
                 </a>
@@ -363,6 +372,11 @@
                     <h3>Chrome Extension</h3>
                     <p>Send job postings from your browser to your dashboard for analysis, or match application fields to your profile.</p>
                 </a>
+                <a href="#cli" class="quick-link-card">
+                    <i class="fas fa-terminal"></i>
+                    <h3>CLI</h3>
+                    <p>Full CLI: workflow, apps, interview, CV, career tools, and more — or let Claude / Cursor call <code>rolemule</code>.</p>
+                </a>
                 <a href="#troubleshooting" class="quick-link-card">
                     <i class="fas fa-wrench"></i>
                     <h3>Troubleshooting</h3>
@@ -380,15 +394,15 @@
                 
                 <!-- Getting Started -->
                 <div class="faq-category" id="getting-started">
-                    <h2><i class="fas fa-rocket me-2"></i> Getting Started</h2>
+                    <h2><i class="fas fa-flag me-2"></i> Getting Started</h2>
 
                     <div class="faq-item">
                         <div class="faq-question">
-                            What is ApplyPilot?
+                            What is RoleMule?
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            ApplyPilot is an AI-powered job search companion that turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get ten tabs of AI-generated insights:
+                            RoleMule — <strong>one mule for every role</strong>. It turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get ten tabs of AI-generated insights:
                             <ul>
                                 <li><strong>Company</strong> — Culture, funding stage, interview culture, and insider tips</li>
                                 <li><strong>Your Fit</strong> — A match score with a breakdown of strengths and gaps</li>
@@ -401,7 +415,7 @@
                                 <li><strong>Mock Session</strong> — Timed conversational mock session (HR / Pro / Manager) with voice or typed answers</li>
                                 <li><strong>Outreach</strong> — Public web contact suggestions and copy-ready outreach drafts (you send messages yourself)</li>
                             </ul>
-                            Beyond job analysis, ApplyPilot also includes six <strong>Career Tools</strong> for follow-up emails, salary negotiation, thank you notes, job comparison, reference requests, and rejection analysis.
+                            Beyond job analysis, RoleMule also includes six <strong>Career Tools</strong> for follow-up emails, salary negotiation, thank you notes, job comparison, reference requests, and rejection analysis. Power users can drive the same workflows from the optional <strong>CLI</strong> (<code>rolemule</code>) — including from Claude or Cursor.
                         </div>
                     </div>
 
@@ -423,11 +437,11 @@
 
                     <div class="faq-item">
                         <div class="faq-question">
-                            Is ApplyPilot free to use?
+                            Is RoleMule free to use?
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            <p>Yes — the ApplyPilot platform itself is completely free and open source. To power the AI features, you bring your own API key for <strong>Gemini, OpenAI, or Anthropic</strong> (or use local <strong>Ollama</strong> with no key) and pay the provider directly for usage. In practice, a single job analysis costs well under $0.01 on cloud providers, so personal use costs are negligible.</p>
+                            <p>Yes — the RoleMule platform itself is completely free and open source. To power the AI features, you bring your own API key for <strong>Gemini, OpenAI, or Anthropic</strong> (or use local <strong>Ollama</strong> with no key) and pay the provider directly for usage. In practice, a single job analysis costs well under $0.01 on cloud providers, so personal use costs are negligible.</p>
                         </div>
                     </div>
 
@@ -437,7 +451,7 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            The AI output is only as good as the inputs. Here's how to get the most out of ApplyPilot:
+                            The AI output is only as good as the inputs. Here's how to get the most out of RoleMule:
                             <ul>
                                 <li><strong>Make sure your profile is complete</strong> — Whether you uploaded a resume or filled it in manually, review that your experience includes specific job titles, technologies, metrics, and accomplishments — not just generic descriptions</li>
                                 <li><strong>Give the AI the full job description</strong> — Paste it directly, upload a file, or use the Chrome extension to extract it from any job site. Include everything: responsibilities, requirements, benefits, and company blurb. More context = better analysis</li>
@@ -471,7 +485,7 @@
                                 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic</a>.
                                 For Ollama, pull a model on the server (e.g. <code>ollama pull qwen3</code>) — no API key needed.
                             </p>
-                            <p class="mt-3"><strong>Important:</strong> Your API key is like a password — keep it private and never share it. If it may be compromised, revoke it in the provider console and save a new one in ApplyPilot.</p>
+                            <p class="mt-3"><strong>Important:</strong> Your API key is like a password — keep it private and never share it. If it may be compromised, revoke it in the provider console and save a new one in RoleMule.</p>
                         </div>
                     </div>
 
@@ -558,7 +572,7 @@
                                 <li>A final <strong>cover letter</strong> is generated to match the best-scoring CV</li>
                             </ol>
                             <p>You can configure max iterations (2–7) and the score threshold (7.0–9.5) before starting. When you click <strong>Start Optimization</strong>, the setup panel hides and progress appears. Results include the optimized CV, cover letter, gap analysis (skills that could not be fixed by rephrasing alone), and a full iteration history. Copy buttons and <strong>Download CV</strong> are available when complete.</p>
-                            <p><strong>Download CV</strong> runs on the ApplyPilot server — you do not need LibreOffice on your computer. Docker deployments return a formatted <code>.odt</code> file (Gemini HTML → layout normalizer → LibreOffice). Local dev without LibreOffice returns a Word <code>.docx</code> with proper bullets and section layout. Rate limits and quota errors show as toasts, not as a markdown file download.</p>
+                            <p><strong>Download CV</strong> runs on the RoleMule server — you do not need LibreOffice on your computer. Docker deployments return a formatted <code>.odt</code> file (Gemini HTML → layout normalizer → LibreOffice). Local dev without LibreOffice returns a Word <code>.docx</code> with proper bullets and section layout. Rate limits and quota errors show as toasts, not as a markdown file download.</p>
                             <p>If the loop stops early due to API quota, the best CV reached is saved; a banner explains what happened and the cover letter section shows an empty state if it could not be generated.</p>
                             <p>Requires an AI provider configured in Settings → AI Setup (or Vertex AI if your operator enabled it). Rate limit: <strong>10 optimization runs per hour</strong>, <strong>10 CV downloads per hour</strong>.</p>
                         </div>
@@ -672,9 +686,9 @@
                                 <li>Open Chrome and go to <code>chrome://extensions</code></li>
                                 <li>Enable <strong>Developer Mode</strong> (toggle in the top right)</li>
                                 <li>Click <strong>"Load unpacked"</strong> and select the <code>/extension</code> folder</li>
-                                <li>The ApplyPilot icon will appear in your Chrome toolbar</li>
+                                <li>The RoleMule icon will appear in your Chrome toolbar</li>
                             </ol>
-                            <p class="mt-3"><strong>Note:</strong> Make sure you're logged into ApplyPilot in your browser — the extension uses your account for analysis and for form match.</p>
+                            <p class="mt-3"><strong>Note:</strong> Make sure you're logged into RoleMule in your browser — the extension uses your account for analysis and for form match.</p>
                         </div>
                     </div>
 
@@ -701,7 +715,7 @@
                         <div class="faq-answer">
                             <ol>
                                 <li>Browse to any job posting on a supported site</li>
-                                <li>Click the <strong>ApplyPilot icon</strong> in your Chrome toolbar</li>
+                                <li>Click the <strong>RoleMule icon</strong> in your Chrome toolbar</li>
                                 <li>Click <strong>"Analyze This Job"</strong> to send it straight to your dashboard</li>
                                 <li>The AI analysis starts automatically — results in 30 seconds</li>
                             </ol>
@@ -717,7 +731,7 @@
                             <ol>
                                 <li>Complete <strong>Profile Setup</strong> first — especially work authorization, visa sponsorship, and an uploaded resume if the form asks for a file</li>
                                 <li>Browse to an application form with visible fields (main page only; fields inside embedded frames are not scanned)</li>
-                                <li>Click the <strong>ApplyPilot icon</strong> in your Chrome toolbar</li>
+                                <li>Click the <strong>RoleMule icon</strong> in your Chrome toolbar</li>
                                 <li>Click <strong>"Match Form To Profile"</strong> — the extension scans the form, maps fields to your profile on the server (AI plus deterministic rules for common screening questions), and applies values on the page</li>
                                 <li>Review every field before you submit; the popup reports how many fields were filled or failed</li>
                             </ol>
@@ -768,7 +782,7 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            <p>ApplyPilot enforces per-user rate limits to prevent accidental runaway usage of your AI provider quota. The error message will tell you exactly how long to wait before trying again.</p>
+                            <p>RoleMule enforces per-user rate limits to prevent accidental runaway usage of your AI provider quota. The error message will tell you exactly how long to wait before trying again.</p>
                             <ul>
                                 <li><strong>Job analyses:</strong> 10 per hour</li>
                                 <li><strong>Career Tools:</strong> 10 per hour</li>
@@ -806,12 +820,35 @@
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
-                            <p>There are two ways to get job postings into ApplyPilot:</p>
+                            <p>There are two ways to get job postings into RoleMule:</p>
                             <ul>
                                 <li><strong>Paste or upload</strong> — In the <a href="/dashboard/new-application">New Application</a> form, either paste the full job description or upload a PDF, TXT, or Word (.docx) file. Include everything: title, company, responsibilities, and requirements</li>
-                                <li><strong>Chrome Extension</strong> — On a posting page, click the ApplyPilot icon and choose <strong>Analyze This Job</strong> to send the description for analysis. See <a href="#extension">Chrome Extension setup</a> for installation steps</li>
+                                <li><strong>Chrome Extension</strong> — On a posting page, click the RoleMule icon and choose <strong>Analyze This Job</strong> to send the description for analysis. See <a href="#extension">Chrome Extension setup</a> for installation steps</li>
                             </ul>
                             <p>The more complete the job text, the better the analysis. Short or incomplete descriptions produce less accurate results.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLI -->
+                <div class="faq-category" id="cli">
+                    <h2><i class="fas fa-terminal me-2"></i> CLI</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I use the RoleMule CLI?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The <code>rolemule</code> CLI is installed with the project (<code>make setup</code> / <code>pip install -e ".[cli]"</code>). It covers the full product surface from the terminal — not just job analysis.</p>
+                            <p><strong>Quick start</strong> (one common path among many):</p>
+                            <ol>
+                                <li><code>rolemule auth login</code> — sign in (or use a personal access token for automation)</li>
+                                <li><code>rolemule workflow analyze job.txt --wait</code> — run the full analysis pipeline</li>
+                                <li><code>rolemule workflow results SESSION --section cover-letter</code> — pull outputs</li>
+                            </ol>
+                            <p>Other command groups include <code>apps</code> (list/manage applications), <code>interview</code>, <code>cv</code> (Optimize CV), <code>tools</code> (career tools), <code>profile</code>, <code>extension</code>, and <code>config</code>. Claude, Cursor, and similar agents can call the same commands.</p>
+                            <p>Run <code>rolemule --help</code> (or <code>rolemule &lt;group&gt; --help</code>) for the full command list, or see the repo CLI docs.</p>
                         </div>
                     </div>
                 </div>
@@ -852,7 +889,7 @@
 
                     <div class="faq-item">
                         <div class="faq-question">
-                            What data does ApplyPilot collect?
+                            What data does RoleMule collect?
                             <i class="fas fa-chevron-down"></i>
                         </div>
                         <div class="faq-answer">
@@ -875,7 +912,7 @@
                         <div class="faq-answer">
                             <p><strong>Password:</strong> Go to <strong>Dashboard → Settings → Account</strong> and use the Change Password form. You'll need to enter your current password to confirm.</p>
                             <p><strong>Email:</strong> Email address changes are not currently supported through self-service. If you need to update your email, you can delete your account and re-register, or open an issue on the project's GitHub repository.</p>
-                            <p>If you signed in with Google OAuth, your email is managed by your Google account and cannot be changed within ApplyPilot.</p>
+                            <p>If you signed in with Google OAuth, your email is managed by your Google account and cannot be changed within RoleMule.</p>
                         </div>
                     </div>
                 </div>

@@ -698,21 +698,21 @@ function setAuthToken(token: string | null): void {
     function _markAnalysisNotified(sessionId: string, failed: boolean): void {
         if (!sessionId) return;
         try {
-            const raw = localStorage.getItem('applypilot_notified_analyses') || '[]';
+            const raw = localStorage.getItem('rolemule_notified_analyses') || '[]';
             const set = /** @type {string[]} */ (JSON.parse(raw));
             const key = _terminalNotifyKey(sessionId, failed);
             if (!set.includes(key)) {
                 set.push(key);
                 // Keep only last 80 entries (c: + f: keys) to avoid unbounded growth
                 if (set.length > 80) set.splice(0, set.length - 80);
-                localStorage.setItem('applypilot_notified_analyses', JSON.stringify(set));
+                localStorage.setItem('rolemule_notified_analyses', JSON.stringify(set));
             }
         } catch (_e) {}
     }
 
     function _isAnalysisNotified(sessionId: string, failed: boolean): boolean {
         try {
-            const raw = localStorage.getItem('applypilot_notified_analyses') || '[]';
+            const raw = localStorage.getItem('rolemule_notified_analyses') || '[]';
             const set = /** @type {string[]} */ (JSON.parse(raw));
             const key = _terminalNotifyKey(sessionId, failed);
             if (set.includes(key)) return true;

@@ -8,7 +8,7 @@ from typing import Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError
+from rolemule_client.errors import ApiClientError
 from cli.context import CliContext
 from cli.output import emit, emit_error, require_client
 from cli.util import require_confirm
@@ -104,7 +104,7 @@ def admin_metrics(ctx: typer.Context) -> None:
     workflows = data.get("workflows") or {}
     apps = data.get("applications") or {}
     lines = [
-        "# ApplyPilot metrics",
+        "# RoleMule metrics",
         f"Generated: {data.get('generated_at', 'N/A')}",
         "",
         "## Users",

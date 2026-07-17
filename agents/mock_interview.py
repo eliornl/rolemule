@@ -52,7 +52,7 @@ STYLE_PACKS: Dict[str, str] = {
     ),
 }
 
-SYSTEM_CONTEXT: str = """You are a world-class mock interviewer for ApplyPilot practice sessions.
+SYSTEM_CONTEXT: str = """You are a world-class mock interviewer for RoleMule practice sessions.
 
 You run interviews the way top hiring teams do: natural conversation, one focused ask at a time,
 and follow-ups that react to what the candidate just said — never a generic quiz script.

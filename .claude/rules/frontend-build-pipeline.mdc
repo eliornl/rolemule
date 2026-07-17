@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Frontend Build Pipeline
 
-ApplyPilot uses a **dual pipeline** unified by `ui/scripts/build-all.mjs`:
+RoleMule uses a **dual pipeline** unified by `ui/scripts/build-all.mjs`:
 
 1. **Legacy esbuild** (`ui/build.mjs`) — minifies and content-hashes **CSS** only.
 2. **Vite** (`ui/scripts/build-vite.mjs`) — bundles each TypeScript page entry from `ui/vite.entries.json` as an IIFE, emits **hidden source maps** (`.js.map` on disk, no `sourceMappingURL` in the bundle), content-hashes JS, and writes `vite-manifest.json`.

@@ -3,10 +3,11 @@ import type { OnboardingStep } from './types';
 export const ALL_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to ApplyPilot! 🎉',
+    title: 'Welcome to RoleMule! 🎉',
     content: `
-                <p>Your AI-powered career co-pilot is ready to help you land your dream job.</p>
-                <p>Let's take a quick tour so you know exactly what's available.</p>
+                <p><strong>One mule for every role.</strong></p>
+                <p>Paste a job, run five AI agents in ~30 seconds, then optimize your CV, practice interviews, draft outreach, and use career tools — with your data 100% local.</p>
+                <p>This quick tour covers the essentials.</p>
             `,
     image: '🚀',
     position: 'center',
@@ -16,14 +17,12 @@ export const ALL_STEPS: OnboardingStep[] = [
     id: 'extension',
     title: 'Install Chrome Extension',
     content: `
-                <p>Get the most out of ApplyPilot with our <strong>Chrome Extension</strong>!</p>
-                <p>With the extension, you can:</p>
+                <p>The <strong>Chrome Extension</strong> works on any job site or company careers page:</p>
                 <ul>
-                    <li>🌐 Analyze jobs from <strong>any job site or company careers page</strong></li>
-                    <li>⚡ One-click job extraction</li>
-                    <li>📋 Auto-detect job postings</li>
+                    <li><strong>Analyze This Job</strong> — send the posting to your dashboard for the full AI workflow</li>
+                    <li><strong>Match Form To Profile</strong> — map visible application fields to your profile (review before you submit)</li>
                 </ul>
-                <p>Load the extension in 3 steps:</p>
+                <p>Load it in 3 steps:</p>
                 <ol>
                     <li>Open <strong>chrome://extensions</strong> in Chrome</li>
                     <li>Enable <strong>Developer Mode</strong> (top-right toggle)</li>
@@ -54,13 +53,13 @@ export const ALL_STEPS: OnboardingStep[] = [
     id: 'analyze',
     title: 'Analyze Job Postings',
     content: `
-                <p>There are 3 ways to analyze a job:</p>
+                <p>Start a new application in any of these ways:</p>
                 <ol>
-                    <li><strong>Chrome Extension:</strong> Browse to any job posting and click the extension to auto-extract</li>
-                    <li><strong>Paste Job Description:</strong> Copy the full job description and paste it directly</li>
-                    <li><strong>File Upload:</strong> Upload a saved job description file</li>
+                    <li><strong>Paste</strong> the full job description</li>
+                    <li><strong>Upload</strong> a PDF, TXT, or Word (<code>.docx</code>) file</li>
+                    <li><strong>Chrome Extension</strong> — Analyze This Job from a posting page</li>
                 </ol>
-                <p>Our AI will analyze the job, research the company, match your profile, and create personalized materials!</p>
+                <p>Five agents run in ~30 seconds (analyze → match → company research → cover letter + resume tips). Open the application to review fit, strategy, interview prep, and more.</p>
             `,
     image: '📋',
     highlight: '[href*="new-application"]',
@@ -69,16 +68,15 @@ export const ALL_STEPS: OnboardingStep[] = [
   },
   {
     id: 'tools',
-    title: 'Career Tools',
+    title: 'Career Tools & Beyond',
     content: `
-                <p>Beyond job analysis, we have <strong>6 career tools</strong> to help throughout your search:</p>
+                <p>After analysis, keep going from the application page and dashboard:</p>
                 <ul>
-                    <li>📝 Thank You Notes</li>
-                    <li>📊 Rejection Analysis</li>
-                    <li>👥 Reference Requests</li>
-                    <li>⚖️ Job Comparison</li>
-                    <li>📧 Follow-up Emails</li>
-                    <li>💰 Salary Negotiation</li>
+                    <li><strong>Optimize CV</strong> — iterative rewrite loop for the role</li>
+                    <li><strong>Mock Session</strong> &amp; interview prep — practice before the real thing</li>
+                    <li><strong>Outreach</strong> — copy-ready drafts (you send messages yourself)</li>
+                    <li><strong>Career Tools</strong> — thank you notes, follow-ups, salary coach, job comparison, and more</li>
+                    <li><strong>CLI</strong> — run the same workflows from the terminal with <code>rolemule</code> (Claude / Cursor friendly)</li>
                 </ul>
             `,
     image: '🛠️',

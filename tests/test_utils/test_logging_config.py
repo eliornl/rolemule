@@ -115,7 +115,7 @@ def test_setup_logging_text_mode(tmp_path) -> None:
         setup_logging(
             log_level="DEBUG",
             log_format="text",
-            service_name="applypilot-test",
+            service_name="rolemule-test",
             service_version="0.0.1",
             environment="test",
             log_dir=str(tmp_path),

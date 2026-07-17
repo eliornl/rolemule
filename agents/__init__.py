@@ -1,5 +1,5 @@
 """
-AI Agents for ApplyPilot.
+AI Agents for RoleMule.
 
 Workflow Agents (LangGraph):
 - job_analyzer: Extracts requirements from job postings

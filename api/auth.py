@@ -2085,7 +2085,7 @@ async def verify_email_code(
         expires_in = security_settings.jwt_config["expire_hours"] * SECONDS_PER_HOUR
 
         return {
-            "message": "Email verified successfully! Welcome to ApplyPilot.",
+            "message": "Email verified successfully! Welcome to RoleMule.",
             "email_verified": True,
             "redirect": redirect_url,
             "access_token": access_token,
@@ -2178,7 +2178,7 @@ async def verify_email(
         redirect_url = "/dashboard" if profile_completed else "/profile/setup"
 
         return {
-            "message": "Email verified successfully! Welcome to ApplyPilot.",
+            "message": "Email verified successfully! Welcome to RoleMule.",
             "email_verified": True,
             "redirect": redirect_url,
         }
