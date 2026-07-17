@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help & FAQ | RoleMule</title>
+    <meta name="description" content="Get help with RoleMule — FAQ, guides, and support.">
+    <link rel="canonical" href="https://eliornl.github.io/rolemule/">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/base/variables.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/marketing.css">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <style>
+.navbar {
+            background: var(--bg-card) !important;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+                .brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .brand-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .brand-accent {
+            color: var(--accent-primary);
+        }
+
+        .help-page {
+            min-height: 100vh;
+            padding-top: 2rem;
+            padding-bottom: 60px;
+        }
+
+        .help-page .page-container {
+            max-width: 960px;
+            margin-top: 0;
+        }
+        
+        .help-header {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .help-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-gradient);
+        }
+
+        .help-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+        
+        .help-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 0;
+        }
+        
+        .help-search {
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+        
+        .help-search input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 15px 20px 15px 50px;
+            color: var(--text-primary);
+            width: 100%;
+            font-size: 1rem;
+            font-family: var(--font-primary);
+        }
+        
+        .help-search input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .help-search input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+        }
+        
+        .help-search i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .quick-links {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .quick-links {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .quick-link-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-decoration: none;
+            transition: var(--transition-base);
+        }
+        
+        .quick-link-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+            box-shadow: var(--glow-accent);
+        }
+        
+        .quick-link-card i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: block;
+        }
+        
+        .quick-link-card h3 {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quick-link-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        .faq-section {
+            width: 100%;
+        }
+        
+        .faq-category {
+            margin-bottom: 2rem;
+        }
+        
+        .faq-category h2 {
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .faq-category h2 i {
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+        
+        .faq-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .faq-item.is-search-hidden,
+        .faq-category.is-search-hidden {
+            display: none;
+        }
+        
+        .faq-question {
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: background var(--transition-fast);
+        }
+        
+        .faq-question:hover {
+            background: rgba(0, 212, 255, 0.04);
+        }
+        
+        .faq-question i {
+            color: var(--accent-primary);
+            transition: transform 0.3s ease;
+        }
+        
+        .faq-item.active .faq-question i {
+            transform: rotate(180deg);
+        }
+        
+        .faq-answer {
+            padding: 0 1.25rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        
+        .faq-item.active .faq-answer {
+            padding: 0 1.25rem 1.25rem;
+            max-height: 500px;
+        }
+        
+        .faq-answer code {
+            background: rgba(0, 212, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-primary);
+            font-family: var(--font-mono);
+        }
+
+        .faq-answer a {
+            color: var(--accent-primary);
+        }
+
+        .faq-answer a:hover {
+            color: var(--text-primary);
+        }
+        
+        .contact-section {
+            text-align: center;
+            margin-top: 4rem;
+            padding: 3rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contact-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-gradient);
+        }
+        
+        .contact-section h2 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+        
+        .contact-section p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-bottom: 2rem;
+            transition: color var(--transition-fast);
+        }
+        
+        .back-link:hover {
+            color: var(--accent-primary);
+        }
+        .brand-icon img {
+            transform: scale(1.28);
+            transform-origin: center center;
+        }
+        .nav-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav-back-btn:hover {
+            color: var(--accent-primary);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <div class="brand-icon">
+                    <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                </div>
+                <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+            </a>
+            <a href="index.html" class="nav-back-btn">
+                <i class="fas fa-arrow-left"></i>Back to Home
+            </a>
+        </div>
+    </nav>
+
+<div class="help-page">
+        <div class="page-container">
+
+            <div class="help-header">
+                <h1>How can we help?</h1>
+                <p>Find answers to common questions and learn how to get the most out of RoleMule</p>
+            </div>
+
+            <!-- Search -->
+            <div class="help-search position-relative">
+                <i class="fas fa-search"></i>
+                <input type="text" id="helpSearch" placeholder="Search for help..." aria-label="Search help articles">
+            </div>
+
+            <!-- Quick Links -->
+            <div class="quick-links">
+                <a href="#getting-started" class="quick-link-card">
+                    <i class="fas fa-flag"></i>
+                    <h3>Getting Started</h3>
+                    <p>Set up your account and analyze your first job in minutes.</p>
+                </a>
+                <a href="#features" class="quick-link-card">
+                    <i class="fas fa-magic"></i>
+                    <h3>Features Guide</h3>
+                    <p>Explore AI agents, career tools, and interview prep.</p>
+                </a>
+                <a href="#api-key" class="quick-link-card">
+                    <i class="fas fa-key"></i>
+                    <h3>API Key Setup</h3>
+                    <p>Set up your AI provider and API key — takes a few minutes.</p>
+                </a>
+                <a href="#extension" class="quick-link-card">
+                    <i class="fas fa-puzzle-piece"></i>
+                    <h3>Chrome Extension</h3>
+                    <p>Send job postings from your browser to your dashboard for analysis, or match application fields to your profile.</p>
+                </a>
+                <a href="#cli" class="quick-link-card">
+                    <i class="fas fa-terminal"></i>
+                    <h3>CLI</h3>
+                    <p>Full CLI: workflow, apps, interview, CV, career tools, and more — or let Claude / Cursor call <code>rolemule</code>.</p>
+                </a>
+                <a href="#troubleshooting" class="quick-link-card">
+                    <i class="fas fa-wrench"></i>
+                    <h3>Troubleshooting</h3>
+                    <p>Stuck? Find solutions to the most common issues.</p>
+                </a>
+                <a href="#account" class="quick-link-card">
+                    <i class="fas fa-user-shield"></i>
+                    <h3>Account & Privacy</h3>
+                    <p>Export your data, manage your account, or delete it.</p>
+                </a>
+            </div>
+
+            <!-- FAQ Sections -->
+            <div class="faq-section">
+                
+                <!-- Getting Started -->
+                <div class="faq-category" id="getting-started">
+                    <h2><i class="fas fa-flag me-2"></i> Getting Started</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What is RoleMule?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            RoleMule — <strong>one mule for every role</strong>. It turns a raw job posting into a complete application package in about 30 seconds. For every job you analyze, you get ten tabs of AI-generated insights:
+                            <ul>
+                                <li><strong>Company</strong> — Culture, funding stage, interview culture, and insider tips</li>
+                                <li><strong>Your Fit</strong> — A match score with a breakdown of strengths and gaps</li>
+                                <li><strong>Strategy</strong> — How to position yourself and what to emphasize in your application</li>
+                                <li><strong>Job Details</strong> — Extracted salary, work type, required skills, qualifications, and all listed office locations</li>
+                                <li><strong>Cover Letter</strong> — A tailored letter referencing your specific experience</li>
+                                <li><strong>Resume</strong> — Personalized recommendations to optimize your resume for this role</li>
+                                <li><strong>Interview Prep</strong> — Predicted questions, STAR answer frameworks, and process tips</li>
+                                <li><strong>Optimize CV</strong> — Iterative AI loop that scores and rewrites your CV for the role, then produces an optimized CV and cover letter</li>
+                                <li><strong>Mock Session</strong> — Timed conversational mock session (HR / Pro / Manager) with voice or typed answers</li>
+                                <li><strong>Outreach</strong> — Public web contact suggestions and copy-ready outreach drafts (you send messages yourself)</li>
+                            </ul>
+                            Beyond job analysis, RoleMule also includes six <strong>Career Tools</strong> for follow-up emails, salary negotiation, thank you notes, job comparison, reference requests, and rejection analysis. Power users can drive the same workflows from the optional <strong>CLI</strong> (<code>rolemule</code>) — including from Claude or Cursor.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I get started?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li><strong>Create an account</strong> — Sign up with email/password or continue with Google</li>
+                                <li><strong>Complete your profile</strong> — Upload your resume to auto-fill your experience, education, and skills, or fill it in manually. Either way, review and adjust to make sure everything is accurate. The more complete your profile, the more personalized the AI output will be</li>
+                                <li><strong>Choose an AI provider and add an API key</strong> — In <strong>Settings → AI Setup</strong>, pick Gemini, OpenAI, Anthropic, or local Ollama (no key). See the <a href="#api-key">API Key Setup</a> section below</li>
+                                <li><strong>Analyze your first job</strong> — Click <strong>New Application</strong> on the dashboard, paste a job description, and hit Analyze</li>
+                            </ol>
+                            <p><strong>Tip:</strong> A complete profile is essential — the AI uses your experience, education, and skills to personalize every output. Make sure everything looks right before your first analysis.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Is RoleMule free to use?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Yes — the RoleMule platform itself is completely free and open source. To power the AI features, you bring your own API key for <strong>Gemini, OpenAI, or Anthropic</strong> (or use local <strong>Ollama</strong> with no key) and pay the provider directly for usage. In practice, a single job analysis costs well under $0.01 on cloud providers, so personal use costs are negligible.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I get the best results?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            The AI output is only as good as the inputs. Here's how to get the most out of RoleMule:
+                            <ul>
+                                <li><strong>Make sure your profile is complete</strong> — Whether you uploaded a resume or filled it in manually, review that your experience includes specific job titles, technologies, metrics, and accomplishments — not just generic descriptions</li>
+                                <li><strong>Give the AI the full job description</strong> — Paste it directly, upload a file, or use the Chrome extension to extract it from any job site. Include everything: responsibilities, requirements, benefits, and company blurb. More context = better analysis</li>
+                                <li><strong>Review and edit AI output</strong> — Treat everything as a strong first draft. The cover letter and resume tips are personalized, but you know your story best</li>
+                                <li><strong>Use the match score as a filter</strong> — A score below your threshold is a signal to reconsider or address gaps before applying. You can configure your minimum threshold in Settings → Preferences</li>
+                                <li><strong>Read the Strategy tab</strong> — This often contains the most actionable insight, specific to how your background intersects with this particular role</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Key Setup -->
+                <div class="faq-category" id="api-key">
+                    <h2><i class="fas fa-key me-2"></i> API Key Setup</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I set up an AI provider and API key?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li>Open <strong>Settings → AI Setup</strong></li>
+                                <li>Select a provider: <strong>Google Gemini</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, or <strong>Ollama (local)</strong></li>
+                                <li>For cloud providers, use <strong>Get API Key</strong> to open the provider’s console, create a key, paste it, and click <strong>Save</strong></li>
+                                <li>Optionally pick a preferred model for that provider</li>
+                            </ol>
+                            <p class="mt-3"><strong>Key pages:</strong>
+                                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> ·
+                                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI</a> ·
+                                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">Anthropic</a>.
+                                For Ollama, pull a model on the server (e.g. <code>ollama pull qwen3</code>) — no API key needed.
+                            </p>
+                            <p class="mt-3"><strong>Important:</strong> Your API key is like a password — keep it private and never share it. If it may be compromised, revoke it in the provider console and save a new one in RoleMule.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How much does AI usage cost?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>A full job analysis typically costs well under $0.01 on cloud providers. You would need to analyze hundreds of jobs per day to incur meaningful charges. Local Ollama has no per-token API bill.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Is my API key stored securely?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Yes. Your API key is protected at every step:
+                            <ul>
+                                <li><strong>Encrypted at rest</strong> using Fernet symmetric encryption before being written to the database</li>
+                                <li><strong>Never returned</strong> in API responses — you can set a new key but cannot read back the stored one</li>
+                                <li><strong>Never logged</strong> in application logs or error traces</li>
+                                <li><strong>Used only</strong> to call your chosen AI provider on your behalf — we make no other use of it</li>
+                                <li><strong>Deletable</strong> at any time from Settings → AI Setup</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Features -->
+                <div class="faq-category" id="features">
+                    <h2><i class="fas fa-magic me-2"></i> Features Guide</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does job analysis work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>When you submit a job posting, a pipeline of five specialized AI agents runs — each building on the previous one's output:</p>
+                            <ol>
+                                <li><strong>Job Analyzer</strong> — Extracts salary, location, work type, required skills, and qualifications from the raw posting</li>
+                                <li><strong>Profile Matcher</strong> — Compares your profile against job requirements, produces a match score with a detailed breakdown, and recommends how to position yourself for this specific role</li>
+                                <li><strong>Company Researcher</strong> — Researches the company's culture, growth stage, values, and interview style</li>
+                                <li><strong>Cover Letter Writer</strong> — Generates a tailored cover letter using your actual experience and the company's priorities</li>
+                                <li><strong>Resume Advisor</strong> — Identifies gaps and suggests targeted, high-impact changes to your resume</li>
+                            </ol>
+                            <p>The full pipeline takes about 30 seconds. <strong>Interview Prep</strong>, <strong>CV Optimization</strong>, <strong>Mock Session</strong>, and <strong>Outreach</strong> can be run separately on demand from within any completed application.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What are Career Tools?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Career Tools are standalone AI tools for the stages of job searching that happen outside of the initial application. Access them from <strong>Dashboard → Career Tools</strong>.</p>
+                            <ul>
+                                <li><strong>Thank You Note</strong> — Post-interview thank you emails that reference specific conversation points</li>
+                                <li><strong>Follow-up Email</strong> — Professional follow-ups for any stage: after applying, after an interview, or when you've been ghosted</li>
+                                <li><strong>Salary Coach</strong> — Negotiation scripts, pushback responses, and alternative asks to maximize your offer</li>
+                                <li><strong>Job Comparison</strong> — Compare 2–3 offers side-by-side with AI scoring on compensation, growth potential, culture fit, and more</li>
+                                <li><strong>Reference Request</strong> — Professional emails asking former colleagues or managers to serve as references</li>
+                                <li><strong>Rejection Analysis</strong> — Turn rejection emails into actionable feedback and improvement suggestions</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does CV Optimization work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>CV Optimization is available on the <strong>Optimize CV</strong> tab after a job analysis workflow completes. It runs an iterative loop:</p>
+                            <ol>
+                                <li>An <strong>AI Hiring Manager</strong> evaluates your CV against the job description and returns a score (out of 10) plus feedback</li>
+                                <li>An <strong>AI Applicant</strong> revises the CV based on that feedback</li>
+                                <li>The cycle repeats until the score reaches your threshold, hits the max iteration count, or stops improving</li>
+                                <li>A final <strong>cover letter</strong> is generated to match the best-scoring CV</li>
+                            </ol>
+                            <p>You can configure max iterations (2–7) and the score threshold (7.0–9.5) before starting. When you click <strong>Start Optimization</strong>, the setup panel hides and progress appears. Results include the optimized CV, cover letter, gap analysis (skills that could not be fixed by rephrasing alone), and a full iteration history. Copy buttons and <strong>Download CV</strong> are available when complete.</p>
+                            <p><strong>Download CV</strong> runs on the RoleMule server — you do not need LibreOffice on your computer. Docker deployments return a formatted <code>.odt</code> file (Gemini HTML → layout normalizer → LibreOffice). Local dev without LibreOffice returns a Word <code>.docx</code> with proper bullets and section layout. Rate limits and quota errors show as toasts, not as a markdown file download.</p>
+                            <p>If the loop stops early due to API quota, the best CV reached is saved; a banner explains what happened and the cover letter section shows an empty state if it could not be generated.</p>
+                            <p>Requires an AI provider configured in Settings → AI Setup (or Vertex AI if your operator enabled it). Rate limit: <strong>10 optimization runs per hour</strong>, <strong>10 CV downloads per hour</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does Interview Prep work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Interview Prep is generated on demand for any completed job analysis. Open an application and click the <strong>Interview</strong> tab, then hit Generate. It produces three sub-sections:</p>
+                            <ul>
+                                <li><strong>Process</strong> — What the interview process typically looks like at this company, what to expect at each stage, and how to prepare</li>
+                                <li><strong>Questions</strong> — Predicted interview questions (behavioral and role-specific), with suggested answer frameworks using your own experience</li>
+                                <li><strong>Preparation</strong> — A tailored checklist of what to review, practice, and prepare before your interview</li>
+                            </ul>
+                            <p>You can regenerate Interview Prep if you want a fresh set of questions or if your preparation evolves.</p>
+                            <p>This is different from <strong>Mock Session</strong> (the next tab), which is a live timed conversation — not a static Q&amp;A guide.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does Mock Session work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Mock Session is a timed conversational practice on the <strong>Mock Session</strong> tab (after Interview). It uses your own API key from Settings → AI Setup.</p>
+                            <ol>
+                                <li>Choose a style — <strong>HR</strong>, <strong>Pro</strong>, or <strong>Manager</strong> — and a duration of <strong>10</strong>, <strong>15</strong>, or <strong>20</strong> minutes</li>
+                                <li>Answer by voice (browser speech recognition) or typing; the interviewer speaks back with browser text-to-speech</li>
+                                <li>While the AI is composing its next line, you may see <em>Interviewer is typing…</em> as the question streams in</li>
+                                <li>When time runs out (or you end early), you get a scored debrief with strengths and improvements</li>
+                            </ol>
+                            <p>English only for now. No audio is uploaded to the server — speech stays in your browser. Requires an AI provider in Settings → AI Setup. Rate limits: <strong>10 starts / hour</strong>, <strong>40 turns / hour</strong>, <strong>10 finishes / hour</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How accurate is the profile match score?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The match score is a useful signal, not a definitive verdict. It's calculated by comparing your profile against the job's stated requirements across:</p>
+                            <ul>
+                                <li>Skills and technologies (required vs. preferred)</li>
+                                <li>Years of experience</li>
+                                <li>Education requirements</li>
+                                <li>Location and work arrangement preferences</li>
+                                <li>Seniority level alignment</li>
+                            </ul>
+                            <p><strong>A high score</strong> (&gt;75%) means you meet most stated requirements — worth applying confidently. <strong>A moderate score</strong> (50–75%) means gaps exist but the role may still be reachable — read the Strategy tab for how to address them. <strong>A low score</strong> (&lt;50%) is a signal to reconsider whether the role is right for your current profile.</p>
+                            <p>You can configure the minimum threshold at which the workflow pauses and asks you to confirm in <strong>Settings → Preferences</strong>. The default is 50%.</p>
+                            <p>The score improves with a more complete profile — sparse profiles produce less reliable matching.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What do the dashboard statistics cards mean?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The four cards at the top of your dashboard summarize your pipeline:</p>
+                            <ul>
+                                <li><strong>Total Applications</strong> — every job you've added and analyzed</li>
+                                <li><strong>Applied</strong> — applications you've moved into the funnel (counts Applied, Interview, Offer, and Rejected tracking stages)</li>
+                                <li><strong>Interviews</strong> — applications where you've marked <strong>Interview</strong></li>
+                                <li><strong>Response Rate</strong> — among tracked applications only: (Interview + Offer + Rejected) ÷ (Applied + Interview + Offer + Rejected). Cards still in analysis-only state (no tracking button selected) are excluded.</li>
+                            </ul>
+                            <p>Use the <strong>Applied / Interview / Offer / Rejected</strong> buttons on each card to keep these stats accurate.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Where is the original job posting link?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>When you submit a job from the Chrome extension (or another path that saves a posting URL), the application detail page header shows a <strong>View posting</strong> link that opens the original listing in a new tab. The link appears only for valid http(s) URLs.</p>
+                            <p>If the posting lists multiple office locations, the header location line shows them separated by <strong>|</strong> (primary city first, then additional offices). The Job Details tab lists the same locations.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Can I regenerate the cover letter or resume tips?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Yes. Both the Cover Letter and Resume tabs have a <strong>Regenerate</strong> button that will produce a fresh version using the same inputs. This is useful if the initial output missed the mark. Before regenerating, you can adjust the output style in <strong>Settings → Preferences</strong>: cover letter tone (professional, conversational, or enthusiastic) and resume advice style (concise or detailed). Regeneration is rate-limited to 5 times per hour per application.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chrome Extension -->
+                <div class="faq-category" id="extension">
+                    <h2><i class="fas fa-puzzle-piece me-2"></i> Chrome Extension</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I install the Chrome extension?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li>Locate the <code>/extension</code> folder inside the repository</li>
+                                <li>Open Chrome and go to <code>chrome://extensions</code></li>
+                                <li>Enable <strong>Developer Mode</strong> (toggle in the top right)</li>
+                                <li>Click <strong>"Load unpacked"</strong> and select the <code>/extension</code> folder</li>
+                                <li>The RoleMule icon will appear in your Chrome toolbar</li>
+                            </ol>
+                            <p class="mt-3"><strong>Note:</strong> Make sure you're logged into RoleMule in your browser — the extension uses your account for analysis and for form match.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Which job sites does the extension support?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            The extension auto-detects job postings on:
+                            <ul>
+                                <li><strong>Any job board</strong> — individual job listing pages</li>
+                                <li><strong>Company careers pages</strong> — if the job description is visible on the page, the extension can usually extract it</li>
+                            </ul>
+                            <p>If a site isn't supported, use the <strong>New Application</strong> page on the dashboard — you can paste the job description directly or upload a file.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does one-click job extraction work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li>Browse to any job posting on a supported site</li>
+                                <li>Click the <strong>RoleMule icon</strong> in your Chrome toolbar</li>
+                                <li>Click <strong>"Analyze This Job"</strong> to send it straight to your dashboard</li>
+                                <li>The AI analysis starts automatically — results in 30 seconds</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does Match Form To Profile work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li>Complete <strong>Profile Setup</strong> first — especially work authorization, visa sponsorship, and an uploaded resume if the form asks for a file</li>
+                                <li>Browse to an application form with visible fields (main page only; fields inside embedded frames are not scanned)</li>
+                                <li>Click the <strong>RoleMule icon</strong> in your Chrome toolbar</li>
+                                <li>Click <strong>"Match Form To Profile"</strong> — the extension scans the form, maps fields to your profile on the server (AI plus deterministic rules for common screening questions), and applies values on the page</li>
+                                <li>Review every field before you submit; the popup reports how many fields were filled or failed</li>
+                            </ol>
+                            <p class="text-muted small mb-0">
+                                Screening answers for work authorization and visa sponsorship come from your profile settings, not from the AI model alone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div class="faq-category" id="troubleshooting">
+                    <h2><i class="fas fa-wrench me-2"></i> Troubleshooting</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            "No API key configured" error
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            This means you haven’t chosen a provider and added credentials yet — required before you can run any analysis (unless the operator enabled Vertex AI).
+                            <ol>
+                                <li>Go to <strong>Settings → AI Setup</strong></li>
+                                <li>Select a provider, add your API key (or pick Ollama), and click Save</li>
+                            </ol>
+                            <p>If you don’t have a key yet, see the <a href="#api-key">API Key Setup</a> section above.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Analysis is taking longer than expected or seems stuck
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>A full analysis normally completes in around 30 seconds. If it's taking longer:</p>
+                            <ul>
+                                <li><strong>Wait up to 60 seconds</strong> — very detailed job postings can take longer</li>
+                                <li><strong>Check your connection</strong> — the app reconnects automatically if the connection drops, but if the UI appears frozen a full page refresh will reset it</li>
+                                <li><strong>Check your API key</strong> — an invalid or expired key will cause the analysis to fail. Go to Settings and re-save your key</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            "Rate limit exceeded" error
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>RoleMule enforces per-user rate limits to prevent accidental runaway usage of your AI provider quota. The error message will tell you exactly how long to wait before trying again.</p>
+                            <ul>
+                                <li><strong>Job analyses:</strong> 10 per hour</li>
+                                <li><strong>Career Tools:</strong> 10 per hour</li>
+                                <li><strong>Cover Letter / Resume regeneration:</strong> 5 per hour per application</li>
+                                <li><strong>Interview Prep generation:</strong> 5 per hour</li>
+                                <li><strong>CV Optimization:</strong> 10 runs per hour, 10 CV downloads per hour</li>
+                                <li><strong>Mock Session:</strong> 10 starts / hour, 40 turns / hour, 10 finishes / hour</li>
+                                <li><strong>Hiring Outreach:</strong> 5 generations / hour</li>
+                            </ul>
+                            <p>Limits reset on a rolling hourly basis. If you are the instance operator and want to adjust these limits, they are configurable in the backend rate-limit settings.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            The AI output seems generic or not personalized
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>This almost always means your profile needs more detail. The AI can only personalize output based on what's in your profile — if it's sparse, the output will be generic.</p>
+                            <ul>
+                                <li><strong>Write a strong Professional Summary</strong> — this is the single most impactful field; describe your background, key strengths, and what you're looking for in 3–4 sentences</li>
+                                <li><strong>Add specific job titles and companies</strong> in your work history, not just "Software Engineer"</li>
+                                <li><strong>Include concrete accomplishments</strong> with numbers: "Reduced API latency by 40%", "Led a team of 5 engineers"</li>
+                                <li><strong>List your actual skills</strong>, especially technologies and tools relevant to roles you're targeting</li>
+                                <li><strong>Complete your Career Preferences</strong> — salary range, job type, and work arrangement all help tailor the output</li>
+                            </ul>
+                            <p>After improving your profile, re-run the analysis on the same job posting to see the difference.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I submit a job from a job board?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>There are two ways to get job postings into RoleMule:</p>
+                            <ul>
+                                <li><strong>Paste or upload</strong> — In the <a href="https://github.com/eliornl/rolemule#quick-start">New Application</a> form, either paste the full job description or upload a PDF, TXT, or Word (.docx) file. Include everything: title, company, responsibilities, and requirements</li>
+                                <li><strong>Chrome Extension</strong> — On a posting page, click the RoleMule icon and choose <strong>Analyze This Job</strong> to send the description for analysis. See <a href="#extension">Chrome Extension setup</a> for installation steps</li>
+                            </ul>
+                            <p>The more complete the job text, the better the analysis. Short or incomplete descriptions produce less accurate results.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLI -->
+                <div class="faq-category" id="cli">
+                    <h2><i class="fas fa-terminal me-2"></i> CLI</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I use the RoleMule CLI?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The <code>rolemule</code> CLI is installed with the project (<code>make setup</code> / <code>pip install -e ".[cli]"</code>). It covers the full product surface from the terminal — not just job analysis.</p>
+                            <p><strong>Quick start</strong> (one common path among many):</p>
+                            <ol>
+                                <li><code>rolemule auth login</code> — sign in (or use a personal access token for automation)</li>
+                                <li><code>rolemule workflow analyze job.txt --wait</code> — run the full analysis pipeline</li>
+                                <li><code>rolemule workflow results SESSION --section cover-letter</code> — pull outputs</li>
+                            </ol>
+                            <p>Other command groups include <code>apps</code> (list/manage applications), <code>interview</code>, <code>cv</code> (Optimize CV), <code>tools</code> (career tools), <code>profile</code>, <code>extension</code>, and <code>config</code>. Claude, Cursor, and similar agents can call the same commands.</p>
+                            <p>Run <code>rolemule --help</code> (or <code>rolemule &lt;group&gt; --help</code>) for the full command list, or see the repo CLI docs.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account & Privacy -->
+                <div class="faq-category" id="account">
+                    <h2><i class="fas fa-user-shield me-2"></i> Account & Privacy</h2>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I delete my account?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li>Go to <strong>Dashboard → Settings</strong></li>
+                                <li>Scroll to the <strong>Danger Zone</strong> section at the bottom</li>
+                                <li>Click <strong>Delete Account</strong> and confirm</li>
+                            </ol>
+                            <p><strong>This is permanent and cannot be undone.</strong> All your data — profile, applications, generated content, and your API key — will be permanently deleted.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I export my data?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <ol>
+                                <li>Go to <strong>Dashboard → Settings → Data Export</strong></li>
+                                <li>Click <strong>Export My Data</strong></li>
+                                <li>A JSON file will be downloaded to your device</li>
+                            </ol>
+                            <p>The export includes your full profile, all job applications and their AI-generated content, and your workflow history. It does not include your encrypted API key.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What data does RoleMule collect?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>This application stores only what's necessary to function:</p>
+                            <ul>
+                                <li><strong>Account information</strong> — Email address and name (from registration or Google OAuth)</li>
+                                <li><strong>Profile data</strong> — Work experience, education, skills, and career preferences that you enter</li>
+                                <li><strong>Job application data</strong> — The job postings you analyze and the AI-generated content produced for them</li>
+                                <li><strong>API key</strong> — Stored encrypted; used only to call your chosen AI provider on your behalf</li>
+                            </ul>
+                            <p>Your data is not sold, used for advertising, or shared with third parties beyond what's required to operate the application. Read the full <a href="/privacy">Privacy Policy</a> for details.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I change my password or email?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Password:</strong> Go to <strong>Dashboard → Settings → Account</strong> and use the Change Password form. You'll need to enter your current password to confirm.</p>
+                            <p><strong>Email:</strong> Email address changes are not currently supported through self-service. If you need to update your email, you can delete your account and re-register, or open an issue on the project's GitHub repository.</p>
+                            <p>If you signed in with Google OAuth, your email is managed by your Google account and cannot be changed within RoleMule.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Contact Section -->
+            <div class="contact-section">
+                <h2>Still need help?</h2>
+                <p>Can't find what you're looking for? Open an issue on GitHub.</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="https://github.com/eliornl/rolemule/issues" target="_blank" rel="noopener noreferrer" class="btn btn-primary-glow">
+                        <i class="fab fa-github me-2"></i> Open a GitHub Issue
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand-icon">
+                        <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                    </div>
+                    <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+                </div>
+                <div class="footer-links">
+                    <a href="help.html">Help &amp; FAQ</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-meta">
+                    <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer" class="footer-github">
+                        <i class="fab fa-github"></i> Open Source on GitHub
+                    </a>
+                    <p>© 2026 RoleMule</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/help.js"></script>
+
+</body>
+</html>
