@@ -233,15 +233,15 @@ def main() -> None:
     print("Wrote favicon.png / favicon.svg / favicon.ico (face-only)")
 
     print("-" * 40)
-    for size, name, passes in (
-        (16, "icon16.png", 7),
-        (48, "icon48.png", 5),
-        (128, "icon128.png", 4),
+    # Extension toolbar icons must match the website favicon exactly (same art).
+    for size, name in (
+        (16, "icon16.png"),
+        (48, "icon48.png"),
+        (128, "icon128.png"),
     ):
         path = OUT_DIR / name
-        # Face-only at all extension sizes (same mark as the browser favicon)
-        make_favicon_face(src, size, passes).save(path)
-        print(f"Created {path.name} ({size}x{size})")
+        fav32.resize((size, size), Image.Resampling.LANCZOS).save(path)
+        print(f"Created {path.name} ({size}x{size}) — scaled from website favicon")
 
     print("-" * 40)
     print("All icons generated successfully!")

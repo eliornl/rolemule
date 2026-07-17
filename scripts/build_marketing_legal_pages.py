@@ -94,6 +94,7 @@ def page_shell(
     <link rel="stylesheet" href="assets/css/marketing.css">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
     <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
     <style>
 {styles}
     </style>
