@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | RoleMule</title>
+    <meta name="description" content="Privacy Policy for RoleMule — self-hosted; your data stays on your instance.">
+    <link rel="canonical" href="https://eliornl.github.io/rolemule/">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/base/variables.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/marketing.css">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <style>
+.navbar {
+            background: var(--bg-card) !important;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+                .brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+        .brand-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .brand-accent {
+            color: var(--accent-primary);
+        }
+        .legal-page {
+            padding-top: 2rem;
+            padding-bottom: 60px;
+            min-height: 100vh;
+        }
+        .legal-page .page-container {
+            margin-top: 0;
+            padding: 0 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .legal-page .page-container {
+                padding: 0 1rem;
+            }
+        }
+        .legal-content {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .legal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-gradient);
+        }
+        .legal-content h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .legal-content .last-updated {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        .legal-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .legal-content h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+        .legal-content p, .legal-content li {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        .legal-content ul {
+            padding-left: 1.5rem;
+        }
+        .legal-content li {
+            margin-bottom: 0.5rem;
+        }
+        .legal-content a {
+            color: var(--accent-primary);
+        }
+        .legal-content a:hover {
+            color: var(--text-primary);
+        }
+        .legal-toc {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-accent);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .legal-toc h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .legal-toc ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .legal-toc li {
+            margin-bottom: 0.5rem;
+        }
+        .legal-toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .legal-toc a:hover {
+            color: var(--accent-primary);
+        }
+        .highlight-box {
+            background: rgba(0, 212, 255, 0.06);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+        .highlight-box p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+        .brand-icon img {
+            transform: scale(1.28);
+            transform-origin: center center;
+        }
+        .nav-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav-back-btn:hover {
+            color: var(--accent-primary);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <div class="brand-icon">
+                    <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                </div>
+                <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+            </a>
+            <a href="index.html" class="nav-back-btn">
+                <i class="fas fa-arrow-left"></i>Back to Home
+            </a>
+        </div>
+    </nav>
+
+<section class="legal-page">
+        <div class="page-container">
+            <div class="legal-content">
+                <h1>Privacy Policy</h1>
+                <p class="last-updated">Last Updated: July 16, 2026</p>
+
+                <div class="highlight-box">
+                    <p><strong>Self-hosted software:</strong> RoleMule is open-source software that you run on your own computer or server. All your data stays in your own database — it is never sent to or stored by the project authors. The person or organisation who deployed this instance is the data controller for any personal data stored here.</p>
+                </div>
+
+                <div class="legal-toc">
+                    <h4><i class="fas fa-list me-2"></i>Table of Contents</h4>
+                    <ul>
+                        <li><a href="#information-we-collect">1. Information Stored</a></li>
+                        <li><a href="#how-we-use">2. How Your Information Is Used</a></li>
+                        <li><a href="#data-storage">3. Data Storage and Security</a></li>
+                        <li><a href="#third-party">4. Third-Party Services</a></li>
+                        <li><a href="#your-rights">5. Your Rights</a></li>
+                        <li><a href="#cookies">6. Cookies and Local Storage</a></li>
+                        <li><a href="#data-retention">7. Data Retention</a></li>
+                        <li><a href="#children">8. Children's Privacy</a></li>
+                        <li><a href="#changes">9. Changes to This Policy</a></li>
+                        <li><a href="#contact">10. Contact</a></li>
+                    </ul>
+                </div>
+
+                <h2 id="information-we-collect">1. Information Stored</h2>
+
+                <h3>1.1 Information You Provide</h3>
+                <ul>
+                    <li><strong>Account Information:</strong> Email address, name, and password when you create an account</li>
+                    <li><strong>Profile Data:</strong> Professional information including work experience, education, skills, and career preferences — entered manually or extracted from a resume you upload</li>
+                    <li><strong>Job Application Data:</strong> Job postings and job descriptions you submit for analysis</li>
+                    <li><strong>API Keys:</strong> If you use Bring Your Own Key (BYOK), encrypted API keys for the providers you configure (Gemini, OpenAI, and/or Anthropic) are stored in the local database. Ollama uses no API key.</li>
+                </ul>
+
+                <h3>1.2 Log Data</h3>
+                <ul>
+                    <li><strong>Server Logs:</strong> IP addresses, access times, and pages viewed — written to local log files on the server running this instance, retained for up to 30 days</li>
+                </ul>
+
+                <h3>1.3 Information from Third Parties</h3>
+                <ul>
+                    <li><strong>Google OAuth:</strong> If you sign in with Google, only your email address and name are stored locally</li>
+                    <li><strong>Chrome Extension:</strong> When you choose <strong>Analyze This Job</strong>, posting content from that page is sent to this instance. When you choose <strong>Match Form To Profile</strong>, visible form field labels/options and your profile snapshot are sent to this instance for suggestions; a stored resume file may be read locally in the browser to fill resume upload fields. Nothing is sent until you click one of those actions.</li>
+                </ul>
+
+                <h2 id="how-we-use">2. How Your Information Is Used</h2>
+                <p>Your information is used solely to:</p>
+                <ul>
+                    <li>Analyze job postings, match your profile against job requirements, and generate personalized application materials</li>
+                    <li>Run on-demand tools such as CV optimization, interview prep, mock sessions, hiring outreach, and career tools</li>
+                    <li>Keep you authenticated across sessions (including the optional CLI)</li>
+                    <li>Send email verification and password reset messages (only if SMTP is configured on this instance)</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <p><strong>Your data never leaves this instance</strong> except when job descriptions and profile data are sent to the AI provider you (or the instance operator) configured — Gemini, OpenAI, Anthropic, or a local Ollama server (see Section 4). No data is sent to the project authors.</p>
+                </div>
+
+                <h2 id="data-storage">3. Data Storage and Security</h2>
+                <p>All data is stored in the PostgreSQL database running alongside this instance:</p>
+                <ul>
+                    <li><strong>API Keys:</strong> Encrypted using Fernet symmetric encryption before being stored</li>
+                    <li><strong>Passwords:</strong> Hashed using bcrypt — never stored in plain text</li>
+                    <li><strong>Authentication tokens:</strong> Short-lived JWTs stored in your browser's localStorage; revocation list stored in Redis</li>
+                    <li><strong>Security:</strong> The instance operator is responsible for securing the host, database, and network</li>
+                </ul>
+
+                <h2 id="third-party">4. Third-Party Services</h2>
+                <p>Depending on how this instance is configured, the following external services may be contacted:</p>
+                <ul>
+                    <li><strong>AI providers (BYOK or operator-configured):</strong> Job descriptions, profile data, and related prompts are sent to the provider selected in Settings → AI Setup (or the operator’s server default) to generate analysis and tools output:
+                        <ul>
+                            <li><strong>Google Gemini</strong> — governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a></li>
+                            <li><strong>OpenAI</strong> — governed by <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer">OpenAI's Privacy Policy</a></li>
+                            <li><strong>Anthropic</strong> — governed by <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer">Anthropic's Privacy Policy</a></li>
+                            <li><strong>Ollama (local)</strong> — requests stay on the machine or network where Ollama is running; no cloud API key is used</li>
+                        </ul>
+                        The instance may use an operator-managed key (for example Gemini / Vertex AI) and/or your own encrypted BYOK keys.
+                    </li>
+                    <li><strong>Google OAuth:</strong> If Google sign-in is enabled on this instance, authentication is handled by Google's OAuth service. Only your email address and name are stored locally.</li>
+                    <li><strong>Analytics (optional):</strong> If PostHog analytics are enabled by the instance operator, usage events are sent to PostHog only with your explicit consent via cookie preferences. This is disabled by default in the self-hosted configuration.</li>
+                </ul>
+
+                <h2 id="your-rights">5. Your Rights</h2>
+                <p>Because all data is stored locally on your instance, you have direct control:</p>
+
+                <h3>5.1 Access and Export</h3>
+                <p>Use the "Export My Data" feature in <strong>Dashboard → Settings</strong> to download everything stored about you in JSON format.</p>
+
+                <h3>5.2 Correction</h3>
+                <p>Update or correct your personal information at any time through your profile settings.</p>
+
+                <h3>5.3 Deletion</h3>
+                <p>Use the "Delete Account" feature in <strong>Dashboard → Settings</strong> to permanently and immediately delete your account and all associated data. This action cannot be undone.</p>
+
+                <h3>5.4 Data Portability</h3>
+                <p>Your data export is in machine-readable JSON format, usable by other systems.</p>
+
+                <h2 id="cookies">6. Cookies and Local Storage</h2>
+                <p>This application uses browser storage for the following purposes:</p>
+                <ul>
+                    <li><strong>Authentication:</strong> Your login token is stored in localStorage to keep you signed in. Required for the application to function.</li>
+                    <li><strong>Cookie Consent:</strong> Your cookie preferences are stored in localStorage so the consent banner does not reappear on every visit.</li>
+                    <li><strong>Analytics (if enabled):</strong> PostHog uses localStorage to track feature usage — only with your explicit consent. You can withdraw consent at any time via the cookie settings banner.</li>
+                </ul>
+                <p>No advertising, retargeting, or third-party tracking cookies are used. Clearing browser cookies alone will not log you out — you must use the logout button to clear your session token from localStorage.</p>
+
+                <h2 id="data-retention">7. Data Retention</h2>
+                <ul>
+                    <li><strong>Account and Profile Data:</strong> Retained while your account is active</li>
+                    <li><strong>Application Data:</strong> Retained until you delete it</li>
+                    <li><strong>Server Log Files:</strong> Retained for up to 30 days on the instance host</li>
+                    <li><strong>Deleted Account Data:</strong> Permanently removed immediately upon account deletion</li>
+                </ul>
+
+                <h2 id="children">8. Children's Privacy</h2>
+                <p>This software is not intended for use by individuals under 16 years of age. The instance operator is responsible for enforcing appropriate age restrictions.</p>
+
+                <h2 id="changes">9. Changes to This Policy</h2>
+                <p>The project maintainers may update this policy in the source repository. Instance operators are responsible for keeping this page current with their own deployment practices.</p>
+
+                <h2 id="contact">10. Contact</h2>
+                <p>For questions about your data on this specific instance, contact the person who set it up. For questions about the open-source software itself, open an issue on the <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+
+                <div class="highlight-box">
+                    <p>You can exercise most data rights yourself without contacting anyone: export your data or delete your account directly from <strong>Dashboard → Settings</strong>.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand-icon">
+                        <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                    </div>
+                    <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+                </div>
+                <div class="footer-links">
+                    <a href="help.html">Help &amp; FAQ</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-meta">
+                    <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer" class="footer-github">
+                        <i class="fab fa-github"></i> Open Source on GitHub
+                    </a>
+                    <p>© 2026 RoleMule</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

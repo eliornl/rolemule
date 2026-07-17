@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | RoleMule</title>
+    <meta name="description" content="Terms of Service for RoleMule — open-source, self-hosted software.">
+    <link rel="canonical" href="https://eliornl.github.io/rolemule/">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/base/variables.css">
+    <link rel="stylesheet" href="assets/css/landing.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/marketing.css">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <style>
+.navbar {
+            background: var(--bg-card) !important;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+                .brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+        .brand-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .brand-accent {
+            color: var(--accent-primary);
+        }
+        .legal-page {
+            padding-top: 2rem;
+            padding-bottom: 60px;
+            min-height: 100vh;
+        }
+        .legal-page .page-container {
+            margin-top: 0;
+            padding: 0 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .legal-page .page-container {
+                padding: 0 1rem;
+            }
+        }
+        .legal-content {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .legal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-gradient);
+        }
+        .legal-content h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .legal-content .last-updated {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        .legal-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .legal-content h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+        .legal-content p, .legal-content li {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        .legal-content ul, .legal-content ol {
+            padding-left: 1.5rem;
+        }
+        .legal-content li {
+            margin-bottom: 0.5rem;
+        }
+        .legal-content a {
+            color: var(--accent-primary);
+        }
+        .legal-content a:hover {
+            color: var(--text-primary);
+        }
+        .legal-toc {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-accent);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .legal-toc h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        .legal-toc ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .legal-toc li {
+            margin-bottom: 0.5rem;
+        }
+        .legal-toc a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .legal-toc a:hover {
+            color: var(--accent-primary);
+        }
+        .highlight-box {
+            background: rgba(0, 212, 255, 0.06);
+            border-left: 4px solid var(--accent-primary);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+        .highlight-box p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+        .warning-box {
+            background: rgba(239, 68, 68, 0.08);
+            border-left: 4px solid var(--danger);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+        .warning-box p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+        .brand-icon img {
+            transform: scale(1.28);
+            transform-origin: center center;
+        }
+        .nav-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .nav-back-btn:hover {
+            color: var(--accent-primary);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <div class="brand-icon">
+                    <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                </div>
+                <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+            </a>
+            <a href="index.html" class="nav-back-btn">
+                <i class="fas fa-arrow-left"></i>Back to Home
+            </a>
+        </div>
+    </nav>
+
+<section class="legal-page">
+        <div class="page-container">
+            <div class="legal-content">
+                <h1>Terms of Use</h1>
+                <p class="last-updated">Last Updated: July 16, 2026</p>
+
+                <div class="highlight-box">
+                    <p><strong>The short version:</strong> RoleMule is free, open-source software you run on your own machine. Use it responsibly. The AI helps you apply for jobs, but you are responsible for reviewing everything before submitting it to an employer. You own your data and can export or delete it at any time.</p>
+                </div>
+
+                <div class="legal-toc">
+                    <h4><i class="fas fa-list me-2"></i>Table of Contents</h4>
+                    <ul>
+                        <li><a href="#acceptance">1. Acceptance of Terms</a></li>
+                        <li><a href="#service-description">2. About This Software</a></li>
+                        <li><a href="#account">3. Account Registration</a></li>
+                        <li><a href="#acceptable-use">4. Acceptable Use</a></li>
+                        <li><a href="#content">5. Your Content</a></li>
+                        <li><a href="#intellectual-property">6. Open Source License</a></li>
+                        <li><a href="#ai-disclaimer">7. AI-Generated Content Disclaimer</a></li>
+                        <li><a href="#api-keys">8. API Keys (BYOK)</a></li>
+                        <li><a href="#privacy">9. Privacy</a></li>
+                        <li><a href="#termination">10. Termination</a></li>
+                        <li><a href="#disclaimers">11. Disclaimers</a></li>
+                        <li><a href="#limitation">12. Limitation of Liability</a></li>
+                        <li><a href="#contact">13. Contact</a></li>
+                    </ul>
+                </div>
+
+                <h2 id="acceptance">1. Acceptance of Terms</h2>
+                <p>By using this instance of RoleMule, you agree to these Terms of Use. If you do not agree, do not use the software. You must be at least 16 years old to create an account.</p>
+
+                <h2 id="service-description">2. About This Software</h2>
+                <p>RoleMule is free, open-source software licensed under the MIT License. The source code is publicly available on <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer">GitHub</a>. You are running a self-hosted instance — all your data stays in your own database on the machine where this instance is deployed.</p>
+                <p>The software provides:</p>
+                <ul>
+                    <li>Job posting analysis and requirements extraction (including PDF, TXT, and DOCX uploads)</li>
+                    <li>Company research and insights</li>
+                    <li>Profile-to-job matching and fit assessment</li>
+                    <li>AI-generated cover letters and application materials</li>
+                    <li>Resume optimization recommendations and on-demand CV optimization</li>
+                    <li>Interview preparation guides and timed mock interview sessions</li>
+                    <li>Hiring outreach drafts (copy-only — you send messages yourself)</li>
+                    <li>Career tools (thank you notes, follow-up emails, salary negotiation coaching, job comparison, and more)</li>
+                    <li>Chrome extension for analyzing job postings from pages you visit and matching application forms to your profile</li>
+                    <li>Optional command-line interface (<code>rolemule</code>) for the same workflows from a terminal or AI coding agents</li>
+                </ul>
+
+                <h2 id="account">3. Account Registration</h2>
+
+                <h3>3.1 Account Creation</h3>
+                <p>To use the software, create an account with accurate information. You may register using email/password or, if configured, Google OAuth.</p>
+
+                <h3>3.2 Account Security</h3>
+                <p>You are responsible for maintaining the confidentiality of your credentials and all activity under your account.</p>
+
+                <h3>3.3 Account Restrictions</h3>
+                <p>You may not share account credentials, use another person's account without permission, or create accounts for fraudulent purposes.</p>
+
+                <h2 id="acceptable-use">4. Acceptable Use</h2>
+                <p>You agree to use the software only for lawful purposes. You agree NOT to:</p>
+                <ul>
+                    <li>Use the software for any illegal or unauthorized purpose</li>
+                    <li>Submit false, misleading, or fraudulent information</li>
+                    <li>Attempt to gain unauthorized access to the server or database</li>
+                    <li>Interfere with or overload the running instance</li>
+                    <li>Attempt to circumvent rate limits, security measures, or access controls</li>
+                    <li>Violate any applicable laws or regulations</li>
+                </ul>
+
+                <h2 id="content">5. Your Content</h2>
+                <p>You retain full ownership of all content you submit — resumes, profile information, job descriptions, and generated outputs. Your data is processed locally on this instance to provide the service. You may export or delete all your data at any time from <strong>Dashboard → Settings</strong>.</p>
+
+                <h2 id="intellectual-property">6. Open Source License</h2>
+                <p>RoleMule is released under the MIT License. You are free to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, subject to the terms of the MIT License included in the source repository. Nothing in these Terms of Use restricts your rights under the MIT License.</p>
+
+                <h2 id="ai-disclaimer">7. AI-Generated Content Disclaimer</h2>
+
+                <div class="warning-box">
+                    <p><strong>Important:</strong> All AI-generated content — match scores, company research, cover letters, resume tips, interview guides, mock-session feedback, outreach drafts, and career-tool output — is provided as a starting point only. It may contain errors, inaccuracies, or outdated information. You are responsible for reviewing and verifying everything before submitting it to an employer or contacting anyone.</p>
+                </div>
+
+                <p>By using the software, you acknowledge that:</p>
+                <ul>
+                    <li>Match scores and fit assessments are estimates — not definitive hiring signals</li>
+                    <li>Company research is derived from publicly available information and may not be current</li>
+                    <li>Cover letters and other materials are drafts — review, personalize, and edit them before submission</li>
+                    <li>AI-generated content is not guaranteed to be accurate, complete, or appropriate for your situation</li>
+                    <li>The quality of AI output depends on the completeness and accuracy of your profile</li>
+                    <li>No guarantee is made of any outcome, including job offers, interviews, or callbacks</li>
+                </ul>
+
+                <h2 id="api-keys">8. API Keys (BYOK)</h2>
+                <p>In Settings → AI Setup you choose a provider (Google Gemini, OpenAI, Anthropic, or local Ollama) and, for cloud providers, add your own API key:</p>
+                <ul>
+                    <li>You are responsible for obtaining and maintaining valid credentials for the providers you use</li>
+                    <li>API usage is subject to each provider's terms and pricing (Ollama has no cloud API bill when run locally)</li>
+                    <li>You are responsible for any costs incurred with cloud providers</li>
+                    <li>Cloud API keys are stored encrypted in the local database</li>
+                    <li>Vertex AI, if enabled by the instance operator, is a server-side configuration — not a user BYOK path</li>
+                </ul>
+
+                <h2 id="privacy">9. Privacy</h2>
+                <p>Your use of this software is governed by the <a href="/privacy">Privacy Policy</a>, which describes what data is stored and how it is handled on this instance.</p>
+
+                <h2 id="termination">10. Termination</h2>
+
+                <h3>10.1 By You</h3>
+                <p>Delete your account at any time from <strong>Dashboard → Settings → Account</strong>. All data is permanently and immediately removed. Export your data first if you want a copy.</p>
+
+                <h3>10.2 By the Instance Operator</h3>
+                <p>The operator of this instance may remove accounts that violate these terms or misuse the software.</p>
+
+                <h2 id="disclaimers">11. Disclaimers</h2>
+                <p>THIS SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, ACCURACY OF AI-GENERATED CONTENT, OR UNINTERRUPTED OR ERROR-FREE OPERATION.</p>
+
+                <h2 id="limitation">12. Limitation of Liability</h2>
+                <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE CONTRIBUTORS TO THIS OPEN-SOURCE PROJECT SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, DATA, OR OPPORTUNITIES, ARISING FROM YOUR USE OF THIS SOFTWARE OR ANY AI-GENERATED CONTENT IT PRODUCES.</p>
+                <p>This software is provided free of charge. Use it at your own risk.</p>
+
+                <h2 id="contact">13. Contact</h2>
+                <p>For questions about these Terms or to report issues with the software, open an issue on the <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+
+                <div class="highlight-box">
+                    <p>By creating an account, you confirm that you are at least 16 years old and agree to these Terms of Use.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand-icon">
+                        <img src="assets/img/rolemule-icon.png" alt="" width="36" height="36">
+                    </div>
+                    <span class="brand-text">Role<span class="brand-accent">Mule</span></span>
+                </div>
+                <div class="footer-links">
+                    <a href="help.html">Help &amp; FAQ</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+                <div class="footer-meta">
+                    <a href="https://github.com/eliornl/rolemule" target="_blank" rel="noopener noreferrer" class="footer-github">
+                        <i class="fab fa-github"></i> Open Source on GitHub
+                    </a>
+                    <p>© 2026 RoleMule</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

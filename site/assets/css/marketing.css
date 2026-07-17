@@ -1,0 +1,18 @@
+/* Marketing site (GitHub Pages) — keep landing navbar on one line like the app. */
+.landing-page .navbar-nav .nav-link {
+    white-space: nowrap;
+    padding: 0.5rem 0.65rem !important;
+}
+
+.landing-page .nav-cta .btn {
+    white-space: nowrap;
+}
+
+.landing-page .nav-cta .btn-primary-glow {
+    padding-left: 1.15rem;
+    padding-right: 1.15rem;
+}
+
+.landing-page .navbar-nav {
+    gap: 0.15rem;
+}
