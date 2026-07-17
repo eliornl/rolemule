@@ -17,7 +17,10 @@
 [![Ollama](https://img.shields.io/badge/Ollama-000000.svg)](https://ollama.com/)
 [![Claude](https://img.shields.io/badge/Claude-D97757.svg)](https://claude.ai/code)
 [![Cursor](https://img.shields.io/badge/Cursor-000000.svg)](https://cursor.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
 
 <p align="center">
   <a href="https://github.com/eliornl/rolemule/stargazers"><img src="https://img.shields.io/github/stars/eliornl/rolemule?style=flat&logo=github" alt="GitHub Stars"></a>
