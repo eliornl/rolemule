@@ -4,6 +4,8 @@
 
 <p align="center"><em>One mule for every role.</em></p>
 
+<p align="center"><a href="https://eliornl.github.io/rolemule/">https://eliornl.github.io/rolemule/</a></p>
+
 [![Python](https://img.shields.io/badge/Python-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-green.svg)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-orange.svg)](https://langchain-ai.github.io/langgraph/)
