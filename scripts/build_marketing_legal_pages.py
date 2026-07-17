@@ -39,7 +39,7 @@ def extract_content(html: str) -> str:
         "",
         content,
         count=1,
-        flags=re.DOTALL,
+        flags=re.DOTALL | re.IGNORECASE,
     )
     # App-only absolute paths → marketing / GitHub equivalents
     content = content.replace('href="/dashboard/new-application"', f'href="{QUICK}"')
@@ -231,7 +231,7 @@ def main() -> None:
         "",
         help_body,
         count=1,
-        flags=re.DOTALL,
+        flags=re.DOTALL | re.IGNORECASE,
     )
     help_body = help_body.replace('href="/dashboard/new-application"', f'href="{QUICK}"')
     help_body = help_body.replace('href="/dashboard"', "href=\"index.html\"")
