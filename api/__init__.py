@@ -1,5 +1,5 @@
 """
-FastAPI API Routers for ApplyPilot.
+FastAPI API Routers for RoleMule.
 
 Routers:
 - auth: Authentication, OAuth, email verification, password reset

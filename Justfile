@@ -33,7 +33,7 @@ _create-env:
 _create-env:
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create_dotenv_if_missing.ps1
 
-# Sibling clone at ../applypilot-just-sandbox + SANDBOX_README.md (does not touch this repo's .env or DB).
+# Sibling clone at ../rolemule-just-sandbox + SANDBOX_README.md (does not touch this repo's .env or DB).
 [unix]
 sandbox-for-testing:
     {{python_cmd}} scripts/make_just_test_sandbox.py
@@ -94,7 +94,7 @@ setup: _create-env _npm-install build-frontend
     @echo "   just migrate   - run database migrations"
     @echo "   just dev       - start the app at http://localhost:8000"
     @echo ""
-    @echo " CLI: venv/bin/applypilot doctor  (Windows: venv\\Scripts\\applypilot.exe)"
+    @echo " CLI: venv/bin/rolemule doctor  (Windows: venv\\Scripts\\rolemule.exe)"
 
 # Install Node dependencies (runs inside ui/ — avoids && which breaks PowerShell 5.x)
 [private]

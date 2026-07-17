@@ -12,7 +12,7 @@ from cli.config import load_config, save_config
 from cli.context import CliContext
 from cli.output import emit
 
-config_app = typer.Typer(help="View and edit ~/.applypilot/config.toml.")
+config_app = typer.Typer(help="View and edit ~/.rolemule/config.toml.")
 
 
 # =============================================================================

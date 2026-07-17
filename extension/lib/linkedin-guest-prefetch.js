@@ -2,7 +2,7 @@
  * MAIN world — runs before the isolated extractor (see popup / service worker).
  * Fetches jobs-guest JSON into sessionStorage; isolated script shares sessionStorage with the tab.
  */
-(function applyPilotLinkedInGuestPrefetch() {
+(function roleMuleLinkedInGuestPrefetch() {
   'use strict';
 
   async function run() {

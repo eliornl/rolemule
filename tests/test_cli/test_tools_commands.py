@@ -1,4 +1,4 @@
-"""Tests for applypilot tools commands."""
+"""Tests for rolemule tools commands."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 
 THANK_YOU_RESPONSE = {
     "subject_line": "Thank you for the interview",

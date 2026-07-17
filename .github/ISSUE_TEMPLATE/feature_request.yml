@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for suggesting a feature.
 
-        ApplyPilot is **self-hosted and privacy-first**. Features that require external cloud services, third-party data collection, or centralized infrastructure are generally out of scope for the default build — but we're happy to discuss alternatives.
+        RoleMule is **self-hosted and privacy-first**. Features that require external cloud services, third-party data collection, or centralized infrastructure are generally out of scope for the default build — but we're happy to discuss alternatives.
 
         For large changes, maintainers may ask you to wait for feedback before opening a pull request. See [CONTRIBUTING.md](../../blob/main/CONTRIBUTING.md).
 
@@ -61,5 +61,5 @@ body:
     attributes:
       label: Scope check
       options:
-        - label: This feature can work in a self-hosted setup without sending user data to ApplyPilot-operated servers
+        - label: This feature can work in a self-hosted setup without sending user data to RoleMule-operated servers
           required: true

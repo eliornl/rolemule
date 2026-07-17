@@ -1,14 +1,14 @@
-"""Tests for applypilot_client.resources.extension."""
+"""Tests for rolemule_client.resources.extension."""
 
 from __future__ import annotations
 
 import httpx
 
-from applypilot_client.client import ApplyPilotClient
+from rolemule_client.client import RoleMuleClient
 
 
-def _mock_client(handler) -> ApplyPilotClient:
-    client = ApplyPilotClient("http://localhost:8000", access_token="jwt")
+def _mock_client(handler) -> RoleMuleClient:
+    client = RoleMuleClient("http://localhost:8000", access_token="jwt")
 
     def _request(method, path, **kwargs):
         url = f"{client.base_url}{path}"
@@ -24,7 +24,7 @@ def _mock_client(handler) -> ApplyPilotClient:
         response = handler(req, kwargs)
         if response.is_success:
             return response
-        from applypilot_client.errors import parse_error_response
+        from rolemule_client.errors import parse_error_response
 
         try:
             body = response.json()

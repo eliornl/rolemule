@@ -1,4 +1,4 @@
-"""Tests for applypilot auth commands."""
+"""Tests for rolemule auth commands."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from cli.config import load_credentials
 
 
-def test_login_saves_credentials(invoke, applypilot_home) -> None:
+def test_login_saves_credentials(invoke, rolemule_home) -> None:
     mock_client = MagicMock()
     mock_client.auth.login.return_value = {
         "access_token": "jwt.login.token",
@@ -35,7 +35,7 @@ def test_login_saves_credentials(invoke, applypilot_home) -> None:
     assert creds.access_token == "jwt.login.token"
 
 
-def test_register_does_not_save_token(invoke, applypilot_home) -> None:
+def test_register_does_not_save_token(invoke, rolemule_home) -> None:
     mock_client = MagicMock()
     mock_client.auth.register.return_value = {
         "access_token": "should-not-save",
@@ -57,7 +57,7 @@ def test_register_does_not_save_token(invoke, applypilot_home) -> None:
     assert load_credentials() is None
 
 
-def test_verify_code_saves_token(invoke, applypilot_home) -> None:
+def test_verify_code_saves_token(invoke, rolemule_home) -> None:
     mock_client = MagicMock()
     mock_client.auth.verify_code.return_value = {
         "access_token": "jwt.verify.token",
@@ -94,7 +94,7 @@ def test_whoami_without_token(invoke) -> None:
     assert json.loads(result.stdout)["authenticated"] is False
 
 
-def test_token_set_from_stdin(invoke, applypilot_home) -> None:
+def test_token_set_from_stdin(invoke, rolemule_home) -> None:
     result = invoke("auth", "token", "set", "--from-stdin", input="my.jwt.token\n")
     assert result.exit_code == 0
     assert load_credentials().access_token == "my.jwt.token"
@@ -113,26 +113,26 @@ def test_pat_create_shows_secret_once(invoke, write_credentials) -> None:
     mock_client.auth.create_pat.return_value = {
         "id": "pat-1",
         "name": "Automation",
-        "token_prefix": "ap_pat_ab",
-        "token": "ap_pat_full_secret",
+        "token_prefix": "rm_pat_ab",
+        "token": "rm_pat_full_secret",
         "created_at": "2026-07-08T00:00:00Z",
     }
 
     with patch("cli.commands.auth.make_client", return_value=mock_client):
         result = invoke("auth", "token", "create", "--name", "Automation")
     assert result.exit_code == 0
-    assert "ap_pat_full_secret" in result.output
+    assert "rm_pat_full_secret" in result.output
     mock_client.auth.create_pat.assert_called_once_with("Automation", expires_days=90)
 
 
-def test_pat_create_save_writes_credentials(invoke, write_credentials, applypilot_home) -> None:
+def test_pat_create_save_writes_credentials(invoke, write_credentials, rolemule_home) -> None:
     write_credentials(token="jwt.for.create", email="user@example.com")
     mock_client = MagicMock()
     mock_client.auth.create_pat.return_value = {
         "id": "pat-2",
         "name": "CI",
-        "token_prefix": "ap_pat_cd",
-        "token": "ap_pat_saved_secret",
+        "token_prefix": "rm_pat_cd",
+        "token": "rm_pat_saved_secret",
         "created_at": "2026-07-08T00:00:00Z",
     }
 
@@ -144,7 +144,7 @@ def test_pat_create_save_writes_credentials(invoke, write_credentials, applypilo
 
     creds = load_credentials()
     assert creds is not None
-    assert creds.access_token == "ap_pat_saved_secret"
+    assert creds.access_token == "rm_pat_saved_secret"
     assert creds.email == "user@example.com"
 
 
@@ -152,13 +152,13 @@ def test_pat_list(invoke, write_credentials) -> None:
     write_credentials()
     mock_client = MagicMock()
     mock_client.auth.list_pats.return_value = {
-        "tokens": [{"id": "pat-1", "name": "CLI", "token_prefix": "ap_pat_ab", "active": True}],
+        "tokens": [{"id": "pat-1", "name": "CLI", "token_prefix": "rm_pat_ab", "active": True}],
     }
 
     with patch("cli.commands.auth.make_client", return_value=mock_client):
         result = invoke("auth", "token", "list")
     assert result.exit_code == 0
-    assert "ap_pat_ab" in result.output
+    assert "rm_pat_ab" in result.output
 
 
 def test_pat_revoke(invoke, write_credentials) -> None:

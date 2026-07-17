@@ -1,5 +1,5 @@
 """
-Company Research Agent for ApplyPilot.
+Company Research Agent for RoleMule.
 Uses Gemini LLM with job-posting context, optional disambiguation, and optional
 Google Search grounding for employer-specific research.
 """

@@ -59,7 +59,7 @@ token = create_access_token({"sub": user_id, "email": email})
 | `/api/v1/auth/google/callback` | GET | OAuth callback — redirects with `?code=` |
 | `/api/v1/auth/oauth/exchange-code` | POST | Exchange one-time OAuth code for JWT |
 | `/api/v1/auth/extension-status` | GET | Auth status for Chrome extension |
-| `/api/v1/auth/tokens` | POST | Create personal access token (`ap_pat_…`) — plaintext shown **once** |
+| `/api/v1/auth/tokens` | POST | Create personal access token (`rm_pat_…`) — plaintext shown **once** |
 | `/api/v1/auth/tokens` | GET | List PATs (metadata only; no plaintext) |
 | `/api/v1/auth/tokens/{id}` | DELETE | Revoke one PAT |
 
@@ -67,10 +67,10 @@ token = create_access_token({"sub": user_id, "email": email})
 
 Long-lived CLI/automation credentials. Implementation: `utils/personal_access_tokens.py`.
 
-- Prefix: **`ap_pat_`**. Store **SHA-256** of the token; never persist plaintext after create.
+- Prefix: **`rm_pat_`**. Store **SHA-256** of the token; never persist plaintext after create.
 - `get_current_user` and WebSocket auth try **PAT before JWT**.
 - On **password change**, **password reset**, and **account delete**, call **`revoke_all_user_pats`** together with JWT invalidation.
-- CLI: `applypilot auth token create|list|revoke` (see **`cli.mdc`**).
+- CLI: `rolemule auth token create|list|revoke` (see **`cli.mdc`**).
 
 ## Auth Dependencies
 ```python

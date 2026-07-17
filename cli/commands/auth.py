@@ -10,7 +10,7 @@ from typing import Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.config import Credentials, clear_credentials, load_credentials, mask_token, save_credentials
 from cli.context import CliContext
 from cli.output import _now_iso, emit, emit_error, make_client, persist_auth_response
@@ -75,7 +75,7 @@ def whoami(ctx: typer.Context) -> None:
     """Show current authenticated user."""
     cli_ctx: CliContext = ctx.obj
     if not cli_ctx.access_token:
-        emit(cli_ctx, {"authenticated": False}, human="Not logged in. Run: applypilot auth login")
+        emit(cli_ctx, {"authenticated": False}, human="Not logged in. Run: rolemule auth login")
         raise typer.Exit(code=int(ExitCode.AUTH_OR_PROFILE))
 
     client = make_client(cli_ctx)
@@ -136,11 +136,11 @@ def register(
             "registered": True,
             "email": email,
             "message": data.get("message"),
-            "next_step": "applypilot auth verify-code",
+            "next_step": "rolemule auth verify-code",
         },
         human=(
             f"Account created for {email}. "
-            "Check your email for the verification code, then run: applypilot auth verify-code"
+            "Check your email for the verification code, then run: rolemule auth verify-code"
         ),
     )
 
@@ -315,7 +315,7 @@ def pat_create(
     ctx: typer.Context,
     name: str = typer.Option(..., "--name", "-n", help="Label for this token"),
     expires_days: int = typer.Option(90, "--expires-days", min=1, max=365, help="Days until expiry"),
-    save: bool = typer.Option(False, "--save", help="Store PAT in ~/.applypilot/credentials.json"),
+    save: bool = typer.Option(False, "--save", help="Store PAT in ~/.rolemule/credentials.json"),
 ) -> None:
     """Create a server-side personal access token (shown once)."""
     cli_ctx: CliContext = ctx.obj
@@ -351,7 +351,7 @@ def pat_create(
             f"Save this token now — it will not be shown again:\n{data.get('token')}",
         ]
         if save:
-            lines.append("Saved to ~/.applypilot/credentials.json")
+            lines.append("Saved to ~/.rolemule/credentials.json")
         emit(cli_ctx, data, human="\n".join(lines))
 
 

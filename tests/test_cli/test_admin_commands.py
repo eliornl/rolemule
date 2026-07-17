@@ -1,11 +1,11 @@
-"""Tests for applypilot admin commands."""
+"""Tests for rolemule admin commands."""
 
 from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.admin_visibility import admin_help_visible
 
 
@@ -16,9 +16,9 @@ def test_admin_hidden_from_default_help(invoke) -> None:
 
 
 def test_admin_help_visible_when_env_set(monkeypatch) -> None:
-    monkeypatch.setenv("APPLYPILOT_ADMIN", "1")
+    monkeypatch.setenv("ROLEMULE_ADMIN", "1")
     assert admin_help_visible() is True
-    monkeypatch.delenv("APPLYPILOT_ADMIN", raising=False)
+    monkeypatch.delenv("ROLEMULE_ADMIN", raising=False)
     assert admin_help_visible() is False
 
 

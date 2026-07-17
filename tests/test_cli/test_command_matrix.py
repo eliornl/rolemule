@@ -341,7 +341,7 @@ def test_command_happy_path(case: CommandCase, invoke, write_credentials) -> Non
 def test_doctor_happy_path(invoke, write_credentials) -> None:
     write_credentials()
     mock_client = build_mock_client()
-    with patch("cli.commands.doctor.ApplyPilotClient", return_value=mock_client):
+    with patch("cli.commands.doctor.RoleMuleClient", return_value=mock_client):
         result = invoke("doctor")
     assert result.exit_code == 0
 

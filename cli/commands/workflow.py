@@ -10,8 +10,8 @@ from typing import Any, Dict, Optional
 
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
-from applypilot_client.polling import WorkflowPollTimeout, wait_for_terminal_status
+from rolemule_client.errors import ApiClientError, ExitCode
+from rolemule_client.polling import WorkflowPollTimeout, wait_for_terminal_status
 from cli.context import CliContext
 from cli.formatters.workflow import VALID_SECTIONS, format_workflow_results
 from cli.output import emit, emit_workflow_error, require_client
@@ -122,7 +122,7 @@ def _finalize_analyze(
         raise typer.Exit(code=int(ExitCode.ERROR))
 
     if terminal_status == "awaiting_confirmation":
-        hint = "Low match score — run: applypilot workflow continue " + session_id
+        hint = "Low match score — run: rolemule workflow continue " + session_id
         if cli_ctx.output_format == "json":
             payload = {**results, "next_step": hint}
             emit(cli_ctx, payload)
@@ -132,7 +132,7 @@ def _finalize_analyze(
         return
 
     if terminal_status == "analysis_complete":
-        hint = "Run: applypilot workflow generate-documents " + session_id
+        hint = "Run: rolemule workflow generate-documents " + session_id
         if cli_ctx.output_format == "json":
             payload = {**results, "next_step": hint}
             emit(cli_ctx, payload)
@@ -212,7 +212,7 @@ def workflow_analyze(
         if cli_ctx.output_format == "json":
             emit(cli_ctx, start_data)
         else:
-            typer.echo(f"Started workflow {session_id}. Check status with: applypilot workflow status {session_id}")
+            typer.echo(f"Started workflow {session_id}. Check status with: rolemule workflow status {session_id}")
         if open_dashboard:
             typer.echo(f"Dashboard: {_dashboard_url(cli_ctx, session_id)}")
         return
@@ -359,7 +359,7 @@ def regenerate_resume(ctx: typer.Context, session_id: str) -> None:
 
 @workflow_app.command("generate-interview-prep")
 def workflow_generate_interview_prep(ctx: typer.Context, session_id: str) -> None:
-    """Generate interview prep (legacy — prefer applypilot interview generate)."""
+    """Generate interview prep (legacy — prefer rolemule interview generate)."""
     cli_ctx: CliContext = ctx.obj
     client = require_client(cli_ctx)
     try:

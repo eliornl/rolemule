@@ -1,4 +1,4 @@
-"""Tests for applypilot workflow commands."""
+"""Tests for rolemule workflow commands."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 
 
 def test_analyze_from_file(invoke, write_credentials, tmp_path: Path) -> None:

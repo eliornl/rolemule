@@ -2,9 +2,10 @@
 
 This folder contains the PNG icons required by the Chrome extension manifest:
 
-- `icon16.png` (16×16 px)
+- `icon16.png` (16×16 px) — toolbar / favicon-style face mark
 - `icon48.png` (48×48 px)
 - `icon128.png` (128×128 px)
+- `brand-icon.png` — full mule + pack mark for the popup header (same as the app navbar)
 
 ## Generating Icons
 
@@ -16,7 +17,7 @@ pip install Pillow
 python generate_icons.py
 ```
 
-This is the standard method — it generates icons that match the app's gradient color scheme.
+Builds a thicker master for the navbar, plus size-aware favicons and `icon16` / `icon48` / `icon128`. Thin line-art is hard to read at 16–36px — the script dilates strokes from `docs/rolemule-icon.original.png`.
 
 ### Alternative — ImageMagick:
 

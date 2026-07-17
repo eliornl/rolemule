@@ -65,7 +65,7 @@ def test_structured_logger_security_events() -> None:
 
 def test_log_startup_info_vertex_and_studio() -> None:
     log_startup_info(
-        app_name="ApplyPilot",
+        app_name="RoleMule",
         version="1.0.0",
         environment="production",
         debug=False,
@@ -80,7 +80,7 @@ def test_log_startup_info_vertex_and_studio() -> None:
         log_level="INFO",
     )
     log_startup_info(
-        app_name="ApplyPilot",
+        app_name="RoleMule",
         version="1.0.0",
         environment="development",
         debug=True,
@@ -137,7 +137,7 @@ def test_setup_logging_json_mode_and_get_config(tmp_path) -> None:
         log_format="json",
         log_dir=str(tmp_path),
         enable_file_logging=False,
-        service_name="applypilot-test",
+        service_name="rolemule-test",
         service_version="0.0.1",
         environment="test",
     )

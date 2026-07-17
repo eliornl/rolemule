@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.database import PersonalAccessToken, User
 
-PAT_PREFIX = "ap_pat_"
+PAT_PREFIX = "rm_pat_"
 DEFAULT_PAT_EXPIRE_DAYS = 90
 MAX_PAT_EXPIRE_DAYS = 365
 MAX_PATS_PER_USER = 25

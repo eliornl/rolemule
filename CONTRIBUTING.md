@@ -1,8 +1,8 @@
-# Contributing to ApplyPilot
+# Contributing to RoleMule
 
 First off — thank you for taking the time to contribute! 🚀
 
-ApplyPilot is a personal open-source project. All contributions are welcome: bug reports, feature ideas, documentation improvements, and code. Please read the relevant section before opening an issue or PR — it makes things faster for everyone.
+RoleMule is a personal open-source project. All contributions are welcome: bug reports, feature ideas, documentation improvements, and code. Please read the relevant section before opening an issue or PR — it makes things faster for everyone.
 
 > Not ready to contribute code yet? You can still help by **starring the repo**, sharing it with others, or opening an issue with feedback.
 
@@ -161,7 +161,7 @@ Use this if you already have PostgreSQL and Redis running. **Windows users:** us
 ```bash
 git clone https://github.com/eliornl/applypilot.git
 cd applypilot
-make setup       # or: just setup   (Windows) — includes applypilot CLI in venv
+make setup       # or: just setup   (Windows) — includes rolemule CLI in venv
 ```
 
 Edit `.env` — update `DATABASE_URL` and `REDIS_URL` to point at your local instances. `JWT_SECRET` and `ENCRYPTION_KEY` are already filled in by `make setup`.

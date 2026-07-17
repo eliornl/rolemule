@@ -16,14 +16,14 @@ def typer_explicit_shell(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_show_completion_bash(invoke, typer_explicit_shell) -> None:
     result = invoke("--show-completion", "bash")
     assert result.exit_code == 0
-    assert "applypilot" in result.output
-    assert "_APPLYPILOT_COMPLETE" in result.output
+    assert "rolemule" in result.output
+    assert "_ROLEMULE_COMPLETE" in result.output
 
 
 def test_show_completion_zsh(invoke, typer_explicit_shell) -> None:
     result = invoke("--show-completion", "zsh")
     assert result.exit_code == 0
-    assert "applypilot" in result.output
+    assert "rolemule" in result.output
     assert "compdef" in result.output
 
 

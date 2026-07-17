@@ -1,5 +1,5 @@
 """
-LangGraph workflow modules for ApplyPilot.
+LangGraph workflow modules for RoleMule.
 
 - job_application_workflow: Main workflow with 5 agents
 - state_schema: Workflow state TypedDict and enums

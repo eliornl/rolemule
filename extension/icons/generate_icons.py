@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-Generate Chrome extension icons programmatically.
-Run this script to create icon16.png, icon48.png, and icon128.png
+Generate RoleMule icons from the master mark.
 
-The icons match the main ApplyPilot app's brand:
-- Gradient: #00d4ff (cyan) → #7c3aed (purple)
-- Shape: Rounded square with rocket icon
+Thin neon line-art disappears at 16–36px. This script:
+  1. Builds a transparent full mark for navbar UI (`docs/rolemule-icon.png`)
+  2. Builds a face-only favicon (head + cyan eye — pack dropped for tiny sizes)
+  3. Writes Chrome extension icons (face-only at 16/48; fuller at 128)
+
+Source of truth for the original artwork:
+  docs/rolemule-icon.original.png  (thin line art — do not overwrite lightly)
+  docs/rolemule-icon.png           (navbar mark; transparent bg)
 
 Requirements:
     pip install Pillow
@@ -14,140 +18,236 @@ Usage:
     python generate_icons.py
 """
 
-from PIL import Image, ImageDraw
-import math
+from __future__ import annotations
+
+import base64
+import io
+from pathlib import Path
+
+from PIL import Image, ImageDraw, ImageFilter
+
+ROOT = Path(__file__).resolve().parents[2]
+ORIGINAL = ROOT / "docs" / "rolemule-icon.original.png"
+MASTER_FALLBACK = ROOT / "docs" / "rolemule-icon.png"
+OUT_MASTER = ROOT / "docs" / "rolemule-icon.png"
+UI_ICON = ROOT / "ui" / "static" / "img" / "rolemule-icon.png"
+UI_FAVICON_PNG = ROOT / "ui" / "static" / "img" / "favicon.png"
+UI_FAVICON_PNG_ROOT = ROOT / "ui" / "static" / "favicon.png"
+UI_FAVICON_SVG = ROOT / "ui" / "static" / "img" / "favicon.svg"
+UI_FAVICON_ICO = ROOT / "ui" / "static" / "favicon.ico"
+OUT_DIR = Path(__file__).resolve().parent
 
 
-def create_icon(size: int, filename: str) -> None:
-    """Create a gradient rounded-square icon with rocket design."""
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+def _source_image() -> Image.Image:
+    path = ORIGINAL if ORIGINAL.exists() else MASTER_FALLBACK
+    if not path.exists():
+        raise SystemExit(f"Master icon not found: {path}")
+    return Image.open(path).convert("RGBA")
 
-    padding = max(1, int(size * 0.03))
-    inner = size - 2 * padding
-    corner = max(2, int(size * 0.22))
 
-    # Draw gradient rounded square background
-    # Gradient from #00d4ff (0, 212, 255) to #7c3aed (124, 58, 237)
-    for y in range(size):
-        for x in range(size):
-            # Calculate distance-based gradient (diagonal: top-left to bottom-right)
-            ratio = ((x + y) / (2 * size))
-            ratio = max(0.0, min(1.0, ratio))
+def _split_masks(img: Image.Image) -> tuple[Image.Image, Image.Image]:
+    w, h = img.size
+    pixels = img.load()
+    white_mask = Image.new("L", (w, h), 0)
+    cyan_mask = Image.new("L", (w, h), 0)
+    wm, cm = white_mask.load(), cyan_mask.load()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = pixels[x, y]
+            if a < 30 or r + g + b < 60:
+                continue
+            if b > 160 and g > 140 and r < 140 and (b + g) > r * 2.2:
+                cm[x, y] = 255
+            elif max(r, g, b) > 120:
+                wm[x, y] = 255
+    return white_mask, cyan_mask
 
-            r = int(0 + (124 - 0) * ratio)
-            g = int(212 + (58 - 212) * ratio)
-            b = int(255 + (237 - 255) * ratio)
 
-            # Check if point is inside rounded rectangle
-            rx = x - padding
-            ry = y - padding
-            if 0 <= rx < inner and 0 <= ry < inner:
-                in_rect = True
-                # Check corners
-                if rx < corner and ry < corner:
-                    in_rect = math.hypot(rx - corner, ry - corner) <= corner
-                elif rx > inner - corner and ry < corner:
-                    in_rect = math.hypot(rx - (inner - corner), ry - corner) <= corner
-                elif rx < corner and ry > inner - corner:
-                    in_rect = math.hypot(rx - corner, ry - (inner - corner)) <= corner
-                elif rx > inner - corner and ry > inner - corner:
-                    in_rect = math.hypot(rx - (inner - corner), ry - (inner - corner)) <= corner
+def _thicken(mask: Image.Image, passes: int, radius: int = 5) -> Image.Image:
+    out = mask
+    for _ in range(passes):
+        out = out.filter(ImageFilter.MaxFilter(radius))
+    return out
 
-                if in_rect:
-                    img.putpixel((x, y), (r, g, b, 255))
 
-    scale = size / 128.0
+def _apply_rounded_alpha(img: Image.Image, radius_ratio: float = 0.18) -> Image.Image:
+    w, h = img.size
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, w - 1, h - 1),
+        radius=int(w * radius_ratio),
+        fill=255,
+    )
+    out = img.copy()
+    out.putalpha(mask)
+    return out
 
-    # Draw rocket body (white triangle/teardrop shape)
-    cx = size // 2
-    
-    # Rocket body points
-    top_y = int(24 * scale)
-    body_width = int(16 * scale)
-    body_bottom = int(88 * scale)
 
-    # Main body polygon (elongated shape with pointed top)
-    body_points = [
-        (cx, top_y),  # Nose tip
-        (cx + body_width, int(60 * scale)),  # Right shoulder
-        (cx + body_width, body_bottom),  # Right bottom
-        (cx - body_width, body_bottom),  # Left bottom
-        (cx - body_width, int(60 * scale)),  # Left shoulder
-    ]
-    draw.polygon(body_points, fill='white')
+def build_master(src: Image.Image) -> Image.Image:
+    """Navbar / large UI mark — light stroke boost only (favicons use heavier make_small)."""
+    w, h = src.size
+    white_mask, cyan_mask = _split_masks(src)
+    white_thick = _thicken(white_mask, passes=1, radius=3)
+    cyan_thick = _thicken(cyan_mask, passes=1, radius=3)
+    glow = white_thick.filter(ImageFilter.GaussianBlur(radius=3))
 
-    # Rocket nose cone (smooth top)
-    nose_r = int(16 * scale)
-    draw.ellipse(
-        [cx - nose_r, top_y - int(2 * scale), cx + nose_r, top_y + int(24 * scale)],
-        fill='white'
+    # Transparent canvas — mule blends with navbar (any page bg)
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    op = out.load()
+    wt, ct = white_thick.load(), cyan_thick.load()
+    wg = glow.load()
+    white = (250, 252, 255)
+    cyan = (0, 220, 255)
+    cyan_core = (150, 250, 255)
+
+    for y in range(h):
+        for x in range(w):
+            if wt[x, y] > 100:
+                op[x, y] = (*white, 255)
+            elif ct[x, y] > 100:
+                color = cyan_core if cyan_mask.getpixel((x, y)) > 80 else cyan
+                op[x, y] = (*color, 255)
+            else:
+                gv = wg[x, y]
+                if gv > 20:
+                    a = int(min(255, gv * 0.35))
+                    op[x, y] = (255, 255, 255, a)
+                else:
+                    op[x, y] = (0, 0, 0, 0)
+
+    return out
+
+
+def make_favicon_face(src: Image.Image, size: int, passes: int) -> Image.Image:
+    """Face-only favicon — head, ears, cyan eye. Pack dropped for 16–32px legibility."""
+    w, h = src.size
+    # Pack sits on the left/back; crop to the head region
+    crop = src.crop((int(w * 0.29), int(h * 0.06), int(w * 0.90), int(h * 0.76)))
+    scale = 4
+    big = size * scale
+    base = crop.resize((big, big), Image.Resampling.LANCZOS)
+    # Slight extra zoom into the face
+    zw = int(big * 0.08)
+    base = base.crop((zw, zw, big - zw, big - zw)).resize((big, big), Image.Resampling.LANCZOS)
+
+    white_mask, cyan_mask = _split_masks(base)
+    white_thick = _thicken(white_mask, passes=passes, radius=3)
+    cyan_thick = _thicken(cyan_mask, passes=max(1, passes - 1), radius=3)
+    glow = white_thick.filter(ImageFilter.GaussianBlur(radius=1.0))
+
+    # Solid dark tile for browser tabs (--bg-primary)
+    bg = (10, 10, 15)
+    canvas = Image.new("RGBA", (big, big), (*bg, 255))
+    cp = canvas.load()
+    for y in range(big):
+        for x in range(big):
+            r, g, b = bg
+            gv = glow.getpixel((x, y))
+            if gv:
+                f = gv / 255.0 * 0.15
+                r = int(bg[0] * (1 - f) + 255 * f)
+                g = int(bg[1] * (1 - f) + 255 * f)
+                b = int(bg[2] * (1 - f) + 255 * f)
+            if white_thick.getpixel((x, y)) > 100:
+                r, g, b = 255, 255, 255
+            if cyan_thick.getpixel((x, y)) > 100:
+                r, g, b = 80, 240, 255
+            cp[x, y] = (r, g, b, 255)
+
+    return _apply_rounded_alpha(canvas, radius_ratio=0.22).resize(
+        (size, size), Image.Resampling.LANCZOS
     )
 
-    # Window (circle with gradient fill)
-    window_r = max(2, int(7 * scale))
-    window_cy = int(52 * scale)
-    draw.ellipse(
-        [cx - window_r, window_cy - window_r, cx + window_r, window_cy + window_r],
-        fill=(0, 180, 220, 255)  # Cyan-ish
+
+def make_small(src: Image.Image, size: int, passes: int) -> Image.Image:
+    """High-legibility icon at an exact pixel size (Chrome extension icons)."""
+    scale = 4
+    big = size * scale
+    base = src.resize((big, big), Image.Resampling.LANCZOS)
+    white_mask, cyan_mask = _split_masks(base)
+    white_thick = _thicken(white_mask, passes=passes, radius=3)
+    cyan_thick = _thicken(cyan_mask, passes=max(1, passes - 1), radius=3)
+    glow = white_thick.filter(ImageFilter.GaussianBlur(radius=2))
+
+    canvas = Image.new("RGBA", (big, big), (10, 10, 15, 255))
+    cp = canvas.load()
+    for y in range(big):
+        for x in range(big):
+            r, g, b = 10, 10, 15
+            gv = glow.getpixel((x, y))
+            if gv:
+                f = gv / 255.0 * 0.5
+                r = int(10 * (1 - f) + 255 * f)
+                g = int(10 * (1 - f) + 255 * f)
+                b = int(15 * (1 - f) + 255 * f)
+            if white_thick.getpixel((x, y)) > 100:
+                r, g, b = 255, 255, 255
+            if cyan_thick.getpixel((x, y)) > 100:
+                r, g, b = 80, 240, 255
+            cp[x, y] = (r, g, b, 255)
+
+    return _apply_rounded_alpha(canvas).resize((size, size), Image.Resampling.LANCZOS)
+
+
+def _write_favicon_svg(png: Image.Image, path: Path) -> None:
+    buf = io.BytesIO()
+    png.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">\n'
+        f'  <image href="data:image/png;base64,{b64}" width="32" height="32"/>\n'
+        "</svg>\n",
+        encoding="utf-8",
     )
 
-    # Left fin
-    fin_w = int(10 * scale)
-    fin_points = [
-        (cx - body_width, int(72 * scale)),
-        (cx - body_width - fin_w, body_bottom + int(4 * scale)),
-        (cx - body_width, body_bottom),
-    ]
-    draw.polygon(fin_points, fill='white')
 
-    # Right fin
-    fin_points_r = [
-        (cx + body_width, int(72 * scale)),
-        (cx + body_width + fin_w, body_bottom + int(4 * scale)),
-        (cx + body_width, body_bottom),
-    ]
-    draw.polygon(fin_points_r, fill='white')
-
-    # Flame (small orange/yellow at bottom)
-    flame_w = int(8 * scale)
-    flame_h = int(12 * scale)
-    flame_points = [
-        (cx - flame_w, body_bottom),
-        (cx, body_bottom + flame_h),
-        (cx + flame_w, body_bottom),
-    ]
-    draw.polygon(flame_points, fill=(255, 200, 80, 230))
-
-    # Inner flame
-    iflame_w = int(4 * scale)
-    iflame_h = int(8 * scale)
-    iflame_points = [
-        (cx - iflame_w, body_bottom),
-        (cx, body_bottom + iflame_h),
-        (cx + iflame_w, body_bottom),
-    ]
-    draw.polygon(iflame_points, fill=(255, 255, 200, 230))
-
-    img.save(filename, 'PNG')
-    print(f'Created {filename} ({size}x{size})')
-
-
-def main():
-    """Generate all required icon sizes."""
-    print("Generating Chrome extension icons...")
+def main() -> None:
+    src = _source_image()
+    print(f"Source: {ORIGINAL if ORIGINAL.exists() else MASTER_FALLBACK}")
     print("-" * 40)
 
-    create_icon(16, 'icon16.png')
-    create_icon(48, 'icon48.png')
-    create_icon(128, 'icon128.png')
+    master = build_master(src)
+    master.save(OUT_MASTER)
+    UI_ICON.parent.mkdir(parents=True, exist_ok=True)
+    master.save(UI_ICON)
+    # Popup header uses the same full mark as the app navbar
+    (OUT_DIR / "brand-icon.png").write_bytes(UI_ICON.read_bytes())
+    print(f"Wrote {OUT_MASTER.relative_to(ROOT)} (navbar — full mule + pack, transparent)")
+    print(f"Wrote {UI_ICON.relative_to(ROOT)}")
+    print("Wrote extension/icons/brand-icon.png (popup header)")
+
+    fav32 = make_favicon_face(src, 32, 1)
+    fav16 = make_favicon_face(src, 16, 2)
+    fav32.save(UI_FAVICON_PNG)
+    fav32.save(UI_FAVICON_PNG_ROOT)
+    _write_favicon_svg(fav32, UI_FAVICON_SVG)
+    try:
+        fav16.save(
+            UI_FAVICON_ICO,
+            format="ICO",
+            sizes=[(16, 16), (32, 32)],
+            append_images=[fav32],
+        )
+    except TypeError:
+        fav32.save(UI_FAVICON_ICO, format="ICO", sizes=[(32, 32)])
+    print("Wrote favicon.png / favicon.svg / favicon.ico (face-only)")
+
+    print("-" * 40)
+    for size, name, passes in (
+        (16, "icon16.png", 7),
+        (48, "icon48.png", 5),
+        (128, "icon128.png", 4),
+    ):
+        path = OUT_DIR / name
+        # Face-only at all extension sizes (same mark as the browser favicon)
+        make_favicon_face(src, size, passes).save(path)
+        print(f"Created {path.name} ({size}x{size})")
 
     print("-" * 40)
     print("All icons generated successfully!")
-    print("\nReload the extension in Chrome:")
-    print("1. Go to chrome://extensions/")
-    print("2. Click the refresh icon on the extension card")
+    print("Hard-refresh the browser (favicon is cached aggressively).")
+    print("Reload the Chrome extension at chrome://extensions/")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

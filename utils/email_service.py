@@ -60,7 +60,7 @@ class EmailService:
         _raw_pw = getattr(self.settings, 'smtp_password', None)
         self.password = _raw_pw.get_secret_value() if _raw_pw is not None else None
         self.from_email = getattr(self.settings, 'smtp_from_email', self.username)
-        self.from_name = getattr(self.settings, 'smtp_from_name', 'ApplyPilot')
+        self.from_name = getattr(self.settings, 'smtp_from_name', 'RoleMule')
         self.enabled = self.username is not None and self.password is not None
 
     def is_configured(self) -> bool:
@@ -161,7 +161,7 @@ class EmailService:
         Returns:
             True if email was sent successfully
         """
-        subject = "Reset Your Password - ApplyPilot"
+        subject = "Reset Your Password - RoleMule"
 
         greeting = f"Hi {html.escape(user_name)}," if user_name else "Hi there,"
         safe_reset_url = html.escape(reset_url, quote=True)
@@ -184,8 +184,8 @@ class EmailService:
                         <td style="background: rgba(26, 26, 36, 0.95); padding: 0; border-radius: 20px 20px 0 0; border: 1px solid rgba(255, 255, 255, 0.1); border-bottom: none;">
                             <div style="height: 3px; background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%); border-radius: 20px 20px 0 0;"></div>
                             <div style="padding: 36px 40px 28px 40px; text-align: center;">
-                                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #00d4ff;">ApplyPilot</h1>
-                                <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.45); font-size: 13px;">Your AI-Powered Job Search Companion</p>
+                                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #00d4ff;">RoleMule</h1>
+                                <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.45); font-size: 13px;">One mule for every role.</p>
                             </div>
                         </td>
                     </tr>
@@ -195,7 +195,7 @@ class EmailService:
                         <td style="background: rgba(26, 26, 36, 0.8); padding: 32px 40px 36px 40px; border: 1px solid rgba(255, 255, 255, 0.1); border-top: none;">
                             <h2 style="color: #ffffff; margin: 0 0 12px 0; font-size: 22px; font-weight: 600;">{greeting}</h2>
 
-                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; line-height: 1.6; margin: 0 0 28px 0;">We received a request to reset your password for your ApplyPilot account. Click the button below to create a new password:</p>
+                            <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; line-height: 1.6; margin: 0 0 28px 0;">We received a request to reset your password for your RoleMule account. Click the button below to create a new password:</p>
 
                             <!-- CTA Button -->
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
@@ -223,7 +223,7 @@ class EmailService:
                     <tr>
                         <td style="background: rgba(26, 26, 36, 0.8); padding: 20px 40px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); border-top: none; border-radius: 0 0 20px 20px;">
                             <p style="color: rgba(255, 255, 255, 0.3); font-size: 12px; margin: 0;">
-                                © {datetime.now().year} ApplyPilot. All rights reserved.
+                                © {datetime.now().year} RoleMule. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -241,7 +241,7 @@ class EmailService:
 PASSWORD RESET REQUEST
 ======================
 
-We received a request to reset your password for your ApplyPilot account.
+We received a request to reset your password for your RoleMule account.
 
 Click the link below to create a new password:
 {safe_reset_url}
@@ -251,7 +251,7 @@ Click the link below to create a new password:
 If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
 
 ---
-© {datetime.now().year} ApplyPilot. All rights reserved.
+© {datetime.now().year} RoleMule. All rights reserved.
 This is an automated message. Please do not reply.
 """
 
@@ -272,7 +272,7 @@ This is an automated message. Please do not reply.
         Returns:
             True if email was sent successfully
         """
-        subject = "Welcome to ApplyPilot — Your AI Job Search Companion"
+        subject = "Welcome to RoleMule — One mule for every role."
 
         greeting = f"Hi {html.escape(user_name)}!" if user_name else "Welcome!"
         dashboard_url = f"{self.settings.base_url.rstrip('/')}/profile/setup"
@@ -283,7 +283,7 @@ This is an automated message. Please do not reply.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to ApplyPilot</title>
+    <title>Welcome to RoleMule</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0a0a0f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0a0a0f; padding: 40px 20px;">
@@ -295,8 +295,8 @@ This is an automated message. Please do not reply.
                         <td style="background: rgba(26, 26, 36, 0.95); padding: 0; border-radius: 20px 20px 0 0; border: 1px solid rgba(255, 255, 255, 0.1); border-bottom: none;">
                             <div style="height: 3px; background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%); border-radius: 20px 20px 0 0;"></div>
                             <div style="padding: 36px 40px 28px 40px; text-align: center;">
-                                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #00d4ff;">ApplyPilot</h1>
-                                <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.45); font-size: 13px;">Your AI-Powered Job Search Companion</p>
+                                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #00d4ff;">RoleMule</h1>
+                                <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.45); font-size: 13px;">One mule for every role.</p>
                             </div>
                         </td>
                     </tr>
@@ -389,7 +389,7 @@ This is an automated message. Please do not reply.
                     <tr>
                         <td style="background: rgba(26, 26, 36, 0.8); padding: 20px 40px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); border-top: none; border-radius: 0 0 20px 20px;">
                             <p style="color: rgba(255, 255, 255, 0.3); font-size: 12px; margin: 0;">
-                                © {datetime.now().year} ApplyPilot. All rights reserved.
+                                © {datetime.now().year} RoleMule. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -427,7 +427,7 @@ negotiations, job comparisons, and more.
 Get Started → {dashboard_url}
 
 ---
-© {datetime.now().year} ApplyPilot. All rights reserved.
+© {datetime.now().year} RoleMule. All rights reserved.
 """
 
         return await self.send_email(to_email, subject, html_content, text_content)
@@ -451,7 +451,7 @@ Get Started → {dashboard_url}
         Returns:
             True if email was sent successfully
         """
-        subject = "Verify Your Email - ApplyPilot"
+        subject = "Verify Your Email - RoleMule"
 
         greeting = f"Hi {html.escape(user_name)}," if user_name else "Hi there,"
         safe_verification_url = html.escape(verification_url, quote=True)
@@ -475,8 +475,8 @@ Get Started → {dashboard_url}
                             <!-- Gradient top line -->
                             <div style="height: 3px; background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);"></div>
                             <div style="padding: 40px; text-align: center;">
-                                <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #00d4ff;">ApplyPilot</h1>
-                                <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.5); font-size: 14px;">Your AI-Powered Job Search Assistant</p>
+                                <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #00d4ff;">RoleMule</h1>
+                                <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.5); font-size: 14px;">One mule for every role.</p>
                             </div>
                         </td>
                     </tr>
@@ -520,7 +520,7 @@ Get Started → {dashboard_url}
                     <tr>
                         <td style="padding: 30px; text-align: center;">
                             <p style="color: rgba(255, 255, 255, 0.5); font-size: 12px; margin: 0;">
-                                © {datetime.now().year} ApplyPilot. All rights reserved.<br>
+                                © {datetime.now().year} RoleMule. All rights reserved.<br>
                                 <span style="color: rgba(255, 255, 255, 0.3);">This is an automated message. Please do not reply.</span>
                             </p>
                         </td>
@@ -549,7 +549,7 @@ Click the link below to verify your email:
 If you didn't create an account with us, you can safely ignore this email.
 
 ---
-© {datetime.now().year} ApplyPilot. All rights reserved.
+© {datetime.now().year} RoleMule. All rights reserved.
 This is an automated message. Please do not reply.
 """
 
@@ -572,7 +572,7 @@ This is an automated message. Please do not reply.
         Returns:
             True if email was sent successfully
         """
-        subject = "Your Verification Code - ApplyPilot"
+        subject = "Your Verification Code - RoleMule"
         
         greeting = f"Hi {html.escape(user_name)}," if user_name else "Hi there,"
         
@@ -597,8 +597,8 @@ This is an automated message. Please do not reply.
                         <td style="background: rgba(26, 26, 36, 0.95); padding: 0; border-radius: 20px 20px 0 0; border: 1px solid rgba(255, 255, 255, 0.1); border-bottom: none;">
                             <div style="height: 3px; background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%); border-radius: 20px 20px 0 0;"></div>
                             <div style="padding: 36px 40px 28px 40px; text-align: center;">
-                                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #00d4ff;">ApplyPilot</h1>
-                                <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.45); font-size: 13px;">Your AI-Powered Job Search Companion</p>
+                                <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #00d4ff;">RoleMule</h1>
+                                <p style="margin: 6px 0 0 0; color: rgba(255, 255, 255, 0.45); font-size: 13px;">One mule for every role.</p>
                             </div>
                         </td>
                     </tr>
@@ -633,7 +633,7 @@ This is an automated message. Please do not reply.
                     <tr>
                         <td style="background: rgba(26, 26, 36, 0.8); padding: 20px 40px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); border-top: none; border-radius: 0 0 20px 20px;">
                             <p style="color: rgba(255, 255, 255, 0.3); font-size: 12px; margin: 0;">
-                                © {datetime.now().year} ApplyPilot. All rights reserved.
+                                © {datetime.now().year} RoleMule. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -660,7 +660,7 @@ Your Verification Code: {formatted_code}
 If you didn't create an account with us, you can safely ignore this email.
 
 ---
-© {datetime.now().year} ApplyPilot. All rights reserved.
+© {datetime.now().year} RoleMule. All rights reserved.
 This is an automated message. Please do not reply.
 """
 

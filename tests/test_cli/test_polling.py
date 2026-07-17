@@ -1,4 +1,4 @@
-"""Tests for applypilot_client.polling."""
+"""Tests for rolemule_client.polling."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from applypilot_client.polling import WorkflowPollTimeout, wait_for_terminal_status
+from rolemule_client.polling import WorkflowPollTimeout, wait_for_terminal_status
 
 
 def test_wait_until_completed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -22,13 +22,13 @@ def test_wait_until_completed(monkeypatch: pytest.MonkeyPatch) -> None:
         calls["n"] += 1
         return statuses[idx]
 
-    monkeypatch.setattr("applypilot_client.polling.time.sleep", lambda _s: None)
+    monkeypatch.setattr("rolemule_client.polling.time.sleep", lambda _s: None)
     result = wait_for_terminal_status(get_status, interval_seconds=0.01, timeout_seconds=5)
     assert result["status"] == "completed"
 
 
 def test_wait_stops_on_awaiting_confirmation(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("applypilot_client.polling.time.sleep", lambda _s: None)
+    monkeypatch.setattr("rolemule_client.polling.time.sleep", lambda _s: None)
     result = wait_for_terminal_status(
         lambda: {"session_id": "s2", "status": "awaiting_confirmation"},
         interval_seconds=0.01,
@@ -38,7 +38,7 @@ def test_wait_stops_on_awaiting_confirmation(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_wait_stops_on_analysis_complete(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("applypilot_client.polling.time.sleep", lambda _s: None)
+    monkeypatch.setattr("rolemule_client.polling.time.sleep", lambda _s: None)
     result = wait_for_terminal_status(
         lambda: {"session_id": "s3", "status": "analysis_complete"},
         interval_seconds=0.01,
@@ -48,9 +48,9 @@ def test_wait_stops_on_analysis_complete(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_wait_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("applypilot_client.polling.time.sleep", lambda _s: None)
+    monkeypatch.setattr("rolemule_client.polling.time.sleep", lambda _s: None)
     monkeypatch.setattr(
-        "applypilot_client.polling.time.monotonic",
+        "rolemule_client.polling.time.monotonic",
         MagicMock(side_effect=[0.0, 0.0, 1000.0]),
     )
     with pytest.raises(WorkflowPollTimeout):
@@ -63,7 +63,7 @@ def test_wait_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_on_progress_called(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[str] = []
-    monkeypatch.setattr("applypilot_client.polling.time.sleep", lambda _s: None)
+    monkeypatch.setattr("rolemule_client.polling.time.sleep", lambda _s: None)
 
     wait_for_terminal_status(
         lambda: {"session_id": "s5", "status": "failed"},

@@ -25,9 +25,9 @@ Before changing how jobs are keyed or deduplicated:
 
 1. **`api/workflow.py`** — `_find_duplicate_active_application` / `_fingerprint_job_content` / `_canonical_job_url`; `normalize_title_company_key` is **`utils/application_dedupe.py`** (imported where needed). Duplicate responses use **`RES_3002`** (409) and must **release** `workflow_creating:{user_id}` on that path.
 2. **Fingerprint** — stored on `WorkflowSession.job_input_data["content_fingerprint"]` only when normalized text length **≥ 80** (constant `_MIN_JOB_CONTENT_FINGERPRINT_CHARS`). Do not weaken NFKC / zero-width stripping without re-checking extension vs paste dedupe.
-3. **Post-start duplicate handling** — see `applypilot-core.mdc` § *Duplicate job after start* (`find_conflicting_job_application` in `utils/application_dedupe.py`, `_maybe_fail_duplicate_job_after_analyzer` in `workflows/job_application_workflow.py`, integrity handling in `api/workflow.py` `_update_job_application_with_final_state`).
+3. **Post-start duplicate handling** — see `rolemule-core.mdc` § *Duplicate job after start* (`find_conflicting_job_application` in `utils/application_dedupe.py`, `_maybe_fail_duplicate_job_after_analyzer` in `workflows/job_application_workflow.py`, integrity handling in `api/workflow.py` `_update_job_application_with_final_state`).
 4. **Tests** — extend `tests/test_api/test_workflow.py` and `tests/test_application_dedupe.py` as appropriate; **frontend** must handle `RES_3002` in `ui/src/pages/dashboard-new-application.ts`, `ui/src/shared/api.ts`, and the Chrome extension (`popup.js`, `service-worker.js`).
-5. **Docs** — `applypilot-core.mdc` § `RES_3002` and § *Duplicate job after start*; `dashboard-home.mdc` § *Toast Deduplication — `notifyReady`* (`c:` / `f:` keys vs legacy bare `sessionId`).
+5. **Docs** — `rolemule-core.mdc` § `RES_3002` and § *Duplicate job after start*; `dashboard-home.mdc` § *Toast Deduplication — `notifyReady`* (`c:` / `f:` keys vs legacy bare `sessionId`).
 
 ## New Database Column
 
@@ -43,7 +43,7 @@ Before changing how jobs are keyed or deduplicated:
 1. Create agent class in `agents/` following the standard structure
 2. Add `process()` or equivalent async method with BYOK support
 3. Add state fields in `workflows/state_schema.py`
-4. Add node and edges in `workflows/job_application_workflow.py` — **any failure in the node must fail the workflow** per `applypilot-core.mdc` (workflow failure — route to error handling, no partial outputs on `failed`)
+4. Add node and edges in `workflows/job_application_workflow.py` — **any failure in the node must fail the workflow** per `rolemule-core.mdc` (workflow failure — route to error handling, no partial outputs on `failed`)
 5. Add `flag_modified()` for the new JSONB result field in `_save_workflow_state`
 6. Add agent timing tracking (`agent_durations`)
 7. If the agent caches shared (non-user-specific) results, add stampede protection via `acquire_compute_lock()` / `release_compute_lock()` (see `agent-patterns.mdc`)

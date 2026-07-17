@@ -117,9 +117,9 @@ from api.websocket import (
 )
 ```
 
-Frontend (`ui/src/hiring-outreach/websocket.ts`) listens via `window.addEventListener('applypilot:ws', ...)`.
+Frontend (`ui/src/hiring-outreach/websocket.ts`) listens via `window.addEventListener('rolemule:ws', ...)`.
 
-Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('applypilot:ws', ...)`.
+Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('rolemule:ws', ...)`.
 
 **Client filter:** only handle events for the open application — `isMockInterviewMessageForSession` in `ui/src/mock-interview/ws-guard.ts` (shared bus can deliver other sessions’ events).
 

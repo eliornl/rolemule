@@ -1,7 +1,7 @@
 # =============================================================================
 # LOCAL SELF-HOSTED DEPLOYMENT
 # =============================================================================
-# Runs ApplyPilot on your own computer — no GCP account needed.
+# Runs RoleMule on your own computer — no GCP account needed.
 #
 # Quick start:
 #   1. make start                       (auto-generates .env with secrets, then runs compose)
@@ -52,7 +52,7 @@ services:
       retries: 10
 
   # ---------------------------------------------------------------------------
-  # ApplyPilot app
+  # RoleMule app
   # ---------------------------------------------------------------------------
   app:
     build:

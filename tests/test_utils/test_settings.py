@@ -134,7 +134,7 @@ def test_base_url_rejects_http_in_production_host() -> None:
         Settings(
             database_url="postgresql://localhost/db",
             jwt_secret="a" * 32 + "Ab1!",
-            base_url="http://applypilot.example.com",
+            base_url="http://rolemule.example.com",
         )
 
 
@@ -234,10 +234,10 @@ def test_get_database_settings() -> None:
 
 def test_database_settings_rewrites_postgresql_scheme() -> None:
     class _SettingsStub:
-        database_url = "postgresql://user:pass@localhost:5432/applypilot"
+        database_url = "postgresql://user:pass@localhost:5432/rolemule"
 
     db = DatabaseSettings(_SettingsStub())
-    assert db.async_database_url == "postgresql+asyncpg://user:pass@localhost:5432/applypilot"
+    assert db.async_database_url == "postgresql+asyncpg://user:pass@localhost:5432/rolemule"
 
 
 def test_use_cloud_tasks_property() -> None:

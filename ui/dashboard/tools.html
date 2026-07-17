@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Career Tools - ApplyPilot{% endblock %}
+{% block title %}Career Tools - RoleMule{% endblock %}
 {% block description %}AI-powered career communication tools{% endblock %}
 {% block extra_head %}
 <!-- Page Specific Styles -->
@@ -23,16 +23,25 @@
             text-decoration: none;
         }
 
-        .brand-icon {
+                .brand-icon {
             width: 36px;
             height: 36px;
             border-radius: var(--radius-md);
-            background: var(--accent-gradient);
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 1rem;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
         }
 
         .brand-text {
@@ -1215,7 +1224,7 @@
                     <!-- Improvement Suggestions -->
                     <div class="salary-content-section">
                         <div class="salary-section-title">
-                            <i class="fas fa-rocket"></i>Improvement Suggestions
+                            <i class="fas fa-lightbulb"></i>Improvement Suggestions
                         </div>
                         <div id="improvementSuggestions"></div>
                     </div>

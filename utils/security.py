@@ -1,5 +1,5 @@
 """
-Security utilities for the ApplyPilot.
+Security utilities for the RoleMule.
 Provides input sanitization, XSS prevention, and security helpers.
 """
 

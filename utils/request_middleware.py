@@ -1,5 +1,5 @@
 """
-Request middleware for the ApplyPilot.
+Request middleware for the RoleMule.
 Provides request ID generation, logging, and performance tracking.
 """
 

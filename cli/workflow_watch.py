@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 import typer
 
-PAT_PREFIX = "ap_pat_"
+PAT_PREFIX = "rm_pat_"
 
 
 # =============================================================================
@@ -41,7 +41,7 @@ def format_watch_event(message: Dict[str, Any]) -> Optional[str]:
             return f"[phase] {phase} ({progress}%)"
         return f"[phase] {phase}"
     if msg_type == "workflow_complete":
-        return "[done] Workflow completed — applypilot workflow results " + session_id
+        return "[done] Workflow completed — rolemule workflow results " + session_id
     if msg_type == "workflow_error":
         err = data.get("error", "Unknown error")
         agent = data.get("failed_agent")
@@ -55,7 +55,7 @@ def format_watch_event(message: Dict[str, Any]) -> Optional[str]:
         except (TypeError, ValueError):
             pct = "?"
         sid = session_id or "SESSION"
-        return f"[gate] Match {pct} — run: applypilot workflow continue {sid} --confirm"
+        return f"[gate] Match {pct} — run: rolemule workflow continue {sid} --confirm"
     if msg_type == "pong":
         return None
     return f"[{msg_type}] {json.dumps(data, default=str)}" if data else f"[{msg_type}]"
@@ -87,7 +87,7 @@ def watch_workflow_session(
         import websocket  # type: ignore[import-untyped]  # websocket-client
     except ImportError as exc:
         typer.secho(
-            "websocket-client is required for workflow watch (pip install applypilot[cli])",
+            "websocket-client is required for workflow watch (pip install rolemule[cli])",
             fg="red",
             err=True,
         )

@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showError('No application ID provided');
   }
 
-  window.addEventListener('applypilot:ws', (e) => {
+  window.addEventListener('rolemule:ws', (e) => {
     const msg = (e as CustomEvent).detail as Record<string, unknown> | undefined;
     const type = String(msg?.type ?? '');
     const sessionId = String(msg?.session_id ?? '');

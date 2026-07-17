@@ -2554,7 +2554,7 @@ async def export_user_data(
         # Create JSON file
         json_content = json.dumps(export_data, indent=2, default=str)
         
-        filename = f"applypilot-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"
+        filename = f"rolemule-export-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.json"
         
         masked_email = mask_email(str(user.email))
         logger.info('User data exported for: %s', sanitize_log_value(masked_email))

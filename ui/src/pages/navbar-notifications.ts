@@ -77,7 +77,7 @@ function connectWs(): void {
     try {
       const msg = JSON.parse(event.data) as Record<string, unknown>;
 
-      window.dispatchEvent(new CustomEvent('applypilot:ws', { detail: msg }));
+      window.dispatchEvent(new CustomEvent('rolemule:ws', { detail: msg }));
 
       const type = String(msg.type || '');
       const sessionId = String(msg.session_id || '');

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from applypilot_client.constants import API_V1_PREFIX
+from rolemule_client.constants import API_V1_PREFIX
 
 
 # =============================================================================

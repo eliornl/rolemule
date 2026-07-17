@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import typer
 
-from applypilot_client.errors import ExitCode
+from rolemule_client.errors import ExitCode
 from cli.util import filename_from_headers, payload_from_file, require_confirm
 
 

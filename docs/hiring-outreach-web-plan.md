@@ -13,7 +13,7 @@ On-demand **Hiring Outreach** for an application: find likely hiring contacts vi
 
 ### 0.1 Goal
 
-On a session with **`job_analysis`** present (Company Research is preferred enrichment, not a hard gate), let the user open a **new standalone application-detail tab** (not the pipeline Company tab) and click **Find who to contact**. ApplyPilot:
+On a session with **`job_analysis`** present (Company Research is preferred enrichment, not a hard gate), let the user open a **new standalone application-detail tab** (not the pipeline Company tab) and click **Find who to contact**. RoleMule:
 
 1. Uses the user’s BYOK LLM + **web search grounding** (when enabled and not Ollama).
 2. Returns 0–4 suggested contacts with **confidence** and evidence from public web sources.
@@ -53,7 +53,7 @@ On a session with **`job_analysis`** present (Company Research is preferred enri
 
 | Area | File |
 |------|------|
-| Core / CFG_6001 / APIError | `.cursor/rules/applypilot-core.mdc` |
+| Core / CFG_6001 / APIError | `.cursor/rules/rolemule-core.mdc` |
 | Agents / standalone pattern | `.cursor/rules/agent-patterns.mdc` |
 | LLM / grounding | `.cursor/rules/llm-integration.mdc` |
 | Interview Prep parallel | `.cursor/rules/interview-prep-feature.mdc` |

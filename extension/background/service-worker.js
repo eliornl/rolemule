@@ -1,5 +1,5 @@
 /**
- * ApplyPilot - Background Service Worker
+ * RoleMule - Background Service Worker
  * Handles API communication, authentication, and cross-tab messaging
  */
 

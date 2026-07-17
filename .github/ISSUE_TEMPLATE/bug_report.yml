@@ -58,7 +58,7 @@ body:
   - type: dropdown
     id: runtime
     attributes:
-      label: How are you running ApplyPilot?
+      label: How are you running RoleMule?
       options:
         - Docker (`make start`)
         - macOS no-Docker (`make start-local`)

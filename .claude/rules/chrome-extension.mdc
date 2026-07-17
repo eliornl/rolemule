@@ -23,7 +23,7 @@ Both `popup.js` and `service-worker.js` use a single flag to switch between loca
 // ⚠️  BEFORE PUBLISHING: Set IS_DEV = false and fill in PRODUCTION_URL.
 const IS_DEV = true;
 const DEV_URL = 'http://localhost:8000';
-const PRODUCTION_URL = 'https://your-applypilot-instance.com';
+const PRODUCTION_URL = 'https://your-rolemule-instance.com';
 const BASE_URL = IS_DEV ? DEV_URL : PRODUCTION_URL;
 
 const CONFIG = {
@@ -41,9 +41,9 @@ chrome.storage.local.set({ jaa_api_url: 'http://localhost:8000/api/v1' })
 
 ## Manifest (current)
 - **version**: `2.0.0`
-- **description**: "Extract any job posting and get AI-powered analysis, resume tips, cover letters, and interview prep on ApplyPilot."
-- **short_name**: `ApplyPilot`
-- **default_title**: `ApplyPilot — AI Job Application Assistant`
+- **description**: "One mule for every role. Analyze any job posting with AI, or match application forms to your profile."
+- **short_name**: `RoleMule`
+- **default_title**: `RoleMule — One mule for every role.`
 - `http://localhost:8000/*` is in `host_permissions` (required, not optional) so Chrome grants access automatically in dev
 
 ## Icons
@@ -64,7 +64,7 @@ The popup (`popup.html` / `popup.css`) mirrors the main app's design system exac
 - **Same CSS variables**: `--accent-gradient`, `--bg-primary/secondary/tertiary`, `--text-*`, `--border-color`, etc.
 - **Same font**: `Outfit` from Google Fonts
 - **Font Awesome 6** loaded from CDN (`cdnjs.cloudflare.com`) for all icons — no emoji
-- **Header logo**: gradient rounded square (`logo-icon` div with `fas fa-rocket`) + "Apply**Pilot**" (Pilot in `var(--accent-primary)`)
+- **Header logo**: mule mark (`logo-icon` img from `extension/icons/icon48.png`) + `Role<span class="brand-accent">Mule</span>` (Mule in `var(--accent-primary)`)
 - **No rounded outer corners** — Chrome's native popup window clips them; do not add `border-radius` to `html`/`body`/`.popup-container`
 
 ### Popup sections (authenticated view)
@@ -128,7 +128,7 @@ function showToast(message, type = 'info') {
 
 ### Duplicate workflow start — `RES_3002`
 
-If `POST .../workflow/start` returns **409** with `error_code === 'RES_3002'`, the user already has an application for that job. **`popup.js`** / **`service-worker.js`** must show an **info** (or warning-style) message via `showToast` / the same UX path — not a generic network error. Details: `applypilot-core.mdc` (`RES_3002`).
+If `POST .../workflow/start` returns **409** with `error_code === 'RES_3002'`, the user already has an application for that job. **`popup.js`** / **`service-worker.js`** must show an **info** (or warning-style) message via `showToast` / the same UX path — not a generic network error. Details: `rolemule-core.mdc` (`RES_3002`).
 
 ## Content extraction (`extension/lib/extract-page-content.js`)
 
@@ -204,7 +204,7 @@ detected_title_form:   Optional[str] = Form(None, alias="detected_title")
 detected_company_form: Optional[str] = Form(None, alias="detected_company")
 ```
 
-**`effective_job_url`** = resolved URL or `source_url`. Before persist, discard any value whose scheme is not `http://` or `https://` (see **`security-python.mdc`** and **`applypilot-core.mdc`**). When title/company are omitted, `job_title` / `company_name` are `null` at creation and the dashboard shows skeleton shimmers until the Job Analyzer runs.
+**`effective_job_url`** = resolved URL or `source_url`. Before persist, discard any value whose scheme is not `http://` or `https://` (see **`security-python.mdc`** and **`rolemule-core.mdc`**). When title/company are omitted, `job_title` / `company_name` are `null` at creation and the dashboard shows skeleton shimmers until the Job Analyzer runs.
 
 ## Backend: InputMethod.EXTENSION
 ```python

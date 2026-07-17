@@ -200,7 +200,7 @@ Apply to the `.account-icon` div. The variant sets both the background and the i
 ## Account Tab (`accountSection`)
 
 ### Account Type Rules — Strict "Either Email OR Google"
-ApplyPilot does not support linking/unlinking OAuth accounts after registration. The UI enforces this:
+RoleMule does not support linking/unlinking OAuth accounts after registration. The UI enforces this:
 
 - **Email-registered users** (`auth_method='local'`): see Password section + Danger Zone
 - **Google-registered users** (`auth_method='google'`): see **only** the Danger Zone (no password section, no link/unlink button)

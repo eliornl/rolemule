@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ApplyPilot are documented here.
+All notable changes to RoleMule are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -29,6 +29,16 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 ## [Unreleased]
 
+### Changed
+
+#### Rebrand — ApplyPilot → RoleMule
+
+Product display name is now **RoleMule** (tagline: **One mule for every role.**). CLI entry point `rolemule`, client package `rolemule_client` / `RoleMuleClient`, PAT prefix `rm_pat_`, localStorage `rolemule_*`, and WS bus `rolemule:ws`. Favicon / navbar / extension icons use the mule mark (`docs/rolemule-icon.png`). **Postgres DB user/name stays `applypilot`** so existing `DATABASE_URL` values keep working. GitHub repo rename (`eliornl/applypilot` → `eliornl/rolemule`) is deferred until approved.
+
+#### Landing page — feature catch-up
+
+Landing (`ui/index.html`) now matches the product: **5** workflow agents; **After Apply** (Optimize CV, Interview Prep, Mock Session, Hiring Outreach); CLI strip; multi-provider tech-bar tags; DOCX in hero copy; extension extract bullets; screenshot showcase **10** tabs with live re-captures (LangChain Senior Backend example); `docs/demo.gif` rebuilt from those tab shots.
+
 ### Added
 
 #### Hiring Outreach
@@ -54,12 +64,12 @@ Timed conversational practice on the application detail page (**9th tab**, after
 
 #### CLI — full-parity terminal client
 
-- **`applypilot` CLI** — Typer-based client for auth, profile, workflow, applications, interview prep, CV optimizer, six career tools, extension autofill testing, and admin monitoring. **Installed with `make setup` / `make start-local` / `just setup`** (editable `pip install -e ".[cli]"` into the project venv).
-- **`applypilot_client/`** — sync httpx resource layer; **`tests/test_cli/`** (**354** mocked tests, CI `cli-tests` job) + **`tests/test_cli_integration/`** (**6** ASGI tests in `python-tests` job).
+- **`rolemule` CLI** — Typer-based client for auth, profile, workflow, applications, interview prep, CV optimizer, six career tools, extension autofill testing, and admin monitoring. **Installed with `make setup` / `make start-local` / `just setup`** (editable `pip install -e ".[cli]"` into the project venv).
+- **`rolemule_client/`** — sync httpx resource layer; **`tests/test_cli/`** (**354** mocked tests, CI `cli-tests` job) + **`tests/test_cli_integration/`** (**6** ASGI tests in `python-tests` job).
 - **Post-v1 CLI:** personal access tokens (`auth token create|list|revoke`, **`--save`**), `apps show`, `workflow results --out|--out-dir`, `workflow watch`, `config` subcommands, pager (`--no-pager`), `--confirm` on resume/api-key delete.
 - **API:** `POST/GET/DELETE /api/v1/auth/tokens`, `GET /api/v1/applications/{id}`; migration `20260708_024` (`personal_access_tokens` table).
 - **Docs:** [docs/cli-reference.md](docs/cli-reference.md), README CLI quick start, USER_GUIDE CLI section, [docs/cli-implementation-plan.md](docs/cli-implementation-plan.md), `.cursor/rules/cli.mdc` / `.claude/rules/cli.mdc`.
-- **Shell completion:** `applypilot --install-completion bash|zsh|fish`.
+- **Shell completion:** `rolemule --install-completion bash|zsh|fish`.
 - **Optional live smoke:** `scripts/cli_smoke.sh`.
 
 #### Security — CodeQL, secret scanning, and contributor docs
@@ -212,7 +222,7 @@ A new shared script (`ui/static/js/navbar-notifications.js`) loaded globally in 
 - Uses the existing **user-scoped WebSocket** (`/api/v1/ws/user`) for real-time detection — no polling
 - A **one-shot status check** on page load catches analyses that finished while the browser was closed
 - The dot is cleared the moment the user lands on `/dashboard` (which shows the full "Analysis ready!" toast)
-- Session IDs are stored in `localStorage.applypilot_tracked_sessions` by `dashboard-new-application.js` immediately after a successful submit
+- Session IDs are stored in `localStorage.rolemule_tracked_sessions` by `dashboard-new-application.js` immediately after a successful submit
 
 #### Landing Page — Inter-Section Scroll Hints
 
@@ -397,7 +407,7 @@ The `from google.cloud import tasks_v2` import is now wrapped in `try/except Imp
 
 - The "Application submitted!" toast is automatically dismissed when the "Analysis ready!" toast appears, preventing duplicate notifications
 - The close (×) button no longer overlaps the "View Results" button — fixed by removing Bootstrap's `alert-dismissible` class and placing the button explicitly inside the flex layout
-- If a user navigates away from the dashboard while an analysis is running and returns later, the "Analysis ready!" toast still appears (persisted via `localStorage.applypilot_notified_analyses`)
+- If a user navigates away from the dashboard while an analysis is running and returns later, the "Analysis ready!" toast still appears (persisted via `localStorage.rolemule_notified_analyses`)
 
 #### Dashboard Status Incorrect for Gate-Stopped Applications
 Applications where the workflow paused at `awaiting_confirmation` (low match score below the configured gate) were showing **PROCESSING** status on the dashboard card. Since the Job Analyzer and Profile Matcher have both completed successfully at this point, the correct status is **COMPLETED**. Fixed in `api/workflow.py` by mapping `WorkflowStatus.AWAITING_CONFIRMATION` → `ApplicationStatus.COMPLETED`.

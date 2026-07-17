@@ -1,6 +1,6 @@
-# ApplyPilot — User Guide
+# RoleMule — User Guide
 
-Welcome to ApplyPilot! This guide walks you through every feature so you can get the most out of your AI-powered job search co-pilot.
+Welcome to RoleMule! This guide walks you through every feature so you can get the most out of the product — one mule for every role.
 
 ## Table of Contents
 
@@ -251,21 +251,21 @@ The extension loads directly from this repository — no app store required.
 1. Open `chrome://extensions` in Chrome
 2. Enable **Developer Mode** (top-right toggle)
 3. Click **Load unpacked** and select the `extension/` folder from the project directory
-4. The ApplyPilot icon will appear in your toolbar
+4. The RoleMule icon will appear in your toolbar
 
 After any code change, click the ↺ refresh icon on the extension card.
 
 ### Using the Extension — Analyze This Job
 
 1. Browse to a job posting page (detail view with the description visible)
-2. Click the ApplyPilot icon in the toolbar
+2. Click the RoleMule icon in the toolbar
 3. Click **Analyze This Job** — the page content is extracted and sent for analysis
 4. When complete, use **Open Dashboard** in the popup to see the results
 
 ### Using the Extension — Match Form To Profile
 
 1. Browse to an application form with visible fields (main page only in the current release)
-2. Click the ApplyPilot icon in the toolbar
+2. Click the RoleMule icon in the toolbar
 3. Click **Match Form To Profile** — the extension scrolls long forms to reveal hidden questions, scans labels and dropdown options, and sends them to the server with your profile
 4. The server returns field assignments: an AI map merged with **deterministic profile rules** (name, contact, work authorization, visa sponsorship, country, location, education, and common screening questions). Values are written into the page for you to review and edit before you submit
 5. Requires the same login, **completed profile** (including work authorization), and API access as dashboard analyses. If some fields fail, the popup shows how many succeeded and failed — always review before submitting
@@ -285,7 +285,7 @@ The extension has optimized content selectors for many employer career sites and
 - Analyzed jobs appear in your dashboard immediately
 - **Match Form To Profile** runs on the main document only; nested iframes are not scanned in the current release
 - After updating the extension code, reload it at `chrome://extensions` before testing again
-- Open DevTools on the application tab and filter the console for `ApplyPilot` to see scan/apply debug details when troubleshooting
+- Open DevTools on the application tab and filter the console for `RoleMule` to see scan/apply debug details when troubleshooting
 
 ---
 
@@ -325,18 +325,18 @@ Practice a timed conversational mock interview grounded in this application's jo
 4. Click **Start mock session** (STAR follow-ups are always on)
 5. Answer by typing (**Enter** to send, **Shift+Enter** for a new line) or using the mic (auto-sends after a short pause)
 6. While the question is composing, you may see **Loading…** as it streams in; speech plays when the full line is ready
-7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score). If you End early while an answer is still processing, ApplyPilot waits for that answer, then scores.
-8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out (or you End early) with text still in the answer box, ApplyPilot includes that draft in your debrief. The debrief shows an overall summary, score dimensions with short explanations, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
+7. Use **Replay question** / **Mute this question** in the session bar; **More** holds **End early** (confirms then scores) and **Abort** (no score). If you End early while an answer is still processing, RoleMule waits for that answer, then scores.
+8. Coaching tips appear under your answer box. Conversation can be hidden/shown. When time runs out (or you End early) with text still in the answer box, RoleMule includes that draft in your debrief. The debrief shows an overall summary, score dimensions with short explanations, strengths/improvements, and a stronger sample answer for each turn you gave (with Copy).
 
 Optional interview prep content from the Interview tab is used when available to steer questions. Practice is a live conversation — different from the static **Interview** tab guide.
 
-Voice uses free browser APIs (no audio uploaded to ApplyPilot). The mic pauses while the interviewer is speaking so it does not capture TTS. Typed answers always work if mic/speech is unavailable.
+Voice uses free browser APIs (no audio uploaded to RoleMule). The mic pauses while the interviewer is speaking so it does not capture TTS. Typed answers always work if mic/speech is unavailable.
 
 ---
 
 ## Hiring Outreach
 
-After you apply, the **Outreach** tab helps you find people who may be involved in hiring for this role and drafts personalized messages you can copy and send yourself. ApplyPilot searches **public web sources only** (company websites, news, team pages) — not professional networking profile sites.
+After you apply, the **Outreach** tab helps you find people who may be involved in hiring for this role and drafts personalized messages you can copy and send yourself. RoleMule searches **public web sources only** (company websites, news, team pages) — not professional networking profile sites.
 
 ### Accessing Outreach
 
@@ -346,14 +346,14 @@ After you apply, the **Outreach** tab helps you find people who may be involved 
 4. Click **Find contacts & draft messages**
 5. Review contact cards (name, title, confidence) and copy email or short-message drafts with the **Copy** buttons
 
-If no credible public contacts are found, ApplyPilot still provides generic outreach drafts you can adapt. Regenerate replaces the previous result (`regenerate=true`). Rate limit: **5 generations per hour**.
+If no credible public contacts are found, RoleMule still provides generic outreach drafts you can adapt. Regenerate replaces the previous result (`regenerate=true`). Rate limit: **5 generations per hour**.
 
-**Copy-only:** ApplyPilot does not send messages or open external apps — you paste drafts into your own email client or messaging tool.
+**Copy-only:** RoleMule does not send messages or open external apps — you paste drafts into your own email client or messaging tool.
 
 ---
 ## CV Optimization
 
-The **CV Optimizer** runs an iterative AI loop tailored to a specific job application. An AI hiring manager scores your CV against the job description; an AI applicant revises it based on the feedback; the cycle repeats until the fit score converges. When the loop finishes, ApplyPilot generates a final optimized CV and a matching cover letter.
+The **CV Optimizer** runs an iterative AI loop tailored to a specific job application. An AI hiring manager scores your CV against the job description; an AI applicant revises it based on the feedback; the cycle repeats until the fit score converges. When the loop finishes, RoleMule generates a final optimized CV and a matching cover letter.
 
 ### Accessing CV Optimization
 
@@ -364,7 +364,7 @@ The **CV Optimizer** runs an iterative AI loop tailored to a specific job applic
 5. Watch each iteration — hiring-manager score and feedback update in real time
 6. When complete, review the **Optimized CV**, **Cover Letter**, **Gap Analysis**, and **Iteration History**
 
-If the loop stops early because of API quota, ApplyPilot saves the best CV reached so far. A notice banner explains what happened; if the cover letter could not be generated, that section shows a clear empty state instead of error text.
+If the loop stops early because of API quota, RoleMule saves the best CV reached so far. A notice banner explains what happened; if the cover letter could not be generated, that section shows a clear empty state instead of error text.
 
 ### Requirements
 
@@ -378,7 +378,7 @@ If the loop stops early because of API quota, ApplyPilot saves the best CV reach
 
 #### CV export — how it works
 
-ApplyPilot converts your optimized CV markdown into a formatted document on the **server**. End users never install anything locally.
+RoleMule converts your optimized CV markdown into a formatted document on the **server**. End users never install anything locally.
 
 | Server setup | Export path | Quality |
 |---|---|---|
@@ -401,7 +401,7 @@ Rate limits: **10 optimization runs per hour** per user, **10 CV downloads per h
 
 ### Generate Resume Tips (same application page)
 
-From the **Resume** tab, **Generate Resume Tips** runs the Resume Advisor on demand. If generation fails (rate limit, quota, or other API error), ApplyPilot shows a toast and returns to the empty “Generate Resume Tips” screen — it does not display raw error JSON in the tab.
+From the **Resume** tab, **Generate Resume Tips** runs the Resume Advisor on demand. If generation fails (rate limit, quota, or other API error), RoleMule shows a toast and returns to the empty “Generate Resume Tips” screen — it does not display raw error JSON in the tab.
 
 
 ---
@@ -510,36 +510,36 @@ All preferences auto-save — there is no Save button:
 
 ## CLI
 
-The **ApplyPilot CLI** (`applypilot`) talks to the same API as the web app and Chrome extension.
+The **RoleMule CLI** (`rolemule`) talks to the same API as the web app and Chrome extension.
 
-**Installed with the app:** `make setup`, `make start-local`, and `just setup` all run `pip install -e ".[cli]"` — no separate install step. Use `venv/bin/applypilot` or activate the venv (`source venv/bin/activate`).
+**Installed with the app:** `make setup`, `make start-local`, and `just setup` all run `pip install -e ".[cli]"` — no separate install step. Use `venv/bin/rolemule` or activate the venv (`source venv/bin/activate`).
 
 ### Setup
 
 1. Start the server (`make start-local`, `make dev`, or Docker).
-2. Run `applypilot doctor` to verify connectivity.
-3. Log in: `applypilot auth login` — or paste a browser JWT with `applypilot auth token set` (Google OAuth users).
-4. For automation, prefer a long-lived token: `applypilot auth token create --name "My script" --save` (requires an existing login).
-5. Check profile completion: `applypilot profile status`.
+2. Run `rolemule doctor` to verify connectivity.
+3. Log in: `rolemule auth login` — or paste a browser JWT with `rolemule auth token set` (Google OAuth users).
+4. For automation, prefer a long-lived token: `rolemule auth token create --name "My script" --save` (requires an existing login).
+5. Check profile completion: `rolemule profile status`.
 
-Config is stored in `~/.applypilot/` (server URL in `config.toml`, credentials in `credentials.json` — JWT or personal access token).
+Config is stored in `~/.rolemule/` (server URL in `config.toml`, credentials in `credentials.json` — JWT or personal access token).
 
-Use `applypilot config` to view settings; `applypilot config set --base-url URL` to change the server. Long human output uses your `$PAGER`; pass `--no-pager` to print everything directly.
+Use `rolemule config` to view settings; `rolemule config set --base-url URL` to change the server. Long human output uses your `$PAGER`; pass `--no-pager` to print everything directly.
 
 ### Common tasks
 
 | Task | Command |
 |------|---------|
-| Analyze a job posting | `applypilot workflow analyze posting.txt --wait` |
-| Stream workflow progress | `applypilot workflow watch SESSION_ID` |
-| Export cover letter to file | `applypilot workflow results SESSION_ID --section cover-letter --out letter.md` |
-| List applications | `applypilot apps list` |
-| Application summary + session link | `applypilot apps show APP_ID` |
-| Interview prep | `applypilot interview generate SESSION_ID --wait` |
-| Optimize CV | `applypilot cv start SESSION_ID --wait` |
-| Thank-you email | `applypilot tools thank-you --file request.json` |
-| Salary negotiation | `applypilot tools salary-coach --file offer.json` |
-| Create automation token | `applypilot auth token create --name LABEL --save` |
+| Analyze a job posting | `rolemule workflow analyze posting.txt --wait` |
+| Stream workflow progress | `rolemule workflow watch SESSION_ID` |
+| Export cover letter to file | `rolemule workflow results SESSION_ID --section cover-letter --out letter.md` |
+| List applications | `rolemule apps list` |
+| Application summary + session link | `rolemule apps show APP_ID` |
+| Interview prep | `rolemule interview generate SESSION_ID --wait` |
+| Optimize CV | `rolemule cv start SESSION_ID --wait` |
+| Thank-you email | `rolemule tools thank-you --file request.json` |
+| Salary negotiation | `rolemule tools salary-coach --file offer.json` |
+| Create automation token | `rolemule auth token create --name LABEL --save` |
 
 Use `--format json` when piping output to scripts or AI tools. Global flags (`--base-url`, `--format`) go **before** the subcommand.
 

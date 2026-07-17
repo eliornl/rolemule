@@ -54,12 +54,12 @@ Tour auto-shows on first dashboard visit when `localStorage.onboarding_completed
 
 **Returning users:** if the key is missing but `GET /api/v1/applications/stats/overview` shows `total_applications > 0`, onboarding auto-completes silently (tour state is browser-local only — without this, clearing storage or switching browsers re-shows the tour).
 
-**Tour steps (conditional):**
-- Welcome *(always)*
-- Install Chrome Extension *(always)* — explains load-unpacked dev flow
-- Set Up Your API Key *(only when `needsApiKey` — user lacks `has_credentials` and Vertex is off)*
-- Analyze Job Postings *(always)*
-- Career Tools *(always — last step, "Next" becomes "Get Started ✓")*
+**Tour steps (conditional)** — copy lives in `ui/src/onboarding/steps.ts`:
+- Welcome *(always)* — RoleMule + tagline **One mule for every role.**
+- Install Chrome Extension *(always)* — Analyze This Job + Match Form To Profile + load-unpacked
+- Set Up Your AI Provider *(only when `needsApiKey` — user lacks `has_credentials` and Vertex is off)* — Gemini / OpenAI / Anthropic / Ollama
+- Analyze Job Postings *(always)* — paste / PDF·TXT·DOCX / extension; five-agent workflow
+- Career Tools & Beyond *(always — last step, "Next" becomes "Get Started ✓")* — Optimize CV, Mock Session, Outreach, Career Tools, CLI (`rolemule`)
 
 **`needsApiKey` condition** is evaluated by `checkServerApiKey()` which calls `GET /api/v1/profile/api-key/status` directly via `fetch()` with the user's auth token from `localStorage`. Prefer **`has_credentials || use_vertex_ai`** (multi-provider readiness). Legacy responses may still expose `has_user_key` / `server_has_key` — treat Vertex / credentials as the source of truth. The old implementation used `window.app.apiCall()` which is `undefined` on dashboard pages — always use direct `fetch()`.
 

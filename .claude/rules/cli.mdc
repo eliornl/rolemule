@@ -1,18 +1,18 @@
 ---
-description: ApplyPilot CLI conventions — Typer commands, HTTP client, tests, and docs
-globs: cli/**/*.py, applypilot_client/**/*.py, tests/test_cli/**/*.py
+description: RoleMule CLI conventions — Typer commands, HTTP client, tests, and docs
+globs: cli/**/*.py, rolemule_client/**/*.py, tests/test_cli/**/*.py
 alwaysApply: false
 ---
 
-# ApplyPilot CLI Conventions
+# RoleMule CLI Conventions
 
-**Product:** ApplyPilot CLI (`applypilot` entry point). **Server parity** via `applypilot_client/` — never duplicate HTTP paths in command handlers.
+**Product:** RoleMule CLI (`rolemule` entry point). **Server parity** via `rolemule_client/` — never duplicate HTTP paths in command handlers.
 
 ## Architecture
 
 ```
 cli/                    — Typer commands, formatters, config, output, pager, workflow watch
-applypilot_client/      — Sync httpx client + resource modules
+rolemule_client/      — Sync httpx client + resource modules
 tests/test_cli/         — CliRunner tests (no live server in CI)
 tests/test_cli_integration/ — ASGI tests (requires DATABASE_URL)
 ```
@@ -21,7 +21,7 @@ Install: bundled with **`make setup`** / **`make start-local`** / **`just setup`
 
 ## Command patterns
 
-1. **Global flags before subcommand:** `applypilot --format json --no-pager workflow analyze -`
+1. **Global flags before subcommand:** `rolemule --format json --no-pager workflow analyze -`
 2. **HTTP only through client:** `require_client(ctx)` → `client.<resource>.<method>()`
 3. **Errors:** `emit_error()` or `emit_workflow_error()` (handles `CFG_6001`, `RES_3002`)
 4. **Destructive ops:** `require_confirm()` from `cli/util.py` (`--confirm`)
@@ -31,13 +31,13 @@ Install: bundled with **`make setup`** / **`make start-local`** / **`just setup`
 ## Auth: JWT vs PAT
 
 - **Local JWT:** `auth token set` / `auth token show` — stored in `credentials.json`
-- **PATs:** `auth token create|list|revoke` → `/api/v1/auth/tokens` (`ap_pat_` prefix; hash at rest); `auth token create --save` stores PAT in `credentials.json`
+- **PATs:** `auth token create|list|revoke` → `/api/v1/auth/tokens` (`rm_pat_` prefix; hash at rest); `auth token create --save` stores PAT in `credentials.json`
 - PAT works as `Authorization: Bearer` on all API + WebSocket endpoints
 
 ## Adding a command
 
-1. Add method to `applypilot_client/resources/<area>.py`
-2. Expose via `@property` on `ApplyPilotClient` if new resource
+1. Add method to `rolemule_client/resources/<area>.py`
+2. Expose via `@property` on `RoleMuleClient` if new resource
 3. Implement Typer command in `cli/commands/<area>.py`
 4. Add human formatter in `cli/formatters/` when output is not raw JSON
 5. Register typer in `cli/main.py`
@@ -46,7 +46,7 @@ Install: bundled with **`make setup`** / **`make start-local`** / **`just setup`
 
 ## Security
 
-- Credentials: `~/.applypilot/credentials.json` mode `0600`
+- Credentials: `~/.rolemule/credentials.json` mode `0600`
 - Passwords: `getpass` only (TTY required)
 - Register success: **never** save JWT — only `verify-code` / `login` / `token set`
 - PAT plaintext shown once on `auth token create`
@@ -65,11 +65,11 @@ Install: bundled with **`make setup`** / **`make start-local`** / **`just setup`
 
 ## Admin visibility
 
-`cli/admin_visibility.py` — `APPLYPILOT_ADMIN=1` before process start shows `admin` in top-level `--help`. Commands work regardless.
+`cli/admin_visibility.py` — `ROLEMULE_ADMIN=1` before process start shows `admin` in top-level `--help`. Commands work regardless.
 
 ## Shell completion
 
-Main app uses `add_completion=True`. Users run `applypilot --install-completion bash`.
+Main app uses `add_completion=True`. Users run `rolemule --install-completion bash`.
 
 ## Error codes (mirror server)
 

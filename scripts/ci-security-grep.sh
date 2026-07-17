@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Enforce ApplyPilot security and style conventions that are easy to grep.
+# Enforce RoleMule security and style conventions that are easy to grep.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

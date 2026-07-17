@@ -28,7 +28,7 @@ def test_email_service_disabled_when_no_credentials() -> None:
             smtp_username=None,
             smtp_password=None,
             smtp_from_email=None,
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -46,7 +46,7 @@ def test_email_service_enabled_with_credentials() -> None:
             smtp_username="sender@example.com",
             smtp_password=secret,
             smtp_from_email="sender@example.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -61,7 +61,7 @@ async def test_send_email_not_configured_returns_false() -> None:
             smtp_username=None,
             smtp_password=None,
             smtp_from_email=None,
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -85,7 +85,7 @@ async def test_send_email_success() -> None:
             smtp_username="sender@example.com",
             smtp_password=secret,
             smtp_from_email="sender@example.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -119,7 +119,7 @@ async def test_send_email_smtp_auth_error() -> None:
             smtp_username="sender@example.com",
             smtp_password=secret,
             smtp_from_email="sender@example.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -144,7 +144,7 @@ async def test_send_email_smtp_exception() -> None:
             smtp_username="sender@example.com",
             smtp_password=secret,
             smtp_from_email="sender@example.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -163,7 +163,7 @@ async def test_send_email_generic_exception() -> None:
             smtp_username="sender@example.com",
             smtp_password=secret,
             smtp_from_email="sender@example.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         svc = email_mod.EmailService()
@@ -181,7 +181,7 @@ async def test_template_methods_delegate_to_send_email() -> None:
             smtp_username="sender@example.com",
             smtp_password=secret,
             smtp_from_email="sender@example.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000/",
         )
         svc = email_mod.EmailService()
@@ -203,7 +203,7 @@ def test_get_email_service_singleton() -> None:
             smtp_username=None,
             smtp_password=None,
             smtp_from_email=None,
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         a = email_mod.get_email_service()
@@ -218,7 +218,7 @@ async def test_check_email_health() -> None:
             smtp_username="a@b.com",
             smtp_password=MagicMock(get_secret_value=lambda: "pw"),
             smtp_from_email="a@b.com",
-            smtp_from_name="ApplyPilot",
+            smtp_from_name="RoleMule",
             base_url="http://localhost:8000",
         )
         assert await email_mod.check_email_health() is True

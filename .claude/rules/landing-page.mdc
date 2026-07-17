@@ -11,16 +11,20 @@ The landing page lives at `ui/index.html` and uses `ui/static/css/landing.css` +
 
 | Section | ID / Class | Notes |
 |---------|-----------|-------|
-| Hero | `.hero-section` | Headline + 3-step explainer; scroll hint at bottom |
-| ↓ section arrow | `.section-arrow.section-arrow--hero` | First inter-section arrow, between hero and tech-bar |
-| Tech Bar | `.section-tech-bar` | Built-with tags + GitHub link |
+| Hero | `.hero-section` | Tagline **One mule for every role.** + 4-step explainer; paste / PDF·TXT·DOCX / extension |
+| ↓ section arrow | `.section-arrow.section-arrow--hero` | Hero → tech-bar |
+| Tech Bar | `.section-tech-bar` | Built-with tags (incl. Gemini/OpenAI/Anthropic/Ollama) + GitHub link to `eliornl/applypilot` |
 | ↓ section arrow | `.section-arrow` | Between each subsequent section pair |
-| Problem | `#problem` `.section-problem` | 118-application stat + time comparison cards |
-| Features | `#features` `.section-features` | 6 AI agent feature cards (`.features-grid`) |
-| Chrome Extension | `#extension` `.section-extension` | Copy covers **Analyze This Job** + **Match Form To Profile**; hero and `#features` agent cards stay posting/workflow-focused |
+| Problem | `#problem` `.section-problem` | ~150-application stat + time comparison cards |
+| Features | `#features` `.section-features` | Label **Workflow Agents**; **5** pipeline agents (`.features-grid`) |
+| On Demand | `#after-apply` `.section-after-apply` | Label **On-Demand Agents**; Optimize CV, Interview Prep, Mock Session, Hiring Outreach |
+| Chrome Extension | `#extension` `.section-extension` | Analyze This Job + Match Form To Profile + extract bullets |
 | Career Tools | `#tools` `.section-tools` | 6 tool cards in Bootstrap rows |
-| **Screenshot Showcase** | `#example` `.section-example` | Real app screenshots — see below |
+| CLI | `#cli` `.section-cli` | Slim strip: `rolemule` install + example commands (`.cli-strip`) |
+| **Screenshot Showcase** | `#example` `.section-example` | App screenshots — 10 tabs (workflow + Optimize CV / Interview / Mock Session / Outreach) |
 | Pricing / CTA | `#pricing` `.section-pricing` | Multi-provider BYOK copy; CTA → `/auth/register` (“Get Started Free”) |
+
+Nav (`navbar_landing.html`): Why RoleMule · Workflow · On Demand · Extension · Career Tools · CLI · Example · Pricing.
 
 ---
 
@@ -127,13 +131,16 @@ The `#example` section shows real screenshots of the live application in a tabbe
 
 ```
 ui/static/img/screenshots/
-├── tab-job-details.png     # merged tall PNG of full Job Details tab
-├── tab-your-fit.png        # merged tall PNG of full Your Fit tab
-├── tab-strategy.png        # merged tall PNG of full Strategy tab
-├── tab-company.png         # merged tall PNG of full Company tab
-├── tab-cover-letter.png    # Cover Letter tab
-├── tab-resume.png          # Resume tab
-└── tab-interview.png       # Interview tab
+├── tab-job-details.png
+├── tab-your-fit.png
+├── tab-strategy.png
+├── tab-company.png
+├── tab-cover-letter.png
+├── tab-resume.png
+├── tab-optimize-cv.png      # Optimize CV tab (re-capture live when chrome changes)
+├── tab-interview.png
+├── tab-mock-session.png     # Mock Session tab
+└── tab-outreach.png         # Hiring Outreach tab
 ```
 
 Each file is a **single merged PNG** (not multiple images stacked) that shows the full scrollable content of that tab. When updating screenshots, always produce one tall merged file per tab rather than multiple separate images — this avoids all seam/gap alignment issues.
@@ -157,7 +164,7 @@ Each file is a **single merged PNG** (not multiple images stacked) that shows th
             <div class="ss-dots"><span></span><span></span><span></span></div>
             <div class="ss-url-bar">
                 <i class="fas fa-lock"></i>
-                <span>applypilot.app / dashboard / applications / …</span>
+                <span>rolemule.app / dashboard / applications / …</span>
             </div>
         </div>
         <div class="ss-panels">

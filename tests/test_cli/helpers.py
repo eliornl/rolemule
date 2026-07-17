@@ -34,14 +34,14 @@ def build_mock_client() -> MagicMock:
     client.auth.create_pat.return_value = {
         "id": "pat-1",
         "name": "CLI",
-        "token_prefix": "ap_pat_ab",
-        "token": "ap_pat_secret_token_value",
+        "token_prefix": "rm_pat_ab",
+        "token": "rm_pat_secret_token_value",
         "expires_at": None,
         "created_at": "2026-07-08T00:00:00Z",
     }
     client.auth.list_pats.return_value = {
         "tokens": [
-            {"id": "pat-1", "name": "CLI", "token_prefix": "ap_pat_ab", "active": True},
+            {"id": "pat-1", "name": "CLI", "token_prefix": "rm_pat_ab", "active": True},
         ]
     }
     client.auth.revoke_pat.return_value = {"message": "Token revoked", "id": "pat-1"}

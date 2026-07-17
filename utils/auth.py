@@ -1,5 +1,5 @@
 """
-Authentication utilities for the ApplyPilot.
+Authentication utilities for the RoleMule.
 Provides JWT token validation and FastAPI authentication dependencies for protected endpoints.
 """
 

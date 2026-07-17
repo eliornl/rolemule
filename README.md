@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="docs/logo.svg" width="280" height="64" alt="ApplyPilot">
+  <img src="docs/logo.svg" width="280" height="64" alt="RoleMule">
 </p>
+
+<p align="center"><em>One mule for every role.</em></p>
 
 [![Python](https://img.shields.io/badge/Python-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-green.svg)](https://fastapi.tiangolo.com/)
@@ -21,25 +23,25 @@
 
 Separate tools, separate tabs, separate sites — none of them talking to each other. Generic output. Over an hour per application.
 
-Paste a job description — or pull it from any job site with the Chrome extension — and five AI agents run an orchestrated pipeline in under 30 seconds: analyzing the role, scoring your fit, researching the company, writing a targeted cover letter, and tailoring your resume to the role. Sequential where it needs to be, parallel where it can be, each agent's output feeding the next.
+Paste a job description, upload a PDF / TXT / DOCX, or pull the posting from any job site with the Chrome extension — and five AI agents run an orchestrated pipeline in under 30 seconds: analyzing the role, scoring your fit, researching the company, writing a targeted cover letter, and producing resume tips for the role. Sequential where it needs to be, parallel where it can be, each agent's output feeding the next.
 
-Also includes a dashboard to track every application. And tools for everything around it: interview prep with mock sessions, salary negotiation, job comparison, follow-ups, thank you notes, and references.
+Also includes a dashboard to track every application. And tools for everything around it: interview prep, timed mock sessions, hiring outreach drafts, salary negotiation, job comparison, follow-ups, thank you notes, and references.
 
 Runs on your machine. No subscriptions — each user picks Gemini, OpenAI, Anthropic, or local Ollama in **Settings → AI Setup** and brings their own key (Ollama needs none).
 
 *Here's what a completed application looks like:*
 
-![ApplyPilot demo](docs/demo.gif)
+![RoleMule demo](docs/demo.gif)
 
 ---
 
-[Six AI Agents](#six-ai-agents) · [Career Tools](#six-career-tools) · [Quick Start](#quick-start) · [CLI](#cli) · [AI Provider / API Key](#ai-provider--api-key) · [Chrome Extension](#chrome-extension) · [Highlights](#highlights) · [Optional Features](#optional-features) · [Developer Setup](#developer-setup) · [Environment Variables](#environment-variables) · [How It Works](#how-it-works) · [Project Structure](#project-structure) · [Contributing](#contributing) · [License](#license)
+[AI Agents](#ai-agents) · [Career Tools](#six-career-tools) · [Quick Start](#quick-start) · [CLI](#cli) · [AI Provider / API Key](#ai-provider--api-key) · [Chrome Extension](#chrome-extension) · [Highlights](#highlights) · [Optional Features](#optional-features) · [Developer Setup](#developer-setup) · [Environment Variables](#environment-variables) · [How It Works](#how-it-works) · [Project Structure](#project-structure) · [Contributing](#contributing) · [License](#license)
 
 ---
 
-## AI agents
+## AI Agents
 
-Paste a job description and five agents run automatically:
+Paste a job description (or upload PDF / TXT / DOCX) and five agents run automatically:
 
 | Agent | What it produces |
 |-------|-----------------|
@@ -49,18 +51,18 @@ Paste a job description and five agents run automatically:
 | **Resume Advisor** | Per-bullet rewrites, ATS alignment score, before-you-submit checklist |
 | **Cover Letter Writer** | Personalized cover letter, regenerate with one click |
 
-Three more agents run **on demand** from the application detail page (after the workflow completes):
+Four more agents run **on demand** from the application detail page (after the workflow completes):
 
 | Agent | What it produces |
 |-------|-----------------|
 | **Interview Prep** | Role-specific questions, model answers, STAR frameworks, and process tips (static guide on the Interview tab) |
 | **CV Optimizer** | Iterative evaluate→revise loop: AI hiring manager scores your CV, AI applicant rewrites it, repeats until score threshold or max iterations. Outputs an optimized CV, cover letter, and **Download CV** (`.odt` via LibreOffice + HTML normalizer on server when available, else `.docx`; see [USER_GUIDE.md](USER_GUIDE.md#cv-optimization)). |
-| **Mock Session** | Timed conversational mock session (HR / Pro / Manager; 10/15/20 min) with browser voice or typed answers and a scored debrief — see [USER_GUIDE.md](USER_GUIDE.md#practice-interview) |
-| **Hiring Outreach** | Public web contact suggestions and copy-ready outreach drafts on the Outreach tab — see [USER_GUIDE.md](USER_GUIDE.md#hiring-outreach) |
+| **Mock Session** | Timed conversational mock session (HR / Pro / Manager; 10/15/20 min) with browser voice or typed answers and a scored debrief — see [USER_GUIDE.md](USER_GUIDE.md#mock-session) |
+| **Hiring Outreach** | Public web contact suggestions and copy-ready outreach drafts on the Outreach tab (you send them yourself — no send integration) — see [USER_GUIDE.md](USER_GUIDE.md#hiring-outreach) |
 
 ## Six career tools
 
-Standalone tools you can use any time — no job description needed:
+Standalone tools you can use any time — no job application needed:
 
 | Tool | What it does |
 |------|-------------|
@@ -131,10 +133,10 @@ make start-local
 
 `make start-local` handles everything on the first run:
 - Installs Homebrew, Python 3, and Node.js if not already present
-- Creates venv, installs Python and Node dependencies, **installs the `applypilot` CLI**, builds the frontend
+- Creates venv, installs Python and Node dependencies, **installs the `rolemule` CLI**, builds the frontend
 - Copies `.env.local.example` → `.env` and fills in strong random secrets automatically
 - Installs PostgreSQL 17 and Redis via Homebrew (first run only)
-- Creates the database and user, runs migrations
+- Creates the database and user (`applypilot` / `applypilot`), runs migrations
 - Starts the app at **http://localhost:8000**
 
 **After `git pull`:** Run **`make start-local`** again — it rebuilds the frontend, applies migrations, and starts the app.
@@ -180,7 +182,7 @@ CREATE DATABASE applypilot OWNER applypilot;
 
 You can run these with `psql -U postgres` or any PostgreSQL client (pgAdmin, TablePlus, etc.).
 
-> **Tip:** Using `applypilot` as the password matches the default in `.env` — you can skip Step 3 entirely. If you choose a different password, update `DATABASE_URL` in Step 3.
+> **Tip:** Using `applypilot` as the password matches the default Postgres credentials in `.env.local.example` — you can skip Step 3 entirely. If you choose a different password, update `DATABASE_URL` in Step 3.
 
 **Step 3 — Edit `.env` with your connection strings** _(skip if you used the default password above)_
 
@@ -211,7 +213,7 @@ INFO:     Application startup complete.
 ```
 
 Open **http://localhost:8000** in your browser and create your account.
-During profile setup you can add a Gemini API key, or configure any provider later in **Settings → AI Setup** (Gemini / OpenAI / Anthropic / Ollama).
+Complete profile setup (basic info, work experience, education, skills, career preferences). Add your AI provider in **Settings → AI Setup** (Gemini / OpenAI / Anthropic / Ollama) before starting an analysis — cloud providers need your own API key; Ollama needs none.
 
 ---
 
@@ -223,35 +225,35 @@ Terminal client for the same API — useful for scripting, AI assistants (Cursor
 
 ```bash
 source venv/bin/activate    # macOS/Linux
-applypilot doctor
+rolemule doctor
 ```
 
-Or without activating: `venv/bin/applypilot doctor` (Windows: `venv\Scripts\applypilot.exe`).
+Or without activating: `venv/bin/rolemule doctor` (Windows: `venv\Scripts\rolemule.exe`).
 
-**Docker only (`make start`):** the app runs in containers; run **`make setup` once on the host** if you also want the CLI on your machine (same venv + `applypilot` command).
+**Docker only (`make start`):** the app runs in containers; run **`make setup` once on the host** if you also want the CLI on your machine (same venv + `rolemule` command).
 
 **First session** (server must be running):
 
 ```bash
-applypilot auth login              # or: applypilot auth token set  (OAuth users)
-applypilot profile status          # complete profile if needed
-applypilot workflow analyze job.txt --wait --format json
-applypilot apps list
-applypilot apps show APP_ID        # summary + workflow session link
+rolemule auth login              # or: rolemule auth token set  (OAuth users)
+rolemule profile status          # complete profile if needed
+rolemule workflow analyze job.txt --wait --format json
+rolemule apps list
+rolemule apps show APP_ID        # summary + workflow session link
 ```
 
 **Automation / scripts:** create a personal access token (shown once) and save it locally:
 
 ```bash
-applypilot auth token create --name "CI" --save
-applypilot workflow results SESSION_ID --section cover-letter --out letter.md
-applypilot workflow watch SESSION_ID   # live WebSocket progress
-applypilot config set --base-url https://your-server.example.com
+rolemule auth token create --name "CI" --save
+rolemule workflow results SESSION_ID --section cover-letter --out letter.md
+rolemule workflow watch SESSION_ID   # live WebSocket progress
+rolemule config set --base-url https://your-server.example.com
 ```
 
 Use `--no-pager` when piping long human output. Destructive commands require `--confirm` (e.g. `profile resume delete --confirm`).
 
-**Shell completion:** run `applypilot --install-completion` from your terminal (auto-detects bash/zsh/fish).
+**Shell completion:** run `rolemule --install-completion` from your terminal (auto-detects bash/zsh/fish).
 
 Full command reference: **[docs/cli-reference.md](docs/cli-reference.md)** (shell aliases included) · Tests: `make cli-test`
 
@@ -289,11 +291,11 @@ The extension appears in your Chrome toolbar. Browse jobs naturally. When you fi
 
 ## Highlights
 
-- **Local-first** — PostgreSQL, Redis, and the app all run on your machine. One command to start, no external services required.
-- **Full profile system** — work experience, skills, career preferences; agents use your profile in every output.
+- **Local-first** — PostgreSQL, Redis, and the app all run on your machine. One command to start. AI calls use your BYOK provider (or local Ollama); optional Google OAuth / SMTP / PostHog if you enable them.
+- **Full profile system** — work experience, education, skills, career preferences (plus work authorization / resume for extension autofill); agents use your profile in every output.
 - **BYOK AI keys** — each user picks a provider and adds their own key via Settings (or uses Ollama / Vertex admin mode).
 - **Google OAuth** — optional "Continue with Google" alongside standard email/password.
-- **Multi-user ready** — JWT auth, encrypted key storage, rate limiting per user, soft delete.
+- **Multi-user ready** — JWT auth, personal access tokens for the CLI, encrypted key storage, rate limiting per user, soft delete.
 - **No analytics by default** — PostHog is disabled unless you explicitly enable it in `.env`.
 - **Data ownership** — everything lives in your local PostgreSQL database. Delete the volume and it's gone.
 
@@ -312,7 +314,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-gmail@gmail.com
 SMTP_PASSWORD=your-app-password        # myaccount.google.com/apppasswords
 SMTP_FROM_EMAIL=your-gmail@gmail.com
-SMTP_FROM_NAME=ApplyPilot
+SMTP_FROM_NAME=RoleMule
 DISABLE_EMAIL_VERIFICATION=false       # require email verification on sign-up
 ```
 
@@ -348,7 +350,7 @@ Use this if you have a Google Cloud project and want to use Vertex AI instead of
 ```bash
 USE_VERTEX_AI=true
 VERTEX_AI_PROJECT=your-gcp-project-id
-VERTEX_AI_LOCATION=global   # required for gemini-3-* models
+VERTEX_AI_LOCATION=global   # required for gemini-3-* models (code default is us-central1)
 ```
 
 Requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials) (`gcloud auth application-default login`) or a service account in the environment.
@@ -363,7 +365,7 @@ Requires [Application Default Credentials](https://cloud.google.com/docs/authent
 make dev            # restart the FastAPI server (Postgres + Redis already running)
 ```
 
-**Frontend changes** — after editing any JS or CSS file, rebuild assets and hard-refresh:
+**Frontend changes** — after editing any TypeScript or CSS under `ui/`, rebuild assets and hard-refresh:
 
 ```bash
 make build-frontend    # rebuilds dist/ and updates manifest.json
@@ -402,7 +404,7 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 |----------|---------|-------------|
 | `JWT_SECRET` | Auto-generated | Signs auth tokens |
 | `ENCRYPTION_KEY` | Auto-generated | Encrypts stored API keys |
-| `DATABASE_URL` | Set automatically | PostgreSQL connection |
+| `DATABASE_URL` | Set automatically | PostgreSQL connection (user/db name stays `applypilot`) |
 | `REDIS_URL` | Set automatically | Redis connection |
 | `LLM_PROVIDER` | `gemini` | Health/admin fallback provider only (`gemini` \| `openai` \| `anthropic` \| `ollama`) — users pick via **Settings → AI Setup** |
 | `GEMINI_API_KEY` | _(empty)_ | Server Gemini key for health/admin; users add BYOK in Settings |
@@ -412,7 +414,7 @@ make build-frontend    # rebuilds dist/ and updates manifest.json
 | `ANTHROPIC_API_KEY` | _(empty)_ | Server Anthropic key for health/admin; users add BYOK in Settings |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5` | Default Anthropic model |
 | `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Ollama host when user selects Ollama |
-| `OLLAMA_MODEL` | `qwen3` | Default Ollama model |
+| `OLLAMA_MODEL` | `qwen3.6` | Default Ollama model |
 | `BASE_URL` | `http://localhost:8000` | Used in password-reset and verification email links |
 | `DISABLE_EMAIL_VERIFICATION` | `true` | Set `false` when SMTP is configured |
 | `GOOGLE_CLIENT_ID` | _(empty)_ | Enables "Continue with Google" |
@@ -431,7 +433,7 @@ Browser / Chrome Extension
          │
          ▼
 ┌──────────────────────────────┐
-│         FastAPI app          │  Python 3.13, async
+│         FastAPI app          │  Python 3.11+ (3.13 in Docker/CI), async
 │    uvicorn · port 8000       │
 └──────────┬───────────────────┘
            │
@@ -447,70 +449,61 @@ Browser / Chrome Extension
                        ↓
         Resume Advisor + Cover Letter Writer  (parallel)
 
-        Interview Prep  ← standalone, runs on demand (static guide)
-
-        CV Optimizer  ← standalone, runs on demand after workflow completes
-               Hiring Manager (evaluator) ←──────────────┐
-                       ↓                                  │
-               CV Optimizer (reviser)                     │
-                       ↓                                  │
-               Convergence check ─── continue ───────────┘
-                       │ stop
-               Cover Letter Finalizer → optimized CV + cover letter
-
-        Mock Session       ← standalone timed conversational mock (HR/Pro/Manager)
-
-        Hiring Outreach  ← standalone public-web contacts + copy-only draft messages
-        Six career tools (Follow-up Email, Thank You Note, Salary Coach,
-        Rejection Analyzer, Reference Request, Job Comparison)
-                        ← standalone, no job description needed
+        Interview Prep     ← on demand (static guide on Interview tab)
+        CV Optimizer       ← on demand after workflow (hiring manager ↔ reviser loop)
+        Mock Session       ← on demand timed conversational mock (HR/Pro/Manager)
+        Hiring Outreach    ← on demand public-web contacts + copy-only drafts
+        Six career tools   ← standalone (no job application required)
 ```
 
-Frontend: server-rendered HTML + **TypeScript** (Vite-bundled per page), no React/Vue. CSS is esbuild-minified; JS is built from `ui/src/` into content-hashed bundles. The Chrome extension uses Manifest V3 and posts directly to your server.
+Frontend: server-rendered HTML + **TypeScript** (Vite-bundled per page), no React/Vue. CSS is esbuild-minified; JS is built from `ui/src/` into content-hashed bundles. The Chrome extension uses Manifest V3 and posts directly to your local server.
 
 ---
 
 ## Project Structure
 
 ```
-applypilot/
-├── main.py               # FastAPI app entry point
-├── cli/                  # ApplyPilot CLI (Typer commands)
-├── applypilot_client/    # Sync HTTP client for CLI
-├── agents/               # 5 workflow agents + interview prep + hiring outreach + CV optimizer loop + 6 career tool agents
-├── workflows/            # LangGraph pipeline orchestration and state schema
-├── api/                  # FastAPI route handlers
-├── config/               # Settings (Pydantic BaseSettings + .env)
-├── models/               # SQLAlchemy ORM models and database setup
-├── utils/                # Auth, email, Redis, encryption, multi-provider LLM (`utils/llm/`)
-├── alembic/              # Database migrations
-├── extension/            # Chrome Extension (Manifest V3)
-├── ui/                   # HTML templates + TypeScript frontend + CSS
-│   ├── src/              # TypeScript page entries + shared modules (Vite)
-│   ├── index.html        # Landing page
-│   ├── dashboard/        # All dashboard pages
-│   ├── auth/             # Login, register, verify
-│   ├── profile/          # Profile setup
-│   ├── partials/         # Shared template fragments
-│   └── static/           # CSS source + dist/ build output (gitignored)
-├── tests/                # Unit + integration tests (pytest)
-│   ├── test_agents/      # Agent unit tests
-│   ├── test_api/         # API integration tests (no live server needed)
-│   └── test_cli/         # CLI tests (CliRunner, mocked HTTP)
-├── e2e/                  # Playwright end-to-end tests
-├── docs/                 # Demo GIF, logo, CLI reference
-├── docker-compose.yml    # Local: postgres + redis + app
-├── Dockerfile            # Multi-stage build: Node (frontend) → Python
-├── Makefile              # Dev workflow shortcuts (macOS / Linux)
-├── Justfile              # Same shortcuts for Windows (just)
-├── requirements.txt      # Python dependencies
-├── CHANGELOG.md          # Version history
-├── CONTRIBUTING.md       # Contribution guide
-├── CODE_OF_CONDUCT.md    # Contributor Covenant
-├── SECURITY.md           # Private vulnerability reporting
-├── .github/              # Issue & PR templates
-├── USER_GUIDE.md         # End-user documentation
-└── .env.local.example    # Config template (make start copies this to .env)
+applypilot/                 # clone folder (GitHub repo: eliornl/applypilot)
+├── main.py                 # FastAPI app entry point
+├── cli/                    # RoleMule CLI (Typer; command: rolemule)
+├── rolemule_client/        # Sync HTTP client for the CLI
+├── agents/                 # Workflow agents + interview prep + mock interview +
+│                           # hiring outreach + CV optimizer loop + 6 career tools
+├── workflows/              # LangGraph pipeline orchestration and state schema
+├── api/                    # FastAPI route handlers (/api/v1/...)
+├── config/                 # Settings (Pydantic BaseSettings + .env)
+├── models/                 # SQLAlchemy ORM models and database setup
+├── utils/                  # Auth, email, Redis, encryption, multi-provider LLM (`utils/llm/`)
+├── alembic/                # Database migrations
+├── extension/              # Chrome Extension (Manifest V3)
+├── ui/                     # HTML templates + TypeScript frontend + CSS
+│   ├── src/                # TypeScript page entries + shared modules (Vite)
+│   ├── index.html          # Landing page
+│   ├── dashboard/          # Dashboard pages (incl. application detail, 10 tabs)
+│   ├── auth/               # Login, register, verify, reset password
+│   ├── profile/            # Profile setup
+│   ├── partials/           # Shared template fragments (navbars)
+│   └── static/             # CSS/img source + dist/ build output (gitignored)
+├── tests/                  # Unit + integration tests (pytest)
+│   ├── test_agents/        # Agent unit tests
+│   ├── test_api/           # API integration tests (no live server needed)
+│   ├── test_cli/           # CLI tests (CliRunner, mocked HTTP)
+│   └── test_cli_integration/  # CLI against ASGITransport
+├── e2e/                    # Playwright end-to-end tests
+├── docs/                   # Demo GIF, logo, CLI reference, rebrand plan
+├── docker-compose.yml      # Local: postgres + redis + app (DB user/name: applypilot)
+├── Dockerfile              # Multi-stage build: Node (frontend) → Python 3.13
+├── Makefile                # Dev workflow shortcuts (macOS / Linux)
+├── Justfile                # Same shortcuts for Windows (just)
+├── pyproject.toml          # Package metadata + `rolemule` console script
+├── requirements.txt        # Pinned Python dependencies (from requirements.in)
+├── CHANGELOG.md            # Version history
+├── CONTRIBUTING.md         # Contribution guide
+├── CODE_OF_CONDUCT.md      # Contributor Covenant
+├── SECURITY.md             # Private vulnerability reporting
+├── .github/                # Issue & PR templates, CI
+├── USER_GUIDE.md           # End-user documentation
+└── .env.local.example      # Config template (make start copies this to .env)
 ```
 
 ---

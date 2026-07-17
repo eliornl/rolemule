@@ -114,7 +114,7 @@ def test_setup_tracing_noop_when_otel_unavailable() -> None:
 def test_setup_tracing_development(monkeypatch: pytest.MonkeyPatch) -> None:
     fakes = _install_fake_otel(monkeypatch)
     monkeypatch.setattr(tracing, "_tracer", None)
-    tracing.setup_tracing(service_name="applypilot", environment="development")
+    tracing.setup_tracing(service_name="rolemule", environment="development")
     fakes["Resource"].create.assert_called_once()
     fakes["TracerProvider"].assert_called_once()
     fakes["BatchSpanProcessor"].assert_not_called()

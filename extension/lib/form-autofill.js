@@ -1,5 +1,5 @@
 /**
- * ApplyPilot — serialize visible form fields and apply autofill assignments (main document MVP).
+ * RoleMule — serialize visible form fields and apply autofill assignments (main document MVP).
  * Injected into the active tab via chrome.scripting.executeScript; exposes globals on window.
  */
 (function () {
@@ -373,7 +373,7 @@
   }
 
   /**
-   * Hide Ashby's native resume autofill UI so only ApplyPilot profile data is used.
+   * Hide Ashby's native resume autofill UI so only RoleMule profile data is used.
    * @returns {{ hidden_sections: number, hidden_banners: number }}
    */
   function suppressAshbyResumeAutofillUI() {
@@ -1603,7 +1603,7 @@
       }
     } catch (eAshbyScan) {
       try {
-        console.debug('[ApplyPilot] Ashby screening scan skipped', eAshbyScan);
+        console.debug('[RoleMule] Ashby screening scan skipped', eAshbyScan);
       } catch (eLog) {
         /* ignore */
       }
@@ -1867,7 +1867,7 @@
       return attachScanDebug(serializeCollectOnlyBody(warnings));
     } catch (eSerialize) {
       try {
-        console.debug('[ApplyPilot] serialize failed', eSerialize);
+        console.debug('[RoleMule] serialize failed', eSerialize);
       } catch (eLog) {
         /* ignore */
       }

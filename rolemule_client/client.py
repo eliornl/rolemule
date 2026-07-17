@@ -8,8 +8,8 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 import httpx
 
-from applypilot_client.constants import API_V1_PREFIX
-from applypilot_client.errors import ApiClientError, parse_error_response
+from rolemule_client.constants import API_V1_PREFIX
+from rolemule_client.errors import ApiClientError, parse_error_response
 
 DEFAULT_TIMEOUT_SECONDS = 30.0
 
@@ -19,9 +19,9 @@ DEFAULT_TIMEOUT_SECONDS = 30.0
 # =============================================================================
 
 
-class ApplyPilotClient:
+class RoleMuleClient:
     """
-    Synchronous HTTP client for ApplyPilot API v1.
+    Synchronous HTTP client for RoleMule API v1.
 
     Args:
         base_url: Server origin, e.g. http://localhost:8000
@@ -253,62 +253,62 @@ class ApplyPilotClient:
     @property
     def auth(self):
         """Auth API resource."""
-        from applypilot_client.resources.auth import AuthResource
+        from rolemule_client.resources.auth import AuthResource
 
         return AuthResource(self)
 
     @property
     def profile(self):
         """Profile API resource."""
-        from applypilot_client.resources.profile import ProfileResource
+        from rolemule_client.resources.profile import ProfileResource
 
         return ProfileResource(self)
 
     @property
     def workflow(self):
         """Workflow API resource."""
-        from applypilot_client.resources.workflow import WorkflowResource
+        from rolemule_client.resources.workflow import WorkflowResource
 
         return WorkflowResource(self)
 
     @property
     def applications(self):
         """Applications API resource."""
-        from applypilot_client.resources.applications import ApplicationsResource
+        from rolemule_client.resources.applications import ApplicationsResource
 
         return ApplicationsResource(self)
 
     @property
     def interview_prep(self):
         """Interview prep API resource."""
-        from applypilot_client.resources.interview_prep import InterviewPrepResource
+        from rolemule_client.resources.interview_prep import InterviewPrepResource
 
         return InterviewPrepResource(self)
 
     @property
     def cv_optimizer(self):
         """CV optimizer API resource."""
-        from applypilot_client.resources.cv_optimizer import CvOptimizerResource
+        from rolemule_client.resources.cv_optimizer import CvOptimizerResource
 
         return CvOptimizerResource(self)
 
     @property
     def tools(self):
         """Career tools API resource."""
-        from applypilot_client.resources.tools import ToolsResource
+        from rolemule_client.resources.tools import ToolsResource
 
         return ToolsResource(self)
 
     @property
     def extension(self):
         """Chrome extension API resource."""
-        from applypilot_client.resources.extension import ExtensionResource
+        from rolemule_client.resources.extension import ExtensionResource
 
         return ExtensionResource(self)
 
     @property
     def admin(self):
         """Admin and monitoring API resource."""
-        from applypilot_client.resources.admin import AdminResource
+        from rolemule_client.resources.admin import AdminResource
 
         return AdminResource(self)

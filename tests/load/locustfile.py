@@ -1,5 +1,5 @@
 """
-Load testing configuration for ApplyPilot.
+Load testing configuration for RoleMule.
 
 Run with: locust -f tests/load/locustfile.py --host=http://localhost:8000
 

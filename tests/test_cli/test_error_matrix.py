@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from applypilot_client.errors import ExitCode
+from rolemule_client.errors import ExitCode
 
 
 @pytest.mark.parametrize(

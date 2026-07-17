@@ -1,5 +1,5 @@
 """
-Configuration module for ApplyPilot.
+Configuration module for RoleMule.
 
 - settings: Pydantic settings with environment variable loading
 """

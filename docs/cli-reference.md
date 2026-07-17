@@ -1,6 +1,6 @@
-# ApplyPilot CLI Reference
+# RoleMule CLI Reference
 
-Command-line client for a running ApplyPilot server. Full API parity for auth, profile, workflows, applications, interview prep, CV optimization, career tools, extension autofill testing, and admin monitoring.
+Command-line client for a running RoleMule server. Full API parity for auth, profile, workflows, applications, interview prep, CV optimization, career tools, extension autofill testing, and admin monitoring.
 
 **Implementation plan:** [cli-implementation-plan.md](./cli-implementation-plan.md)
 
@@ -15,16 +15,16 @@ From the repo root, the CLI is installed automatically when you run **`make setu
 ```bash
 make setup          # or make start-local on macOS
 source venv/bin/activate
-applypilot doctor
+rolemule doctor
 ```
 
-Without activating the venv: `venv/bin/applypilot` (Windows: `venv\Scripts\applypilot.exe`).
+Without activating the venv: `venv/bin/rolemule` (Windows: `venv\Scripts\rolemule.exe`).
 
-**Docker only (`make start`):** run `make setup` once on the host if you want the CLI locally — the container image does not install a host-side `applypilot` command.
+**Docker only (`make start`):** run `make setup` once on the host if you want the CLI locally — the container image does not install a host-side `rolemule` command.
 
 Manual reinstall (optional): `pip install -e ".[cli]"` inside the project venv.
 
-Entry point: `applypilot` → `cli.main:main`
+Entry point: `rolemule` → `cli.main:main`
 
 ---
 
@@ -32,10 +32,10 @@ Entry point: `applypilot` → `cli.main:main`
 
 | Path | Purpose |
 |------|---------|
-| `~/.applypilot/config.toml` | `base_url`, poll intervals, output defaults |
-| `~/.applypilot/credentials.json` | JWT (`0600` permissions) |
+| `~/.rolemule/config.toml` | `base_url`, poll intervals, output defaults |
+| `~/.rolemule/credentials.json` | JWT (`0600` permissions) |
 
-Override server URL per invocation: `applypilot --base-url http://localhost:8000 …`
+Override server URL per invocation: `rolemule --base-url http://localhost:8000 …`
 
 ---
 
@@ -55,8 +55,8 @@ Place **before** the subcommand:
 Shell completion (run from an interactive terminal so Typer can detect your shell):
 
 ```bash
-applypilot --install-completion
-applypilot --show-completion
+rolemule --install-completion
+rolemule --show-completion
 ```
 
 ---
@@ -88,8 +88,8 @@ applypilot --show-completion
 | `doctor` | `GET /health`, token check (JWT vs PAT), local config paths |
 
 ```bash
-applypilot doctor
-applypilot doctor --format json
+rolemule doctor
+rolemule doctor --format json
 ```
 
 ---
@@ -98,12 +98,12 @@ applypilot doctor --format json
 
 | Command | Action |
 |---------|--------|
-| `config` | Show `~/.applypilot/config.toml` (default when no subcommand) |
+| `config` | Show `~/.rolemule/config.toml` (default when no subcommand) |
 | `config set` | Patch config (`--base-url`, `--format`, `--poll-interval`, `--poll-timeout`, `--color` / `--no-color`) |
 
 ```bash
-applypilot config
-applypilot config set --base-url https://apply.example.com --format json
+rolemule config
+rolemule config set --base-url https://apply.example.com --format json
 ```
 
 ---
@@ -130,7 +130,7 @@ applypilot config set --base-url https://apply.example.com --format json
 | `auth verification-status` | `GET /api/v1/auth/verification-status` |
 | `auth extension-status` | `GET /api/v1/auth/extension-status` |
 
-Google OAuth users: log in via the browser, then `applypilot auth token set`. For automation, prefer **`auth token create`** (personal access token) over pasting a short-lived JWT.
+Google OAuth users: log in via the browser, then `rolemule auth token set`. For automation, prefer **`auth token create`** (personal access token) over pasting a short-lived JWT.
 
 ---
 
@@ -198,12 +198,12 @@ JSON sections accept `--file path.json` or `--file -` (stdin).
 **Errors:** `409 RES_3002` → exit 0 warning; `422 CFG_6001` → add API key hint
 
 ```bash
-applypilot workflow analyze posting.txt --wait --format json
-applypilot workflow results SESSION_ID --section cover-letter --out cover-letter.md
-applypilot workflow watch SESSION_ID
+rolemule workflow analyze posting.txt --wait --format json
+rolemule workflow results SESSION_ID --section cover-letter --out cover-letter.md
+rolemule workflow watch SESSION_ID
 ```
 
-Long human output uses `$PAGER` / `$APPLYPILOT_PAGER` (disable with `--no-pager`).
+Long human output uses `$PAGER` / `$ROLEMULE_PAGER` (disable with `--no-pager`).
 
 ---
 
@@ -264,10 +264,10 @@ Long human output uses `$PAGER` / `$APPLYPILOT_PAGER` (disable with `--no-pager`
 Most tools accept `--file REQUEST.json` or flag shortcuts. Example:
 
 ```bash
-applypilot tools schema thank-you
-applypilot tools thank-you --interviewer "Jane" --interview-type video \
+rolemule tools schema thank-you
+rolemule tools thank-you --interviewer "Jane" --interview-type video \
   --company Acme --title "Engineer" --highlights "Led migration"
-applypilot tools salary-coach --file offer.json --format json
+rolemule tools salary-coach --file offer.json --format json
 ```
 
 ---
@@ -286,7 +286,7 @@ Requires complete profile. JSON must include `page_url` (http(s)) and `fields` a
 
 ## `admin` (power users)
 
-Hidden from `applypilot --help` unless `APPLYPILOT_ADMIN=1` is set **before** launching the CLI. Commands still work without the env var.
+Hidden from `rolemule --help` unless `ROLEMULE_ADMIN=1` is set **before** launching the CLI. Commands still work without the env var.
 
 | Command | API |
 |---------|-----|
@@ -305,17 +305,17 @@ Requires `is_admin` on your account.
 Prefer `--format json` when an agent parses output:
 
 ```bash
-applypilot doctor && applypilot profile status
-applypilot workflow analyze jobs/acme.txt --wait --format json
-applypilot apps list --status applied --format json
-applypilot interview generate SESSION --wait --format json > prep.json
-applypilot tools salary-coach --file offer.json --format json
+rolemule doctor && rolemule profile status
+rolemule workflow analyze jobs/acme.txt --wait --format json
+rolemule apps list --status applied --format json
+rolemule interview generate SESSION --wait --format json > prep.json
+rolemule tools salary-coach --file offer.json --format json
 ```
 
 **Rules for agents:**
 
 - Server must be running (`make start-local` or Docker)
-- Login once: `applypilot auth login` or `auth token set`
+- Login once: `rolemule auth login` or `auth token set`
 - Global flags go **before** subcommands
 - Destructive commands need `--confirm` (account/data/application/resume/api-key deletes, maintenance toggles, etc.)
 - `422 CFG_6001` → configure AI (`profile api-key set --provider …`, `preferred_provider=ollama`, or Vertex)
@@ -324,30 +324,30 @@ applypilot tools salary-coach --file offer.json --format json
 
 ## Shell aliases (optional)
 
-Copy into `~/.bashrc` or `~/.zshrc` for shorter commands. Adjust paths to your ApplyPilot install.
+Copy into `~/.bashrc` or `~/.zshrc` for shorter commands. Adjust paths to your RoleMule install.
 
 ```bash
 # Server + auth
-alias ap='applypilot'
-alias apdoc='applypilot doctor'
-alias aplogin='applypilot auth login'
-alias aptoken='applypilot auth token create --save --name'
+alias ap='rolemule'
+alias apdoc='rolemule doctor'
+alias aplogin='rolemule auth login'
+alias aptoken='rolemule auth token create --save --name'
 
 # Analyze and watch
-alias apanalyze='applypilot workflow analyze --wait'
-alias apwatch='applypilot workflow watch'
+alias apanalyze='rolemule workflow analyze --wait'
+alias apwatch='rolemule workflow watch'
 
 # Applications
-alias aplist='applypilot apps list'
-alias apshow='applypilot apps show'
+alias aplist='rolemule apps list'
+alias apshow='rolemule apps show'
 
 # Export cover letter after a completed workflow
 apcover() {
-  applypilot workflow results "$1" --section cover-letter --out "${2:-cover-letter.md}"
+  rolemule workflow results "$1" --section cover-letter --out "${2:-cover-letter.md}"
 }
 
 # JSON-friendly scripting
-alias apjson='applypilot --format json --no-pager'
+alias apjson='rolemule --format json --no-pager'
 ```
 
 Example session:

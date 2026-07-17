@@ -7,7 +7,7 @@ import json
 import pytest
 import typer
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.context import CliContext
 from cli.output import (
     emit,
@@ -123,13 +123,13 @@ def test_emit_duplicate_application_human_ids(capsys) -> None:
     assert "sess-9" in out
 
 
-def test_persist_auth_response_skips_without_token(applypilot_home) -> None:
+def test_persist_auth_response_skips_without_token(rolemule_home) -> None:
     persist_auth_response({"message": "no token"})
-    assert not (applypilot_home / "credentials.json").exists()
+    assert not (rolemule_home / "credentials.json").exists()
 
 
-def test_persist_auth_response_saves_token(applypilot_home) -> None:
+def test_persist_auth_response_saves_token(rolemule_home) -> None:
     persist_auth_response({"access_token": "abc.def.ghi", "user": {"email": "a@b.com"}})
-    data = json.loads((applypilot_home / "credentials.json").read_text())
+    data = json.loads((rolemule_home / "credentials.json").read_text())
     assert data["access_token"] == "abc.def.ghi"
     assert data["email"] == "a@b.com"

@@ -1,4 +1,4 @@
-"""Tests for applypilot extension commands."""
+"""Tests for rolemule extension commands."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.errors import ApiClientError, ExitCode
 
 SAMPLE_BODY = {
     "page_url": "https://careers.example.com/apply",

@@ -1,4 +1,4 @@
-"""Tests for applypilot profile commands."""
+"""Tests for rolemule profile commands."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from applypilot_client.errors import ExitCode
+from rolemule_client.errors import ExitCode
 
 
 def test_profile_show(invoke, write_credentials) -> None:

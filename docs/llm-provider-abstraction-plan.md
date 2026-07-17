@@ -36,7 +36,7 @@ Introduce a clear, high-performance provider abstraction so agents call one stab
 | Settings / env | `.cursor/rules/settings-and-env.mdc` |
 | Settings UI | `.cursor/rules/settings-page.mdc` |
 | Unit tests | `.cursor/rules/unit-testing.mdc` |
-| Core | `.cursor/rules/applypilot-core.mdc` |
+| Core | `.cursor/rules/rolemule-core.mdc` |
 
 ### 0.4 Design principles
 

@@ -1,5 +1,5 @@
 """
-Redis client utilities for the ApplyPilot.
+Redis client utilities for the RoleMule.
 Provides async Redis connection management with singleton pattern for caching and health monitoring.
 """
 

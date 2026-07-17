@@ -94,7 +94,7 @@ def format_application_show(data: Dict[str, Any]) -> str:
         lines.append(f"Posting: {data['job_url']}")
     if data.get("workflow_session_id"):
         lines.append(f"Session: {data['workflow_session_id']}")
-        lines.append(f"  → applypilot workflow results {data['workflow_session_id']}")
+        lines.append(f"  → rolemule workflow results {data['workflow_session_id']}")
     if data.get("notes"):
         lines.append(f"Notes: {data['notes']}")
     if data.get("created_at"):

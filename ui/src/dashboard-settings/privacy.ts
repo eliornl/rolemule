@@ -34,7 +34,7 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
 }
 
 export async function exportData(): Promise<void> {
-  const suggestedName = `applypilot-data-${new Date().toISOString().split('T')[0]}.json`;
+  const suggestedName = `rolemule-data-${new Date().toISOString().split('T')[0]}.json`;
   showAlert('Preparing your export…', 'info', { loading: true });
 
   try {

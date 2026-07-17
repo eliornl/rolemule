@@ -11,8 +11,8 @@ from typing import Any, Dict, List
 
 import typer
 
-from applypilot_client.client import ApplyPilotClient
-from applypilot_client.errors import ApiClientError, ExitCode
+from rolemule_client.client import RoleMuleClient
+from rolemule_client.errors import ApiClientError, ExitCode
 from cli.config import config_dir, config_path, credentials_path, ensure_config_dir, mask_token
 from cli.context import CliContext
 from cli.workflow_watch import PAT_PREFIX
@@ -32,7 +32,7 @@ def _check(path: str, ok: bool, detail: str = "") -> Dict[str, Any]:
 @doctor_app.callback(invoke_without_command=True)
 def doctor_run(ctx: typer.Context) -> None:
     """
-    Verify ApplyPilot server reachability, config files, and token (if saved).
+    Verify RoleMule server reachability, config files, and token (if saved).
     """
     cli_ctx: CliContext = ctx.obj
     results: List[Dict[str, Any]] = []
@@ -58,9 +58,9 @@ def doctor_run(ctx: typer.Context) -> None:
             )
         )
     else:
-        results.append(_check("credentials_file", True, "not present (run applypilot auth login)"))
+        results.append(_check("credentials_file", True, "not present (run rolemule auth login)"))
 
-    client = ApplyPilotClient(cli_ctx.base_url, access_token=cli_ctx.access_token)
+    client = RoleMuleClient(cli_ctx.base_url, access_token=cli_ctx.access_token)
 
     # Health
     try:
@@ -89,7 +89,7 @@ def doctor_run(ctx: typer.Context) -> None:
                     _check(
                         "pat_refresh",
                         True,
-                        "PAT cannot be refreshed — use: applypilot auth token create --save",
+                        "PAT cannot be refreshed — use: rolemule auth token create --save",
                     )
                 )
                 try:
@@ -124,13 +124,13 @@ def doctor_run(ctx: typer.Context) -> None:
                     _check(
                         "jwt_refresh",
                         True,
-                        "refresh with: applypilot auth refresh",
+                        "refresh with: rolemule auth refresh",
                     )
                 )
         except ApiClientError as exc:
             detail = str(exc)
             if token_kind == "pat":
-                detail += " — create a new PAT: applypilot auth token create --save"
+                detail += " — create a new PAT: rolemule auth token create --save"
             results.append(_check("auth_token", False, detail))
     elif not cli_ctx.quiet:
         results.append(_check("auth_token", True, "skipped (not logged in)"))

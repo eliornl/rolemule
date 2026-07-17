@@ -40,7 +40,7 @@ def test_profile_status_incomplete_user(invoke, patch_httpx_asgi, cli_user_token
 
 
 def test_apps_list_requires_complete_profile(invoke, patch_httpx_asgi, cli_user_token, write_credentials) -> None:
-    from applypilot_client.errors import ExitCode
+    from rolemule_client.errors import ExitCode
 
     write_credentials(token=cli_user_token["token"], email=cli_user_token["email"])
     result = invoke("--format", "json", "--base-url", "http://localhost", "apps", "list")
@@ -55,7 +55,7 @@ def test_tools_followup_stages_authenticated(invoke, patch_httpx_asgi, cli_user_
     assert "stages" in payload
 
 
-def test_pat_create_and_whoami(invoke, patch_httpx_asgi, cli_user_token, write_credentials, applypilot_home) -> None:
+def test_pat_create_and_whoami(invoke, patch_httpx_asgi, cli_user_token, write_credentials, rolemule_home) -> None:
     write_credentials(token=cli_user_token["token"], email=cli_user_token["email"])
     create = invoke(
         "--format",
@@ -70,7 +70,7 @@ def test_pat_create_and_whoami(invoke, patch_httpx_asgi, cli_user_token, write_c
     )
     assert create.exit_code == 0, create.output
     pat_body = json.loads(create.stdout)
-    assert pat_body["token"].startswith("ap_pat_")
+    assert pat_body["token"].startswith("rm_pat_")
 
     from cli.config import Credentials, save_credentials
 

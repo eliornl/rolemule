@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 import typer
 
-from applypilot_client.errors import ExitCode
+from rolemule_client.errors import ExitCode
 
 
 # =============================================================================

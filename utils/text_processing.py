@@ -2,7 +2,7 @@
 Text Processing Utilities
 
 Provides text processing functions for similarity calculation, skill extraction,
-and other text analysis operations used across ApplyPilot.
+and other text analysis operations used across RoleMule.
 """
 
 from difflib import SequenceMatcher

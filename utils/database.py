@@ -1,5 +1,5 @@
 """
-Database utilities for the ApplyPilot.
+Database utilities for the RoleMule.
 Provides PostgreSQL connection management with SQLAlchemy async, health monitoring, and session management.
 """
 

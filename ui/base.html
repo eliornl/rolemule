@@ -1,8 +1,8 @@
 {#
-    ui/base.html — Shared base template for all ApplyPilot pages.
+    ui/base.html — Shared base template for all RoleMule pages.
 
     Blocks available to child templates:
-      {% block title %}        — <title> text (default: "ApplyPilot")
+      {% block title %}        — <title> text (default: "RoleMule")
       {% block description %}  — <meta name="description"> content
       {% block extra_head %}   — Extra <style> or <meta> tags in <head>
       {% block body_attrs %}   — Extra attributes on <body> (e.g. class="landing-page")
@@ -17,8 +17,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ApplyPilot{% endblock %}</title>
-    <meta name="description" content="{% block description %}Your AI-Powered Job Search Companion{% endblock %}">
+    <title>{% block title %}RoleMule{% endblock %}</title>
+    <meta name="description" content="{% block description %}One mule for every role.{% endblock %}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,9 +37,9 @@
     <link rel="stylesheet" href="{{ asset_url('css/app.css') }}">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{ asset_url('img/favicon.svg') }}">
-    <link rel="icon" type="image/png" href="{{ asset_url('favicon.png') }}?v=3">
-    <link rel="icon" type="image/x-icon" href="{{ asset_url('favicon.ico') }}?v=3">
+    <link rel="icon" type="image/svg+xml" href="{{ asset_url('img/favicon.svg') }}?v=11">
+    <link rel="icon" type="image/png" href="{{ asset_url('favicon.png') }}?v=11">
+    <link rel="icon" type="image/x-icon" href="{{ asset_url('favicon.ico') }}?v=11">
 
     {% block extra_head %}{% endblock %}
 </head>

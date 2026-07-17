@@ -395,7 +395,7 @@ def _skill_category_paragraph(label: str, body: str) -> P:
 
 def markdown_cv_to_odt_bytes(cv_markdown: str) -> bytes:
     """
-    Convert ApplyPilot markdown CV text to ODT file bytes (last-resort fallback).
+    Convert RoleMule markdown CV text to ODT file bytes (last-resort fallback).
 
     Args:
         cv_markdown: Markdown-formatted CV from the optimizer

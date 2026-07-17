@@ -49,7 +49,7 @@ def test_nested_group_help(invoke, parts: list[str]) -> None:
 def test_root_help(invoke) -> None:
     result = invoke("--help")
     assert result.exit_code == 0
-    assert "applypilot" in result.output.lower()
+    assert "rolemule" in result.output.lower()
     assert "workflow" in result.output
 
 

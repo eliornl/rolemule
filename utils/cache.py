@@ -1,5 +1,5 @@
 """
-Cache utilities for the ApplyPilot.
+Cache utilities for the RoleMule.
 Provides high-level caching functions for various data types with automatic
 serialization, TTL management, and graceful fallbacks.
 """

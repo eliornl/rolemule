@@ -1,5 +1,5 @@
 """
-Hiring Outreach Agent for ApplyPilot.
+Hiring Outreach Agent for RoleMule.
 
 Standalone agent (not LangGraph) that finds hiring contacts via public web search
 grounding and drafts personalized outreach emails after applying.

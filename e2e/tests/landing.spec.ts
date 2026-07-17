@@ -3,18 +3,20 @@ import { test, expect } from '@playwright/test';
 /**
  * COMPREHENSIVE LANDING PAGE TESTS
  *
- * Covers every section of the ApplyPilot landing page (index.html):
+ * Covers every section of the RoleMule landing page (index.html):
  *
  * 1.  Page Load & Meta
- * 2.  Navbar — logo, all 6 nav-links, Sign In / Try Free CTAs, mobile hamburger
- * 3.  Hero Section — title, subtitle, 4 steps
- * 4.  Tech Stack Bar — all 7 tags, GitHub link
+ * 2.  Navbar — logo, nav-links (Workflow / On Demand), Sign In / Try Free CTAs, mobile hamburger
+ * 3.  Hero Section — tagline, subtitle, 4 steps
+ * 4.  Tech Stack Bar — provider tags, GitHub link
  * 5.  Problem Section (#problem) — stat number, time-comparison table
- * 6.  Features Section (#features) — all 6 AI-agent cards
+ * 6.  Features Section (#features) — 5 workflow AI-agent cards
+ * 6b. On Demand (#after-apply) — Optimize CV, Interview Prep, Mock Session, Outreach
  * 7.  Chrome Extension Section (#extension) — 4 bullet points
  * 8.  Career Tools Section (#tools) — all 6 tool cards
- * 9.  Example Section (#example) — 7 interactive tabs + mock output panels
- * 10. Pricing Section (#pricing) — free pricing text, Gemini API key CTA
+ * 8b. CLI Section (#cli)
+ * 9.  Example Section (#example) — 10 interactive tabs + screenshot panels
+ * 10. Pricing Section (#pricing) — free pricing text, BYOK CTA
  * 11. Footer — logo, Help / Privacy / Terms links, GitHub link
  * 12. Cookie Consent — banner appears, accept hides it, reject keeps it hidden
  * 13. Smooth-scroll anchor navigation
@@ -48,9 +50,9 @@ test.describe('1. Page Load & Meta', () => {
     expect(res.status()).toBe(200);
   });
 
-  test('page title contains ApplyPilot', async ({ page }) => {
+  test('page title contains RoleMule', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveTitle(/ApplyPilot/i);
+    await expect(page).toHaveTitle(/RoleMule/i);
   });
 
   test('meta description is present', async ({ page }) => {
@@ -117,22 +119,28 @@ test.describe('2. Navbar', () => {
     expect(href).toBe('/');
   });
 
-  test('brand text reads "ApplyPilot"', async ({ page }) => {
+  test('brand text reads "RoleMule"', async ({ page }) => {
     const brand = page.locator('.navbar-brand');
     const text = await brand.textContent();
-    expect(text?.replace(/\s/g, '')).toMatch(/ApplyPilot/i);
+    expect(text?.replace(/\s/g, '')).toMatch(/RoleMule/i);
   });
 
-  test('navbar has "Why ApplyPilot" link pointing to #problem', async ({ page }) => {
+  test('navbar has "Why RoleMule" link pointing to #problem', async ({ page }) => {
     const link = page.locator('.navbar-nav a[href="#problem"]');
     await expect(link).toBeVisible();
-    await expect(link).toContainText(/Why ApplyPilot/i);
+    await expect(link).toContainText(/Why RoleMule/i);
   });
 
-  test('navbar has "AI Agents" link pointing to #features', async ({ page }) => {
+  test('navbar has "Workflow" link pointing to #features', async ({ page }) => {
     const link = page.locator('.navbar-nav a[href="#features"]');
     await expect(link).toBeVisible();
-    await expect(link).toContainText(/AI Agents/i);
+    await expect(link).toContainText(/Workflow/i);
+  });
+
+  test('navbar has "On Demand" link pointing to #after-apply', async ({ page }) => {
+    const link = page.locator('.navbar-nav a[href="#after-apply"]');
+    await expect(link).toBeVisible();
+    await expect(link).toContainText(/On Demand/i);
   });
 
   test('navbar has "Extension" link pointing to #extension', async ({ page }) => {
@@ -145,6 +153,12 @@ test.describe('2. Navbar', () => {
     const link = page.locator('.navbar-nav a[href="#tools"]');
     await expect(link).toBeVisible();
     await expect(link).toContainText(/Career Tools/i);
+  });
+
+  test('navbar has "CLI" link pointing to #cli', async ({ page }) => {
+    const link = page.locator('.navbar-nav a[href="#cli"]');
+    await expect(link).toBeVisible();
+    await expect(link).toContainText(/^CLI$/i);
   });
 
   test('navbar has "Example" link pointing to #example', async ({ page }) => {
@@ -224,15 +238,15 @@ test.describe('3. Hero Section', () => {
     await expect(page.locator('.hero-section')).toBeVisible();
   });
 
-  test('hero title contains "AI-Powered" text', async ({ page }) => {
+  test('hero title contains tagline "One mule for every role"', async ({ page }) => {
     const title = page.locator('.hero-title');
     await expect(title).toBeVisible();
-    await expect(title).toContainText(/AI-Powered/i);
+    await expect(title).toContainText(/One mule for every role/i);
   });
 
-  test('hero title contains "Job Search Companion" text', async ({ page }) => {
+  test('hero title does not use old Job Search Companion headline', async ({ page }) => {
     const title = page.locator('.hero-title');
-    await expect(title).toContainText(/Job Search Companion/i);
+    await expect(title).not.toContainText(/Job Search Companion/i);
   });
 
   test('hero subtitle is visible and non-empty', async ({ page }) => {
@@ -298,7 +312,7 @@ test.describe('4. Tech Stack Bar', () => {
     await expect(page.locator('.tech-bar-label')).toContainText(/Built with/i);
   });
 
-  const techTags = ['Python', 'FastAPI', 'PostgreSQL', 'Redis', 'Google Gemini', 'LangGraph', 'Docker'];
+  const techTags = ['Python', 'FastAPI', 'PostgreSQL', 'Redis', 'Google Gemini', 'OpenAI', 'Anthropic', 'Ollama', 'LangGraph', 'Docker'];
   for (const tag of techTags) {
     test(`tech tag "${tag}" is visible`, async ({ page }) => {
       const tagEl = page.locator('.tech-bar-tags span').filter({ hasText: tag });
@@ -400,19 +414,19 @@ test.describe('6. Features Section (6 AI Agents)', () => {
     await expect(page.locator('#features')).toBeAttached();
   });
 
-  test('section label reads "What You Get"', async ({ page }) => {
+  test('section label reads "Workflow Agents"', async ({ page }) => {
     const label = page.locator('#features .section-label');
-    await expect(label).toContainText(/What You Get/i);
+    await expect(label).toContainText(/Workflow Agents/i);
   });
 
-  test('section title mentions "Six AI Agents"', async ({ page }) => {
+  test('section title mentions "Five AI Agents"', async ({ page }) => {
     const title = page.locator('#features .section-title');
-    await expect(title).toContainText(/Six AI Agents/i);
+    await expect(title).toContainText(/Five AI Agents/i);
   });
 
-  test('exactly 6 feature cards are rendered', async ({ page }) => {
+  test('exactly 5 feature cards are rendered', async ({ page }) => {
     const cards = page.locator('#features .feature-card');
-    await expect(cards).toHaveCount(6);
+    await expect(cards).toHaveCount(5);
   });
 
   const agents = [
@@ -421,7 +435,6 @@ test.describe('6. Features Section (6 AI Agents)', () => {
     'Company Researcher',
     'Resume Advisor',
     'Cover Letter Writer',
-    'Interview Coach',
   ];
 
   for (const agent of agents) {
@@ -444,8 +457,37 @@ test.describe('6. Features Section (6 AI Agents)', () => {
 
   test('each feature card has an icon', async ({ page }) => {
     const icons = page.locator('#features .feature-icon-wrap i');
-    await expect(icons).toHaveCount(6);
+    await expect(icons).toHaveCount(5);
   });
+});
+
+// ---------------------------------------------------------------------------
+// 6b. After Apply Section
+// ---------------------------------------------------------------------------
+test.describe('6b. After Apply Section', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+  });
+
+  test('after-apply section exists with correct id', async ({ page }) => {
+    await expect(page.locator('#after-apply')).toBeAttached();
+  });
+
+  test('section label reads "On-Demand Agents"', async ({ page }) => {
+    await expect(page.locator('#after-apply .section-label')).toContainText(/On-Demand Agents/i);
+  });
+
+  test('exactly 4 after-apply cards are rendered', async ({ page }) => {
+    await expect(page.locator('#after-apply .feature-card')).toHaveCount(4);
+  });
+
+  const afterApplyCards = ['Optimize CV', 'Interview Prep', 'Mock Session', 'Hiring Outreach'];
+  for (const name of afterApplyCards) {
+    test(`after-apply card "${name}" is visible`, async ({ page }) => {
+      await expect(page.locator('#after-apply .feature-card').filter({ hasText: name })).toBeVisible();
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -471,25 +513,18 @@ test.describe('7. Chrome Extension Section', () => {
     await expect(title).toContainText(/job site/i);
   });
 
-  test('3 extension feature bullet points are present', async ({ page }) => {
-    const features = page.locator('#extension .ext-feature');
-    await expect(features).toHaveCount(3);
-  });
-
-  test('bullet: auto-detects job pages mentioned', async ({ page }) => {
-    await expect(page.locator('#extension .ext-feature').filter({ hasText: /auto-detect/i })).toBeVisible();
-  });
-
-  test('bullet: one-click extraction mentioned', async ({ page }) => {
-    await expect(page.locator('#extension .ext-feature').filter({ hasText: /one-click/i })).toBeVisible();
+  test('subtitle mentions Analyze This Job and Match Form To Profile', async ({ page }) => {
+    const subtitle = page.locator('#extension .section-subtitle');
+    await expect(subtitle).toContainText(/Analyze This Job/i);
+    await expect(subtitle).toContainText(/Match Form To Profile/i);
   });
 
   test('extension popup mockup preview is visible', async ({ page }) => {
     await expect(page.locator('.popup-mockup')).toBeVisible();
   });
 
-  test('extension popup shows "ApplyPilot" brand', async ({ page }) => {
-    await expect(page.locator('.pm-logo')).toContainText(/ApplyPilot/i);
+  test('extension popup shows "RoleMule" brand', async ({ page }) => {
+    await expect(page.locator('.pm-logo')).toContainText(/RoleMule/i);
   });
 
   test('extension popup shows "Analyze This Job" button', async ({ page }) => {
@@ -557,6 +592,28 @@ test.describe('8. Career Tools Section', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 8b. CLI Section
+// ---------------------------------------------------------------------------
+test.describe('8b. CLI Section', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+  });
+
+  test('cli section exists with correct id', async ({ page }) => {
+    await expect(page.locator('#cli')).toBeAttached();
+  });
+
+  test('cli strip mentions rolemule command', async ({ page }) => {
+    await expect(page.locator('#cli .cli-strip-code')).toContainText(/rolemule/i);
+  });
+
+  test('cli section title mentions terminal', async ({ page }) => {
+    await expect(page.locator('#cli .section-title')).toContainText(/terminal/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 9. Example Section — Interactive Tabs
 // ---------------------------------------------------------------------------
 test.describe('9. Example Section (Interactive Tabs)', () => {
@@ -589,15 +646,18 @@ test.describe('9. Example Section (Interactive Tabs)', () => {
 
   test('screenshot frame shows browser chrome and URL bar', async ({ page }) => {
     await expect(page.locator('.ss-browser-chrome')).toBeVisible();
-    await expect(page.locator('.ss-url-bar')).toContainText(/applypilot/i);
+    await expect(page.locator('.ss-url-bar')).toContainText(/rolemule/i);
   });
 
-  test('exactly 7 screenshot tabs are rendered', async ({ page }) => {
+  test('exactly 10 screenshot tabs are rendered', async ({ page }) => {
     const tabs = page.locator('.ss-tab');
-    await expect(tabs).toHaveCount(7);
+    await expect(tabs).toHaveCount(10);
   });
 
-  const tabLabels = ['Job Details', 'Your Fit', 'Strategy', 'Company', 'Cover Letter', 'Resume', 'Interview'];
+  const tabLabels = [
+    'Job Details', 'Your Fit', 'Strategy', 'Company', 'Cover Letter', 'Resume',
+    'Optimize CV', 'Interview', 'Mock Session', 'Outreach',
+  ];
 
   for (const label of tabLabels) {
     test(`tab "${label}" is visible`, async ({ page }) => {
@@ -641,15 +701,31 @@ test.describe('9. Example Section (Interactive Tabs)', () => {
     await expect(page.locator('#ss-panel-resume')).toBeVisible({ timeout: 3000 });
   });
 
+  test('clicking "Optimize CV" tab shows optimize panel', async ({ page }) => {
+    await page.locator('.ss-tab').filter({ hasText: 'Optimize CV' }).click();
+    await expect(page.locator('#ss-panel-optimize-cv')).toBeVisible({ timeout: 3000 });
+  });
+
   test('clicking "Interview" tab shows interview panel', async ({ page }) => {
     await page.locator('.ss-tab').filter({ hasText: 'Interview' }).click();
     await expect(page.locator('#ss-panel-interview')).toBeVisible({ timeout: 3000 });
   });
 
-  test('all 7 screenshot panels exist in the DOM', async ({ page }) => {
+  test('clicking "Mock Session" tab shows mock session panel', async ({ page }) => {
+    await page.locator('.ss-tab').filter({ hasText: 'Mock Session' }).click();
+    await expect(page.locator('#ss-panel-mock-session')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('clicking "Outreach" tab shows outreach panel', async ({ page }) => {
+    await page.locator('.ss-tab').filter({ hasText: 'Outreach' }).click();
+    await expect(page.locator('#ss-panel-outreach')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('all 10 screenshot panels exist in the DOM', async ({ page }) => {
     const panels = [
       'ss-panel-job-details', 'ss-panel-your-fit', 'ss-panel-strategy', 'ss-panel-company',
-      'ss-panel-cover-letter', 'ss-panel-resume', 'ss-panel-interview',
+      'ss-panel-cover-letter', 'ss-panel-resume', 'ss-panel-optimize-cv', 'ss-panel-interview',
+      'ss-panel-mock-session', 'ss-panel-outreach',
     ];
     for (const id of panels) {
       await expect(page.locator(`#${id}`)).toBeAttached();
@@ -658,7 +734,7 @@ test.describe('9. Example Section (Interactive Tabs)', () => {
 
   test('each screenshot panel contains a lazy-loaded image', async ({ page }) => {
     const images = page.locator('.ss-panel img');
-    await expect(images).toHaveCount(7);
+    await expect(images).toHaveCount(10);
     await expect(images.first()).toHaveAttribute('loading', 'lazy');
   });
 });
@@ -726,9 +802,9 @@ test.describe('11. Footer', () => {
     await expect(page.locator('footer.footer')).toBeAttached();
   });
 
-  test('footer brand reads "ApplyPilot"', async ({ page }) => {
+  test('footer brand reads "RoleMule"', async ({ page }) => {
     const brand = page.locator('footer .footer-brand');
-    await expect(brand).toContainText(/ApplyPilot/i);
+    await expect(brand).toContainText(/RoleMule/i);
   });
 
   test('footer "Help & FAQ" link goes to /help', async ({ page }) => {
@@ -867,7 +943,7 @@ test.describe('13. Anchor Navigation', () => {
     await page.waitForLoadState('domcontentloaded');
   });
 
-  test('clicking "Why ApplyPilot" scrolls to #problem section', async ({ page }) => {
+  test('clicking "Why RoleMule" scrolls to #problem section', async ({ page }) => {
     await page.locator('a[href="#problem"]').first().click();
     await page.waitForTimeout(800); // allow scroll animation
     const section = page.locator('#problem');
@@ -878,7 +954,7 @@ test.describe('13. Anchor Navigation', () => {
     expect(isInView).toBeTruthy();
   });
 
-  test('clicking "AI Agents" scrolls to #features section', async ({ page }) => {
+  test('clicking "Workflow" scrolls to #features section', async ({ page }) => {
     await page.locator('a[href="#features"]').first().click();
     await page.waitForTimeout(800);
     const section = page.locator('#features');
@@ -891,13 +967,17 @@ test.describe('13. Anchor Navigation', () => {
 
   test('direct URL with #pricing hash scrolls to pricing', async ({ page }) => {
     await page.goto('/#pricing');
-    await page.waitForTimeout(800);
+    await page.waitForLoadState('domcontentloaded');
+    // Longer page (After Apply + CLI) — wait for hash scroll / force into view if needed
+    await page.waitForTimeout(1200);
     const section = page.locator('#pricing');
-    const isInView = await section.evaluate(el => {
+    await section.scrollIntoViewIfNeeded();
+    await expect(section).toBeVisible();
+    const isNearViewport = await section.evaluate(el => {
       const rect = el.getBoundingClientRect();
-      return rect.top < window.innerHeight + 400;
+      return rect.top < window.innerHeight + 600 && rect.bottom > -200;
     });
-    expect(isInView).toBeTruthy();
+    expect(isNearViewport).toBeTruthy();
   });
 });
 
@@ -1266,7 +1346,7 @@ test.describe('23. Footer Details', () => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const footer = page.locator('footer');
     const text = await footer.textContent();
-    expect(text).toMatch(/©|copyright|applypilot/i);
+    expect(text).toMatch(/©|copyright|rolemule/i);
   });
 
   test('footer has privacy policy link', async ({ page }) => {
@@ -1438,10 +1518,10 @@ test.describe('27. Auth Page Extras', () => {
     await expect(email).toBeAttached();
   });
 
-  test('auth pages have brand logo or ApplyPilot text', async ({ page }) => {
+  test('auth pages have brand logo or RoleMule text', async ({ page }) => {
     await page.goto('/auth/login');
     await page.waitForLoadState('domcontentloaded');
-    await expect(page).toHaveTitle(/ApplyPilot/i);
+    await expect(page).toHaveTitle(/RoleMule/i);
   });
 
   test('/auth/login form submission requires non-empty fields', async ({ page }) => {
@@ -1489,11 +1569,11 @@ test.describe('28. Static Asset Loading', () => {
     expect(title.length).toBeGreaterThan(0);
   });
 
-  test('page title contains ApplyPilot or brand name', async ({ page }) => {
+  test('page title contains RoleMule or brand name', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     const title = await page.title();
-    expect(title.toLowerCase()).toMatch(/apply|pilot|job/i);
+    expect(title.toLowerCase()).toMatch(/rolemule|mule|role|job/i);
   });
 
   test('meta description tag is present', async ({ page }) => {

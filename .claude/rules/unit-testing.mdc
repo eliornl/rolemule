@@ -11,7 +11,7 @@ alwaysApply: false
 ## Test Suites
 
 ### CLI Tests (`tests/test_cli/`)
-Typer `CliRunner` + mocked `ApplyPilotClient` — no running server required.
+Typer `CliRunner` + mocked `RoleMuleClient` — no running server required.
 ```bash
 make cli-test
 # or:
