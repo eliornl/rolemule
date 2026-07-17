@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability (private)
-    url: https://github.com/eliornl/applypilot/security/advisories/new
+    url: https://github.com/eliornl/rolemule/security/advisories/new
     about: Do not open a public issue — report security problems privately via GitHub Security Advisories.
   - name: Contributing guide
-    url: https://github.com/eliornl/applypilot/blob/main/CONTRIBUTING.md
+    url: https://github.com/eliornl/rolemule/blob/main/CONTRIBUTING.md
     about: Development setup, code style, tests, and pull request process.
   - name: Questions
-    url: https://github.com/eliornl/applypilot/blob/main/CONTRIBUTING.md#questions
+    url: https://github.com/eliornl/rolemule/blob/main/CONTRIBUTING.md#questions
     about: General questions are welcome — include your OS, runtime, and what you've already tried.

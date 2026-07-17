@@ -589,4 +589,4 @@ A: PDF, DOCX, and TXT files up to 10 MB.
 A: On self-hosted instances without SMTP, the password reset page shows the reset link directly on screen after you submit your email — no email is sent. Copy the link, open it, and set your new password. If you are the operator and want to enable email delivery, configure the `SMTP_*` variables in your `.env` file.
 
 **Q: Something looks broken — how do I report it?**  
-A: Open an issue at `https://github.com/eliornl/applypilot/issues` with the steps to reproduce, what you expected, and what actually happened.
+A: Open an issue at `https://github.com/eliornl/rolemule/issues` with the steps to reproduce, what you expected, and what actually happened.

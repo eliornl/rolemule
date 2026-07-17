@@ -91,16 +91,16 @@ Three ways to run it — pick the one that suits you:
 **macOS / Linux** — `make` is pre-installed:
 
 ```bash
-git clone https://github.com/eliornl/applypilot.git
-cd applypilot
+git clone https://github.com/eliornl/rolemule.git
+cd rolemule
 make start
 ```
 
 **Windows** — install [just](https://just.systems) (`winget install Casey.Just`) instead of `make`. It works natively in PowerShell and cmd — no WSL2 needed, and **no Git for Windows / `cygpath` required** for `just start` (only Docker Desktop + `just`).
 
 ```powershell
-git clone https://github.com/eliornl/applypilot.git
-cd applypilot
+git clone https://github.com/eliornl/rolemule.git
+cd rolemule
 just start
 ```
 
@@ -126,8 +126,8 @@ make docker-reset / just docker-reset  # stop and wipe all data
 **What you need:** macOS. No Docker, no manual installs — `make start-local` installs everything it needs (Homebrew, Python 3, Node.js, PostgreSQL, Redis) automatically on the first run. If Homebrew isn't installed yet, you'll be prompted for your **sudo password** once in the terminal — this is normal and required to install Homebrew.
 
 ```bash
-git clone https://github.com/eliornl/applypilot.git
-cd applypilot
+git clone https://github.com/eliornl/rolemule.git
+cd rolemule
 make start-local
 ```
 
@@ -158,16 +158,16 @@ Use this if you already have PostgreSQL and Redis running (any platform, any set
 macOS / Linux:
 
 ```bash
-git clone https://github.com/eliornl/applypilot.git
-cd applypilot
+git clone https://github.com/eliornl/rolemule.git
+cd rolemule
 make setup          # creates venv, installs deps + CLI, builds frontend, generates .env
 ```
 
 Windows — install [just](https://just.systems) (`winget install Casey.Just`) first:
 
 ```powershell
-git clone https://github.com/eliornl/applypilot.git
-cd applypilot
+git clone https://github.com/eliornl/rolemule.git
+cd rolemule
 just setup
 ```
 
@@ -463,7 +463,7 @@ Frontend: server-rendered HTML + **TypeScript** (Vite-bundled per page), no Reac
 ## Project Structure
 
 ```
-applypilot/                 # clone folder (GitHub repo: eliornl/applypilot)
+rolemule/                   # GitHub: eliornl/rolemule (local folder may still be applypilot/)
 ├── main.py                 # FastAPI app entry point
 ├── cli/                    # RoleMule CLI (Typer; command: rolemule)
 ├── rolemule_client/        # Sync HTTP client for the CLI

@@ -13,7 +13,7 @@ The landing page lives at `ui/index.html` and uses `ui/static/css/landing.css` +
 |---------|-----------|-------|
 | Hero | `.hero-section` | Tagline **One mule for every role.** + 4-step explainer; paste / PDF·TXT·DOCX / extension |
 | ↓ section arrow | `.section-arrow.section-arrow--hero` | Hero → tech-bar |
-| Tech Bar | `.section-tech-bar` | Built-with tags (incl. Gemini/OpenAI/Anthropic/Ollama) + GitHub link to `eliornl/applypilot` |
+| Tech Bar | `.section-tech-bar` | Built-with tags (incl. Gemini/OpenAI/Anthropic/Ollama) + GitHub link to `eliornl/rolemule` |
 | ↓ section arrow | `.section-arrow` | Between each subsequent section pair |
 | Problem | `#problem` `.section-problem` | ~150-application stat + time comparison cards |
 | Features | `#features` `.section-features` | Label **Workflow Agents**; **5** pipeline agents (`.features-grid`) |

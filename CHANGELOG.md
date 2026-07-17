@@ -33,7 +33,7 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 #### Rebrand — ApplyPilot → RoleMule
 
-Product display name is now **RoleMule** (tagline: **One mule for every role.**). CLI entry point `rolemule`, client package `rolemule_client` / `RoleMuleClient`, PAT prefix `rm_pat_`, localStorage `rolemule_*`, and WS bus `rolemule:ws`. Favicon / navbar / extension icons use the mule mark (`docs/rolemule-icon.png`). **Postgres DB user/name stays `applypilot`** so existing `DATABASE_URL` values keep working. GitHub repo rename (`eliornl/applypilot` → `eliornl/rolemule`) is deferred until approved.
+Product display name is now **RoleMule** (tagline: **One mule for every role.**). CLI entry point `rolemule`, client package `rolemule_client` / `RoleMuleClient`, PAT prefix `rm_pat_`, localStorage `rolemule_*`, and WS bus `rolemule:ws`. Favicon / navbar / extension icons use the mule mark (`docs/rolemule-icon.png`). **Postgres DB user/name stays `applypilot`** so existing `DATABASE_URL` values keep working. GitHub repo renamed: `eliornl/applypilot` → `eliornl/rolemule`.
 
 #### Landing page — feature catch-up
 

@@ -19,7 +19,7 @@ If you are running a fork or a pinned older commit, please upgrade to the latest
 
 Report security issues privately using one of these channels:
 
-1. **[GitHub Security Advisories](https://github.com/eliornl/applypilot/security/advisories/new)** (preferred) — use **Report a vulnerability** on the [Security tab](https://github.com/eliornl/applypilot/security).
+1. **[GitHub Security Advisories](https://github.com/eliornl/rolemule/security/advisories/new)** (preferred) — use **Report a vulnerability** on the [Security tab](https://github.com/eliornl/rolemule/security).
 2. **Direct contact** — message the repository maintainer privately via their [GitHub profile](https://github.com/eliornl).
 
 Public issues for security problems may be deleted or converted to private advisories without notice.
@@ -86,9 +86,9 @@ RoleMule runs continuous security checks on `main`:
 
 | Check | Where | Notes |
 |-------|-------|-------|
-| **CodeQL** | [Code scanning](https://github.com/eliornl/applypilot/security/code-scanning) | Python + TypeScript/JavaScript (`ui/src/`, `extension/`); config in [`.github/codeql/codeql-config.yml`](.github/codeql/codeql-config.yml) |
-| **Secret scanning** | [Secret scanning](https://github.com/eliornl/applypilot/security/secret-scanning) | Flags leaked API keys; use non-`AIza` test keys in tests |
-| **Dependabot** | [Dependabot alerts](https://github.com/eliornl/applypilot/security/dependabot) | CVE alerts + automated security update PRs |
+| **CodeQL** | [Code scanning](https://github.com/eliornl/rolemule/security/code-scanning) | Python + TypeScript/JavaScript (`ui/src/`, `extension/`); config in [`.github/codeql/codeql-config.yml`](.github/codeql/codeql-config.yml) |
+| **Secret scanning** | [Secret scanning](https://github.com/eliornl/rolemule/security/secret-scanning) | Flags leaked API keys; use non-`AIza` test keys in tests |
+| **Dependabot** | [Dependabot alerts](https://github.com/eliornl/rolemule/security/dependabot) | CVE alerts + automated security update PRs |
 | **Ruff lint** | GitHub Actions [`ci.yml`](.github/workflows/ci.yml) | Style + unused-import checks on every push |
 | **Security grep** | GitHub Actions [`ci.yml`](.github/workflows/ci.yml) | Convention checks via `scripts/ci-security-grep.sh` |
 | **E2E (live)** | GitHub Actions [`ci.yml`](.github/workflows/ci.yml) | Full Playwright suite when UI/backend/e2e paths change |
