@@ -18,6 +18,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude-Code-D97757.svg)](https://claude.ai/code)
 [![Cursor](https://img.shields.io/badge/Cursor-IDE-000000.svg)](https://cursor.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Stars](https://img.shields.io/github/stars/eliornl/rolemule?style=flat&logo=github)](https://github.com/eliornl/rolemule/stargazers)
 [![GitHub Clones](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Feliornl%2Frolemule%2Fmain%2Fdocs%2Fclone-stats.json&query=total_clones&label=clones&logo=github&color=blue)](https://github.com/eliornl/rolemule/blob/main/docs/clone-stats.json)
 
 150 applications. One offer. Each application took 5+ manual steps.
