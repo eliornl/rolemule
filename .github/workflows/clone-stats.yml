@@ -1,5 +1,10 @@
 # Persist GitHub Traffic clone counts beyond the 14-day API window.
 # Runs daily; commits docs/clone-stats.json when totals change.
+#
+# Requires repo secret CLONE_STATS_TOKEN — a PAT that can read Traffic.
+# GITHUB_TOKEN always 403s on /traffic/* ("Resource not accessible by integration").
+#   Classic PAT: repo scope
+#   Fine-grained PAT: this repo, Administration: Read
 name: Clone stats
 
 on:
@@ -25,9 +30,18 @@ jobs:
           # Need a token that can push; default GITHUB_TOKEN works for same-repo commits
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Require CLONE_STATS_TOKEN
+        env:
+          CLONE_STATS_TOKEN: ${{ secrets.CLONE_STATS_TOKEN }}
+        run: |
+          if [ -z "$CLONE_STATS_TOKEN" ]; then
+            echo "::error::Set repo secret CLONE_STATS_TOKEN to a PAT that can read Traffic (classic: repo scope; fine-grained: Administration Read). GITHUB_TOKEN cannot call /traffic/clones."
+            exit 1
+          fi
+
       - name: Fetch Traffic clones
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CLONE_STATS_TOKEN }}
         run: |
           gh api "repos/${{ github.repository }}/traffic/clones" > /tmp/clones.json
           python3 -c "import json; d=json.load(open('/tmp/clones.json')); print(f\"API window: {d.get('count')} clones / {d.get('uniques')} uniques\")"
