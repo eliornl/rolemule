@@ -4,6 +4,6 @@ ruff>=0.15.21
 pytest>=9.0
 pytest-asyncio>=1.4.0
 pytest-cov>=7.0.0
-pip-audit>=2.7.0
+pip-audit>=2.10.1
 # Optional load testing: locust -f tests/load/locustfile.py --host=http://localhost:8000
 locust>=2.32.0
