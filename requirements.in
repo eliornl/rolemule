@@ -16,7 +16,7 @@ bcrypt>=4.3.0,<5
 httpx==0.28.1
 cryptography==49.0.0
 tenacity==9.1.4
-google-genai==1.64.0
+google-genai==2.12.1
 langgraph==1.2.9
 bleach==6.4.0
 beautifulsoup4==4.15.0
