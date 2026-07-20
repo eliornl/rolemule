@@ -20,7 +20,7 @@ distro==1.9.0
 dnspython==2.8.0
 docx2txt==0.9
 email-validator==2.2.0
-fastapi==0.135.0
+fastapi==0.139.2
 frozenlist==1.8.0
 google-auth[requests]==2.55.1
 google-genai==1.64.0
