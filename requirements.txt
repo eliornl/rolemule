@@ -50,7 +50,7 @@ ormsgpack==1.12.2
 packaging==26.2
 passlib[bcrypt]==1.7.4
 propcache==0.5.2
-pyasn1==0.6.3
+pyasn1==0.6.4
 pyasn1-modules==0.4.2
 pycparser==3.0
 pydantic==2.13.4
