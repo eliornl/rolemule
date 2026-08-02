@@ -773,6 +773,58 @@ async def broadcast_hiring_outreach_error(
 
 
 # =============================================================================
+# JOB FINDER BROADCASTS
+# =============================================================================
+
+
+async def broadcast_job_finder_status(
+    user_id: str,
+    session_id: str,
+    *,
+    status: str,
+) -> None:
+    """Broadcast Job Finder turn status (thinking / fetching)."""
+    payload = {
+        "type": "job_finder_status",
+        "session_id": session_id,
+        "data": {"status": status},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_job_finder_message(
+    user_id: str,
+    session_id: str,
+    *,
+    message: dict,
+) -> None:
+    """Broadcast a complete Job Finder assistant message."""
+    payload = {
+        "type": "job_finder_message",
+        "session_id": session_id,
+        "data": {"message": message},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_user(user_id, payload)
+
+
+async def broadcast_job_finder_error(
+    user_id: str,
+    session_id: str,
+    error_message: str,
+) -> None:
+    """Broadcast Job Finder turn failure."""
+    payload = {
+        "type": "job_finder_error",
+        "session_id": session_id,
+        "data": {"error": error_message},
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    await manager.send_to_user(user_id, payload)
+
+
+# =============================================================================
 # CV OPTIMIZATION BROADCASTS
 # =============================================================================
 

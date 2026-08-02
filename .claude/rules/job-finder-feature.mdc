@@ -1,0 +1,64 @@
+---
+description: Job Finder chat — company careers discovery, ATS providers, orchestrator, select → workflow
+globs: agents/job_finder_resolver.py,api/job_finder.py,utils/job_finder/**/*.py,ui/src/job-finder/**/*.ts,ui/src/pages/job-finder.ts,ui/dashboard/find-jobs.html
+alwaysApply: false
+---
+
+# Job Finder Feature
+
+Standalone feature (not LangGraph). Users confirm filters, search one company
+at a time, pick roles from careers/ATS boards, then start the normal workflow.
+
+## Product
+
+- Route: `/dashboard/find-jobs` (Applications remains home)
+- API: `/api/v1/job-finder`
+- Discover + analyze only — never auto-apply
+- CTA copy: **Add to applications** / **Analyze** — never “Apply”
+- No job-board aggregators (blocklist in `utils/job_finder/blocklists.py`)
+- Never name specific job-board brands in user-facing copy
+
+## Architecture
+
+- Providers: `utils/job_finder/providers/*` + `registry.py`
+- SSRF HTTP: `utils/job_finder/http.py` — HTTPS only, allow/block lists, async DNS, **IP-pinned TLS** (SNI/`Host`), no redirects, size cap
+- Orchestrator: `utils/job_finder/orchestrator.py`
+- Resolver agent: `agents/job_finder_resolver.py` (grounded search; LLM must not invent job lists)
+- Persistence: `job_finder_sessions` table (migration `20260720_028`)
+- Select → `start_workflow_from_job_finder()` in `api/workflow.py` (**sequential** starts; `InputMethod.JOB_FINDER`)
+
+## Rate limits
+
+- Chat turns: 30/hour (`{user_id}:job_finder_chat:30ph`)
+- Workflow starts: existing 30/hour
+
+## Settings
+
+- `JOB_FINDER_ENABLED` (default true)
+- `JOB_FINDER_GROUNDING_ENABLED` (default true; off for Ollama)
+
+## WebSocket (on `/ws/user`)
+
+- `job_finder_status`
+- `job_finder_message`
+- `job_finder_error`
+
+## Cache keys
+
+- `v1:job_finder_board:{provider}:{slug}` — 20 min
+- `v1:job_finder_company:{hash}` — 24 h
+- `v1:job_finder_turn:{user_id}:{session_id}` — NX lock 2 min
+
+## Tests
+
+```bash
+./venv/bin/pytest tests/test_utils/test_job_finder*.py \
+  tests/test_agents/test_job_finder_resolver.py \
+  tests/test_api/test_job_finder.py -q --override-ini="addopts="
+```
+
+E2E: `e2e/tests/job-finder.spec.ts` + Find jobs cases in `e2e/tests/smoke.spec.ts` (`@smoke`).
+
+## Plan
+
+`docs/job-finder-chat-plan.md`

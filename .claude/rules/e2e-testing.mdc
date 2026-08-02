@@ -25,7 +25,8 @@ Tests are split into two tiers based on whether they require a live server.
 | `security.spec.ts` | XSS, JWT format, API headers, content security (all mocked) |
 | `extension.spec.ts` | Manifest V3, content script, service worker, popup JS |
 | `error-handling.spec.ts` | 401/403/429/500 + mocked network errors, form validation |
-| `smoke.spec.ts` | Critical path (~46 `@smoke` tests) — **this is what CI runs** (`e2e-smoke` in `.github/workflows/ci.yml`) |
+| `smoke.spec.ts` | Critical path (~46 `@smoke` tests) — **this is what CI runs** (`e2e-smoke` in `.github/workflows/ci.yml`); includes Find jobs CTA + page load |
+| `job-finder.spec.ts` | Find jobs dashboard CTA (mocked auth) |
 | `workflow-mocked.spec.ts` | Workflow processing/complete/error states (mocked) |
 | `api-validation.spec.ts` | API response shapes: full/partial/null fields, error bodies, auth tokens |
 | `form-edge-cases.spec.ts` | Unicode, boundary values, special characters, XSS |

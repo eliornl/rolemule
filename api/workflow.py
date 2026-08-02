@@ -1011,6 +1011,240 @@ async def start_workflow(
         raise internal_error("Failed to start workflow")
 
 
+async def start_workflow_from_job_finder(
+    *,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession,
+    current_user: Dict[str, Any],
+    job_text: str,
+    job_url: Optional[str] = None,
+    detected_title: Optional[str] = None,
+    detected_company: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Start a workflow from Job Finder selection (shared with /workflow/start).
+
+    Acquires the same rate limit + workflow_creating lock as start_workflow.
+    Caller should invoke sequentially for multi-select.
+
+    Returns:
+        Dict with session_id, application_id on success.
+
+    Raises:
+        APIError: rate limit, duplicate (RES_3002), validation, CFG_6001
+    """
+    user_id = get_user_uuid(current_user)
+    text = (job_text or "").strip()
+    if not text:
+        raise validation_error("Job description is required")
+    if len(text) > MAX_TEXT_LENGTH:
+        text = text[:MAX_TEXT_LENGTH]
+
+    rate_result = await check_rate_limit_with_headers(
+        identifier=f"{user_id}:workflow_start:30ph",
+        limit=30,
+        window_seconds=3600,
+    )
+    if not rate_result.allowed:
+        raise rate_limit_error(
+            f"Rate limit exceeded. Maximum 30 workflows per hour. "
+            f"Resets in {rate_result.reset_seconds} seconds."
+        )
+
+    lock_acquired = False
+    try:
+        from utils.redis_client import get_redis_client as _get_wf_rc
+
+        _wf_rc = await _get_wf_rc()
+        if _wf_rc:
+            _acquired = await _wf_rc.set(
+                f"workflow_creating:{user_id}", "1", nx=True, ex=10
+            )
+            if not _acquired:
+                raise rate_limit_error(
+                    "A workflow is already being created. Please wait a moment.",
+                    retry_after=10,
+                )
+            lock_acquired = True
+    except APIError:
+        raise
+    except Exception as _lock_err:
+        logger.warning(
+            "Could not acquire workflow-creation lock for job_finder: %s",
+            sanitize_log_value(_lock_err),
+        )
+
+    try:
+        profile_result = await db.execute(
+            select(UserProfile).where(UserProfile.user_id == user_id)
+        )
+        user_profile = profile_result.scalar_one_or_none()
+        if not user_profile:
+            raise validation_error(
+                "User profile not found. Please complete your profile setup."
+            )
+
+        user_result = await db.execute(select(User).where(User.id == user_id))
+        user = user_result.scalar_one_or_none()
+
+        from utils.llm_context import require_user_llm_context
+
+        _user, llm_ctx, prefs_row = await require_user_llm_context(
+            db, user_id, user=user
+        )
+        user_api_key = llm_ctx.user_api_key
+        llm_provider = llm_ctx.provider
+
+        user_data = user_profile.to_dict()
+        user_data.update(
+            {
+                "full_name": current_user.get("full_name", ""),
+                "email": current_user.get("email", ""),
+            }
+        )
+        user_data["application_preferences"] = (
+            prefs_row.to_dict() if prefs_row else {}
+        )
+        user_data["llm_provider"] = llm_provider
+
+        title = _sanitize_detected_job_title(detected_title)
+        company = _sanitize_detected_company_name(detected_company)
+        effective_job_url = job_url if _is_http_or_https_url(job_url or "") else None
+        content_fingerprint = _fingerprint_job_content(text)
+        input_method = InputMethod.JOB_FINDER.value
+
+        dup_row = await _find_duplicate_active_application(
+            db,
+            user_id,
+            effective_job_url,
+            title,
+            company,
+            content_fingerprint,
+        )
+        if dup_row:
+            if lock_acquired:
+                try:
+                    from utils.redis_client import get_redis_client as _dup_wf_rc
+
+                    _dwrc = await _dup_wf_rc()
+                    if _dwrc:
+                        await _dwrc.delete(f"workflow_creating:{user_id}")
+                except Exception:
+                    logger.debug(
+                        "Failed to release lock after job_finder duplicate",
+                        exc_info=True,
+                    )
+            raise APIError(
+                error_code=ErrorCode.RESOURCE_ALREADY_EXISTS,
+                message=(
+                    "You already have an application for this job. Open it from your "
+                    "dashboard, or delete the old one first if you want to start over."
+                ),
+                status_code=status.HTTP_409_CONFLICT,
+                details=[
+                    {
+                        "field": "application_id",
+                        "message": str(dup_row.id),
+                        "code": "DUPLICATE_APPLICATION",
+                    }
+                ],
+            )
+
+        session_id = str(uuid.uuid4())
+        application_id = uuid.uuid4()
+        workflow_session = WorkflowSession(
+            id=uuid.uuid4(),
+            session_id=session_id,
+            user_id=user_id,
+            workflow_status=WorkflowStatus.INITIALIZED.value,
+            current_phase=WorkflowPhase.INITIALIZATION.value,
+            agent_status={},
+            completed_agents=[],
+            failed_agents=[],
+            error_messages=[],
+            warning_messages=[],
+            job_input_data={
+                "input_method": input_method,
+                "job_input": text,
+                "source_url": effective_job_url,
+                "detected_title": title,
+                "detected_company": company,
+                "content_fingerprint": content_fingerprint,
+                "source": "job_finder",
+            },
+            user_data=user_data,
+            processing_start_time=datetime.now(timezone.utc),
+        )
+        job_application = JobApplication(
+            id=application_id,
+            user_id=user_id,
+            session_id=session_id,
+            status=ApplicationStatus.PROCESSING.value,
+            job_url=effective_job_url,
+            job_title=title or None,
+            company_name=company or None,
+        )
+        db.add(workflow_session)
+        db.add(job_application)
+        await db.commit()
+
+        from config.settings import get_settings as _get_settings_for_dispatch
+
+        dispatch_settings = _get_settings_for_dispatch()
+        if dispatch_settings.use_cloud_tasks:
+            try:
+                await enqueue_workflow_task(
+                    session_id=session_id,
+                    user_id=str(user_id),
+                    input_method=input_method,
+                    job_input=text,
+                    user_data=user_data,
+                )
+            except Exception as ct_err:
+                logger.warning(
+                    "Cloud Tasks enqueue failed (job_finder), falling back: %s",
+                    sanitize_log_value(ct_err),
+                )
+                background_tasks.add_task(
+                    _execute_workflow_background,
+                    session_id=session_id,
+                    user_id=str(user_id),
+                    input_method=input_method,
+                    job_input=text,
+                    user_data=user_data,
+                    user_api_key=user_api_key,
+                )
+        else:
+            background_tasks.add_task(
+                _execute_workflow_background,
+                session_id=session_id,
+                user_id=str(user_id),
+                input_method=input_method,
+                job_input=text,
+                user_data=user_data,
+                user_api_key=user_api_key,
+            )
+
+        return {
+            "session_id": session_id,
+            "application_id": str(application_id),
+            "ok": True,
+        }
+    finally:
+        if lock_acquired:
+            try:
+                from utils.redis_client import get_redis_client as _get_wf_rc2
+
+                _wf_rc2 = await _get_wf_rc2()
+                if _wf_rc2:
+                    await _wf_rc2.delete(f"workflow_creating:{user_id}")
+            except Exception:
+                logger.debug(
+                    "Failed to release job_finder workflow lock",
+                    exc_info=True,
+                )
+
+
 @router.get("/status/{session_id}", response_model=WorkflowStatusResponse)
 async def get_workflow_status(
     session_id: str,

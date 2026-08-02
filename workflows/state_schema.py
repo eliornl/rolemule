@@ -17,6 +17,7 @@ class InputMethod(str, Enum):
     FILE = "file"
     TEXT = "text"  # Alias for MANUAL (used by API)
     EXTENSION = "extension"  # Content extracted via Chrome extension
+    JOB_FINDER = "job_finder"  # Selected from Job Finder careers chat
 
 
 @dataclass

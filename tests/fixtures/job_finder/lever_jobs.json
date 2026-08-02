@@ -1,0 +1,12 @@
+[
+  {
+    "id": "abc123def456",
+    "text": "Software Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/abc123def456",
+    "categories": {
+      "location": "San Francisco, CA"
+    },
+    "descriptionPlain": "Write reliable backend services.",
+    "createdAt": 1704067200000
+  }
+]

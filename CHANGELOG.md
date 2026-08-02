@@ -29,6 +29,21 @@ Profile setup adds **work authorization** (radio), **visa sponsorship** (checkbo
 
 ## [Unreleased]
 
+### Added
+
+#### Job Finder — company careers chat
+
+New **Find jobs** experience (`/dashboard/find-jobs`): chat to discover open roles on **company careers / ATS pages** (Greenhouse, Ashby, Lever, Workday, SmartRecruiters, and more), pick roles, and start the normal analysis pipeline. **Applications stays the home tab.** RoleMule does **not** auto-apply.
+
+- API: `/api/v1/job-finder` (sessions, messages, select, careers-url)
+- Providers + SSRF-safe fetch: `utils/job_finder/`
+- Resolver agent: `agents/job_finder_resolver.py` (optional grounding)
+- Migration: `20260720_028` (`job_finder_sessions`)
+- Settings: `JOB_FINDER_ENABLED`, `JOB_FINDER_GROUNDING_ENABLED`
+- UI: `/dashboard/find-jobs` + dashboard **Find jobs** CTA; landing `#find-jobs` section
+- Plan: `docs/job-finder-chat-plan.md`
+- Rule: `.cursor/rules/job-finder-feature.mdc`
+
 ### Changed
 
 #### Rebrand — ApplyPilot → RoleMule

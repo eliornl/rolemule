@@ -2803,6 +2803,92 @@ section {
     color: var(--text-secondary);
 }
 
+/* Find jobs — company careers discovery */
+.section-find-jobs {
+    padding: 8rem 0;
+    background: var(--bg-secondary, var(--bg-primary));
+}
+
+.section-find-jobs .section-title {
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.section-find-jobs .section-subtitle {
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    max-width: 560px;
+}
+
+.find-jobs-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0 0;
+}
+
+.find-jobs-bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+}
+
+.find-jobs-bullets i {
+    color: var(--accent-primary);
+    margin-top: 0.2rem;
+}
+
+.find-jobs-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.25));
+}
+
+.find-jobs-panel-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent-primary);
+    margin-bottom: 1.25rem;
+}
+
+.find-jobs-panel-bot,
+.find-jobs-panel-user {
+    margin: 0 0 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    max-width: 92%;
+}
+
+.find-jobs-panel-bot {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.find-jobs-panel-user {
+    margin-left: auto;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.15));
+    border: 1px solid rgba(0, 212, 255, 0.35);
+    color: var(--text-primary);
+    text-align: right;
+}
+
+.find-jobs-panel-bot:last-child {
+    margin-bottom: 0;
+}
+
+
 .ext-feature i {
     color: var(--success);
     flex-shrink: 0;

@@ -2,12 +2,13 @@
 
 > One mule for every role.
 
-Self-hosted AI job application companion. Paste a job posting (or use the Chrome extension), and five agents analyze the role, score your fit, research the company, write a cover letter, and produce resume tips — typically in about 30 seconds. Dashboard, interview prep, mock sessions, hiring outreach, six career tools, and a CLI. Bring your own API key (Gemini, OpenAI, Anthropic) or use local Ollama. Your data stays on your machine.
+Self-hosted AI job application companion. Paste a job posting, use Find jobs to discover roles on company careers pages, or use the Chrome extension — five agents analyze the role, score your fit, research the company, write a cover letter, and produce resume tips — typically in about 30 seconds. Dashboard, interview prep, mock sessions, hiring outreach, six career tools, and a CLI. Bring your own API key (Gemini, OpenAI, Anthropic) or use local Ollama. Your data stays on your machine.
 
 ## What it is
 
 - Open-source, self-hosted job search companion
 - Multi-agent LangGraph workflow (Job Analyzer → Profile Matcher → Company Research → Cover Letter + Resume Advisor)
+- **Find jobs** chat: discover open roles on company careers / ATS pages (not job boards), then analyze — RoleMule does not apply for you
 - On-demand: Optimize CV, Interview Prep, Mock Session, Hiring Outreach
 - Six standalone career tools (follow-up, thank you, salary coach, job comparison, rejection analysis, references)
 - Chrome extension: analyze a posting or match application forms to your profile

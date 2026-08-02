@@ -1,0 +1,12 @@
+{
+  "jobPostings": [
+    {
+      "id": "JR-10001",
+      "title": "Platform Engineer",
+      "locationsText": "Remote - US",
+      "externalPath": "/en-US/acme/job/Remote-US/Platform-Engineer_JR-10001",
+      "jobDescription": "<p>Operate cloud infrastructure.</p>",
+      "postedOn": "2026-02-01T00:00:00Z"
+    }
+  ]
+}

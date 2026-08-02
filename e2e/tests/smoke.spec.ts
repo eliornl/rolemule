@@ -402,6 +402,67 @@ test.describe('Mocked Smoke Tests', { tag: '@smoke' }, () => {
       await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('nav, .navbar').first()).toBeVisible({ timeout: 5000 });
     });
+
+    test('dashboard shows Find jobs action', async ({ page }) => {
+      await page.goto('/dashboard');
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('a[href="/dashboard/find-jobs"]').first()).toBeVisible({
+        timeout: 10000,
+      });
+    });
+  });
+
+  test.describe('Find jobs Page (Mocked)', () => {
+    test.beforeEach(async ({ page }) => {
+      await setupAuth(page);
+      await setupAllMocks(page);
+      await page.route('**/api/v1/job-finder/**', async (route: any) => {
+        const method = route.request().method();
+        if (method === 'POST' && route.request().url().endsWith('/sessions')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: 'jf-smoke-001',
+              status: 'active',
+              phase: 'await_filter_confirm',
+              confirmed_filters: {},
+              messages: [
+                {
+                  id: 'm1',
+                  role: 'assistant',
+                  content: 'Welcome to Find jobs.',
+                  created_at: new Date().toISOString(),
+                  meta: { type: 'text' },
+                },
+              ],
+              last_board: {},
+              last_listings: [],
+            }),
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'jf-smoke-001',
+            status: 'active',
+            phase: 'await_filter_confirm',
+            confirmed_filters: {},
+            messages: [],
+            last_board: {},
+            last_listings: [],
+          }),
+        });
+      });
+    });
+
+    test('find jobs page loads', async ({ page }) => {
+      await page.goto('/dashboard/find-jobs');
+      await page.waitForLoadState('domcontentloaded');
+      expect(page.url()).toContain('find-jobs');
+    });
   });
 
   test.describe('New Application Form (Mocked)', () => {

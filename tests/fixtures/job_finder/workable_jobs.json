@@ -1,0 +1,16 @@
+{
+  "name": "Acme Corp",
+  "jobs": [
+    {
+      "id": "w1",
+      "title": "Data Analyst",
+      "shortcode": "DA001",
+      "location": {
+        "city": "London",
+        "country": "UK"
+      },
+      "description": "<p>Analyze product metrics.</p>",
+      "created_at": "2026-01-12T00:00:00Z"
+    }
+  ]
+}

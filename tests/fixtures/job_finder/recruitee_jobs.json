@@ -1,0 +1,13 @@
+{
+  "offers": [
+    {
+      "id": 9001,
+      "title": "Frontend Engineer",
+      "slug": "frontend-engineer",
+      "careers_url": "https://acme.recruitee.com/o/frontend-engineer",
+      "location": "Berlin, Germany",
+      "description": "<p>Build accessible UI components.</p>",
+      "created_at": "2026-01-05T00:00:00Z"
+    }
+  ]
+}

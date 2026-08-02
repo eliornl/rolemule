@@ -208,6 +208,17 @@
         .action-btn-content h5 { margin: 0; font-weight: 600; color: var(--text-primary); }
         .action-btn-content p  { margin: 0; font-size: 0.9rem; color: var(--text-secondary); }
 
+        .action-btn--featured {
+            border-color: rgba(0, 212, 255, 0.45);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(124, 58, 237, 0.08));
+            box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.12);
+        }
+
+        .action-btn--featured:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--glow-accent);
+        }
+
         /* ── Applications section ────────────────────────────────────────────── */
         .applications-section {
             background: var(--bg-card);
@@ -767,6 +778,13 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
+        <a href="/dashboard/find-jobs" class="action-btn action-btn--featured">
+            <i class="fas fa-comments"></i>
+            <div class="action-btn-content">
+                <h5>Find jobs</h5>
+                <p>Chat to discover roles on company careers pages</p>
+            </div>
+        </a>
         <a href="/dashboard/new-application" class="action-btn">
             <i class="fas fa-plus-circle"></i>
             <div class="action-btn-content">

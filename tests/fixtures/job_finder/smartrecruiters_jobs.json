@@ -1,0 +1,16 @@
+{
+  "content": [
+    {
+      "id": "sr-post-001",
+      "name": "DevOps Engineer",
+      "postingUrl": "https://jobs.smartrecruiters.com/AcmeCorp/sr-post-001",
+      "location": {
+        "city": "Austin",
+        "region": "TX",
+        "country": "US"
+      },
+      "jobAd": "<p>Automate deployments.</p>",
+      "releasedDate": "2026-01-20T00:00:00Z"
+    }
+  ]
+}

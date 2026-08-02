@@ -67,6 +67,8 @@ Before changing how jobs are keyed or deduplicated:
 
 **Application-detail on-demand tabs** (Interview Prep, CV Optimizer, Practice Interview, Hiring Outreach pattern): also update **`mock-interview-feature.mdc` / `interview-prep-feature.mdc` / `cv-optimizer-feature.mdc` / `hiring-outreach-feature.mdc`** as appropriate; **`ui-application-detail.mdc`** tab count; **`USER_GUIDE.md`**, **`ui/help.html`**, **`README.md`**; indexes in **`CLAUDE.md`** / **`.cursorrules`**; **`e2e-testing.mdc`** / **`e2e/README.md`** tab count; **`CHANGELOG.md`**. If using LLM streaming, document in **`llm-integration.mdc`** + **`websocket-patterns.mdc`**.
 
+**Job Finder** (dashboard chat at `/dashboard/find-jobs`, not an application-detail tab): follow **`job-finder-feature.mdc`** + plan `docs/job-finder-chat-plan.md`. Update **`caching-redis.mdc`**, **`websocket-patterns.mdc`**, **`dashboard-home.mdc`** (CTA), **`landing-page.mdc`**, **`security-python.mdc`** (SSRF), indexes, USER_GUIDE / help / README / CHANGELOG, and e2e smoke.
+
 ## New Content Regeneration Endpoint
 
 1. `POST /api/v1/workflow/regenerate-{name}/{session_id}`

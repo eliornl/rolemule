@@ -44,6 +44,10 @@ GEMINI_MODEL=gemini-3.5-flash
 # IMPORTANT: gemini-3-* models ONLY work with VERTEX_AI_LOCATION=global
 # VERTEX_AI_LOCATION=global
 
+# Job Finder (company careers chat)
+# JOB_FINDER_ENABLED=true
+# JOB_FINDER_GROUNDING_ENABLED=true
+
 # LLM — OpenAI (user BYOK in Settings; server key for health/admin)
 # OPENAI_API_KEY=
 # OPENAI_MODEL=gpt-5.6-luna

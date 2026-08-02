@@ -1,0 +1,14 @@
+{
+  "jobs": [
+    {
+      "id": 501,
+      "attributes": {
+        "title": "Product Designer",
+        "url": "https://acme.teamtailor.com/jobs/501-product-designer",
+        "location": {"name": "Hybrid - NYC"},
+        "body": "<p>Design user experiences.</p>",
+        "created_at": "2026-01-10T00:00:00Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "jobs": [
+    {
+      "id": 101,
+      "title": "Software Engineer",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/101",
+      "location": {"name": "Remote"},
+      "content": "<p>Build APIs with Python</p>",
+      "first_published": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

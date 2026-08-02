@@ -139,6 +139,16 @@ class Settings(BaseSettings):
         description="Enable provider web-search grounding for hiring outreach LLM calls",
     )
 
+    # Job Finder — resolve company → careers board via grounded search
+    job_finder_enabled: bool = Field(
+        default=True,
+        description="Enable Job Finder chat (company careers discovery)",
+    )
+    job_finder_grounding_enabled: bool = Field(
+        default=True,
+        description="Enable provider web-search grounding for Job Finder board resolution",
+    )
+
     base_url: str = "http://localhost:8000"
     security_contact_email: Optional[str] = Field(
         default=None,

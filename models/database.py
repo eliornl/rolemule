@@ -774,6 +774,63 @@ class JobApplication(Base):
         }
 
 
+class JobFinderSession(Base):
+    """
+    Job Finder chat session (company careers discovery).
+
+    Stores conversation messages, confirmed filters, and last board listings.
+    Not tied to a single workflow_session — workflows are created on select.
+    """
+
+    __tablename__ = "job_finder_sessions"
+    __table_args__ = (
+        Index("ix_job_finder_sessions_user_status", "user_id", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
+    confirmed_filters: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+    messages: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+    last_board: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+    last_listings: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
+        JSONB, nullable=True, default=None
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize session for API responses."""
+        return {
+            "id": str(self.id),
+            "user_id": str(self.user_id),
+            "status": self.status,
+            "confirmed_filters": self.confirmed_filters or {},
+            "messages": self.messages or [],
+            "last_board": self.last_board or {},
+            "last_listings": self.last_listings or [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================

@@ -7,7 +7,7 @@ Welcome to RoleMule! This guide walks you through every feature so you can get t
 - [Getting Started](#getting-started)
 - [Profile Setup](#profile-setup)
 - [Dashboard Overview](#dashboard-overview)
-- [Creating Applications](#creating-applications)
+- [Creating Applications](#creating-applications) (includes [Find jobs](#find-jobs-careers-chat))
 - [Chrome Extension](#chrome-extension)
 - [Interview Preparation](#interview-preparation)
 - [Mock Session](#practice-interview)
@@ -183,11 +183,23 @@ All your applications are listed here with company name, job title, match score,
 | **Paste Job Description** | Copy and paste the full job description text |
 | **Upload File** | PDF, TXT, or Word (.docx) up to 5 MB |
 
+3. Click start — the five-agent workflow runs automatically
+
 The AI extracts the company name, job title, and all requirements from the text — you don't need to enter them manually. If the posting omits the employer, you may see **Unknown** as the company name after analysis; that is expected.
 
 **Duplicate job** — If you already have an application for the same role at the same employer, the app will not add a second copy. You might see this immediately when submitting, or as a dashboard notification (**Duplicate job — not added**) if the overlap is detected after the job title and company are inferred from the description.
 
 > **Tip:** The Chrome extension can **Analyze This Job** from a posting page (one click, no paste step) or **Match Form To Profile** on an application form. See the [Chrome Extension](#chrome-extension) section below.
+
+### Find jobs (careers chat)
+
+1. From the dashboard, open **Find jobs**
+2. Confirm (or edit) the search filters RoleMule proposes from your profile
+3. Enter **one company** at a time (or paste a company careers page URL)
+4. Pick open roles from the list and click **Add to applications**
+5. Analysis runs like any other application — RoleMule does **not** submit applications for you
+
+Job boards / aggregators are not supported; use company careers pages only.
 
 ### The Analysis Process
 

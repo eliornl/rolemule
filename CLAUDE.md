@@ -19,10 +19,11 @@ All detailed rules live in `.claude/rules/`. Read the relevant file(s) **before*
 | `.claude/rules/security-middleware.mdc` | middleware, CORS, CSP, `.is-hidden`, maintenance mode |
 | `.claude/rules/settings-and-env.mdc` | env vars, `get_settings()`, `.env`, `ENCRYPTION_KEY` |
 | `.claude/rules/llm-integration.mdc` | Multi-provider LLM (`get_llm_client`), per-user BYOK (Gemini/OpenAI/Anthropic/Ollama), model allowlists in `utils/llm/models.py`, grounding, **`CFG_6001`**, **`DEFAULT_MAX_TOKENS` (16k)**, **`generate_stream` / `SpeakFieldStreamer`** |
-| `.claude/rules/agent-patterns.mdc` | workflow agents (**any agent failure fails the workflow**), standalone interview prep + CV optimizer + Practice Interview + Hiring Outreach, `workflow_preferences`, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
+| `.claude/rules/agent-patterns.mdc` | workflow agents (**any agent failure fails the workflow**), standalone interview prep + CV optimizer + Practice Interview + Hiring Outreach + **Job Finder resolver**, `workflow_preferences`, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
 | `.claude/rules/interview-prep-feature.mdc` | interview prep agent, background task, Redis lock, rate limit (static Interview tab — not Practice Interview) |
 | `.claude/rules/mock-interview-feature.mdc` | Mock Session / Practice Interview (HR/Pro/Manager), duration timer, browser STT/TTS, BYOK, speak streaming / `speak_delta`, ws-guard |
 | `.claude/rules/hiring-outreach-feature.mdc` | Hiring Outreach — public web contacts + copy-only drafts, `hiring_outreach` JSONB, Redis lock, WS `hiring_outreach_*`, 10th Outreach tab |
+| `.claude/rules/job-finder-feature.mdc` | Job Finder chat — company careers discovery, ATS providers, orchestrator, `/api/v1/job-finder` |
 | `.claude/rules/cv-optimizer-feature.mdc` | CV Optimizer loop, API, cache, WebSocket, application detail tab |
 | `.claude/rules/career-tools.mdc` | 6 career tool agents, endpoints, rate limits, output schemas, copy button |
 | `.claude/rules/caching-redis.mdc` | cache TTLs, Redis helpers, **job-analysis key (up to 50k chars of text)**, rate limiting, auth-specific keys |

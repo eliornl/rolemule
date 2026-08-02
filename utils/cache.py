@@ -41,6 +41,9 @@ CACHE_PREFIX_CV_OPTIMIZATION_RUNNING = "cv_optimization_running"
 CACHE_PREFIX_MOCK_INTERVIEW_THINKING = "mock_interview_thinking"
 CACHE_PREFIX_HIRING_OUTREACH = "hiring_outreach"
 CACHE_PREFIX_HIRING_OUTREACH_GENERATING = "hiring_outreach_generating"
+CACHE_PREFIX_JOB_FINDER_BOARD = "job_finder_board"
+CACHE_PREFIX_JOB_FINDER_COMPANY = "job_finder_company"
+CACHE_PREFIX_JOB_FINDER_TURN = "job_finder_turn"
 CACHE_PREFIX_TOOL_RESULT = "tool_result"
 CACHE_PREFIX_COMPUTE_LOCK = "computing"
 
@@ -58,6 +61,9 @@ TTL_CV_OPTIMIZATION_RUNNING = 60 * 30  # 30 minutes — auto-expires if backgrou
 TTL_MOCK_INTERVIEW_THINKING = 60 * 3  # 3 minutes — turn LLM lock
 TTL_HIRING_OUTREACH = 60 * 60 * 24 * 7  # 7 days
 TTL_HIRING_OUTREACH_GENERATING = 60 * 10  # 10 minutes — auto-expires if background task crashes
+TTL_JOB_FINDER_BOARD = 60 * 20  # 20 minutes — ATS listing cache
+TTL_JOB_FINDER_COMPANY = 60 * 60 * 24  # 24 hours — verified company → board URL
+TTL_JOB_FINDER_TURN = 60 * 2  # 2 minutes — concurrent turn lock
 TTL_TOOL_RESULT = 60 * 60  # 1 hour
 TTL_COMPUTE_LOCK = 60  # 1 minute — prevents stampede, auto-expires if compute crashes
 
@@ -1170,6 +1176,80 @@ async def is_hiring_outreach_generating(session_id: str) -> bool:
             sanitize_log_value(str(e)),
         )
         return False
+
+
+# =============================================================================
+# JOB FINDER CACHE
+# =============================================================================
+
+
+async def get_cached_job_finder_board(provider: str, slug: str) -> Optional[Dict[str, Any]]:
+    """Return cached board listing payload or None."""
+    key = f"{CACHE_VERSION}:{CACHE_PREFIX_JOB_FINDER_BOARD}:{provider}:{slug}"
+    cached = await cache_get(key)
+    if cached and "data" in cached:
+        return cached["data"]
+    return None
+
+
+async def cache_job_finder_board(
+    provider: str, slug: str, data: Dict[str, Any]
+) -> bool:
+    """Cache normalized board listings."""
+    key = f"{CACHE_VERSION}:{CACHE_PREFIX_JOB_FINDER_BOARD}:{provider}:{slug}"
+    return await cache_set(key, {"data": data}, ttl=TTL_JOB_FINDER_BOARD)
+
+
+async def get_cached_job_finder_company(company_key: str) -> Optional[Dict[str, Any]]:
+    """Return verified company → board mapping."""
+    key = f"{CACHE_VERSION}:{CACHE_PREFIX_JOB_FINDER_COMPANY}:{company_key}"
+    cached = await cache_get(key)
+    if cached and "data" in cached:
+        return cached["data"]
+    return None
+
+
+async def cache_job_finder_company(company_key: str, data: Dict[str, Any]) -> bool:
+    """Cache verified company → board URL mapping."""
+    key = f"{CACHE_VERSION}:{CACHE_PREFIX_JOB_FINDER_COMPANY}:{company_key}"
+    return await cache_set(key, {"data": data}, ttl=TTL_JOB_FINDER_COMPANY)
+
+
+async def set_job_finder_turn_lock(user_id: str, session_id: str) -> bool:
+    """
+    Claim NX lock for a Job Finder chat turn.
+
+    Returns:
+        True if lock acquired
+    """
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return True  # fail open
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_JOB_FINDER_TURN}:{user_id}:{session_id}"
+        return bool(await redis.set(key, "1", nx=True, ex=TTL_JOB_FINDER_TURN))
+    except Exception as e:
+        logger.warning(
+            "Failed to set job_finder turn lock: %s",
+            sanitize_log_value(str(e)),
+        )
+        return True
+
+
+async def clear_job_finder_turn_lock(user_id: str, session_id: str) -> None:
+    """Release Job Finder turn lock."""
+    try:
+        redis = await get_redis_or_none()
+        if not redis:
+            return
+        key = f"{CACHE_VERSION}:{CACHE_PREFIX_JOB_FINDER_TURN}:{user_id}:{session_id}"
+        await redis.delete(key)
+    except Exception as e:
+        logger.debug(
+            "Failed to clear job_finder turn lock: %s",
+            sanitize_log_value(str(e)),
+            exc_info=True,
+        )
 
 
 # =============================================================================

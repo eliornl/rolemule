@@ -35,6 +35,7 @@ from api.workflow import router as workflow_router, _safe_error_msg
 from api.websocket import router as websocket_router
 from api.interview_prep import router as interview_prep_router
 from api.hiring_outreach import router as hiring_outreach_router
+from api.job_finder import router as job_finder_router
 from api.cv_optimizer import router as cv_optimizer_router
 from api.mock_interview import router as mock_interview_router
 from api.tools import router as tools_router
@@ -637,6 +638,11 @@ def include_routers(app: FastAPI):
         tags=["Hiring Outreach"],
     )
     app.include_router(
+        job_finder_router,
+        prefix=f"{API_V1_PREFIX}/job-finder",
+        tags=["Job Finder"],
+    )
+    app.include_router(
         cv_optimizer_router, prefix=f"{API_V1_PREFIX}/cv-optimizer", tags=["CV Optimizer"]
     )
     app.include_router(
@@ -670,6 +676,12 @@ def include_routers(app: FastAPI):
         hiring_outreach_router,
         prefix="/api/hiring-outreach",
         tags=["Hiring Outreach (Legacy)"],
+        include_in_schema=False,
+    )
+    app.include_router(
+        job_finder_router,
+        prefix="/api/job-finder",
+        tags=["Job Finder (Legacy)"],
         include_in_schema=False,
     )
     app.include_router(
@@ -851,6 +863,31 @@ def add_custom_routes(app: FastAPI):
             logger.error('Error serving new application page: %s', sanitize_log_value(e), exc_info=True)
             return HTMLResponse(
                 content="<h1>New Application</h1><p>Service temporarily unavailable</p>",
+                status_code=503,
+            )
+
+    @app.get("/dashboard/find-jobs", response_class=HTMLResponse)
+    async def find_jobs_page(request: Request):
+        """Serve the Job Finder chat page."""
+        if templates is None:
+            return HTMLResponse(
+                content="<h1>Find jobs</h1><p>Service initializing...</p>",
+                status_code=503,
+            )
+        try:
+            return _template_response(
+                request,
+                "dashboard/find-jobs.html",
+                {"request": request, "app_name": settings.app_name},
+            )
+        except Exception as e:
+            logger.error(
+                "Error serving find-jobs page: %s",
+                sanitize_log_value(e),
+                exc_info=True,
+            )
+            return HTMLResponse(
+                content="<h1>Find jobs</h1><p>Service temporarily unavailable</p>",
                 status_code=503,
             )
 

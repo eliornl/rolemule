@@ -44,6 +44,8 @@
     "src/mock-interview/**/*.ts",
     "src/pages/hiring-outreach.ts",
     "src/hiring-outreach/**/*.ts",
+    "src/pages/job-finder.ts",
+    "src/job-finder/**/*.ts",
     "src/pages/dashboard-settings.ts",
     "src/dashboard-settings/**/*.ts",
     "src/pages/dashboard-tools.ts",

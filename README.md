@@ -51,7 +51,7 @@ Runs on your machine. No subscriptions — each user picks Gemini, OpenAI, Anthr
 
 ## AI Agents
 
-Paste a job description (or upload PDF / TXT / DOCX) and five agents run automatically:
+Paste a job description (or upload PDF / TXT / DOCX) and five agents run automatically — or use **Find jobs** to discover roles on company careers pages via chat, then analyze them the same way:
 
 | Agent | What it produces |
 |-------|-----------------|
@@ -60,6 +60,8 @@ Paste a job description (or upload PDF / TXT / DOCX) and five agents run automat
 | **Company Research** | Culture, leadership style, interview approach, watch-out notes |
 | **Resume Advisor** | Per-bullet rewrites, ATS alignment score, before-you-submit checklist |
 | **Cover Letter Writer** | Personalized cover letter, regenerate with one click |
+
+**Find jobs** (dashboard → Find jobs): chat to search **company careers pages** (not job boards), pick open roles, and add them to Applications for analysis. RoleMule does **not** apply for you.
 
 Four more agents run **on demand** from the application detail page (after the workflow completes):
 

@@ -1,0 +1,12 @@
+{
+  "jobs": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "title": "Backend Engineer",
+      "jobUrl": "https://jobs.ashbyhq.com/acme/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "locationName": "Remote",
+      "descriptionPlain": "Build APIs with Python and PostgreSQL.",
+      "publishedAt": "2026-01-15T00:00:00Z"
+    }
+  ]
+}

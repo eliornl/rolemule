@@ -10,6 +10,8 @@ alwaysApply: false
 
 The dashboard home is the **only** application list page. `/dashboard/history` was permanently removed — do not re-add it. All filtering, sorting, searching, and bulk operations live here.
 
+**Find jobs CTA:** The action bar leads with a featured **Find jobs** card (`action-btn--featured` → `/dashboard/find-jobs`). Applications remains the home list — do not default users into Find jobs. See **`job-finder-feature.mdc`**.
+
 ---
 
 ## API — `GET /api/v1/applications/`

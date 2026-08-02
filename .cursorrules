@@ -19,11 +19,12 @@ All detailed coding rules live in `.cursor/rules/`. This file is the index.
 | `security-middleware.mdc` | Middleware stack, CORS explicit headers, no wildcard origins, maintenance mode, **CSP nonce-based style-src** (no `'unsafe-inline'`), `.is-hidden` / CSS utility class reference |
 | `settings-and-env.mdc` | All env vars, `get_settings()`, `ENCRYPTION_KEY` requirement, `.env` commit rules |
 | `llm-integration.mdc` | Multi-provider LLM (`get_llm_client`), per-user BYOK (Gemini/OpenAI/Anthropic/Ollama), model allowlists in `utils/llm/models.py`, grounding, `CFG_6001`, `asyncio.wait_for()`, **`generate_stream` / `SpeakFieldStreamer`**, JSON parsing |
-| `agent-patterns.mdc` | 5 workflow agents + standalone on-demand (interview prep, CV optimizer, Practice Interview, Hiring Outreach) + 6 career tools, **any workflow agent failure fails the run**, workflow_preferences injection, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
+| `agent-patterns.mdc` | 5 workflow agents + standalone on-demand (interview prep, CV optimizer, Practice Interview, Hiring Outreach, **Job Finder resolver**) + 6 career tools, **any workflow agent failure fails the run**, workflow_preferences injection, BYOK model override, **Company Research — `_has_usable_company_name` / unnamed-posting / disambiguation / staffing / `research_quality`** |
 | `interview-prep-feature.mdc` | Standalone agent, background task, Redis atomic lock, rate limit (static Interview tab — not Practice Interview) |
 | `cv-optimizer-feature.mdc` | CV Optimizer loop — hiring manager + reviser agents, `cv_optimization` JSONB, ownership-before-cache, WebSocket iteration events, Optimize CV tab |
 | `mock-interview-feature.mdc` | Practice Interview — HR/Pro/Manager, duration minutes, browser STT/TTS, BYOK, speak streaming / `speak_delta`, `ws-guard`, `mock_interview` JSONB |
 | `hiring-outreach-feature.mdc` | Hiring Outreach — public web contact finder + copy-only draft messages, `hiring_outreach` JSONB, Redis lock, WS `hiring_outreach_*`, 10th Outreach tab |
+| `job-finder-feature.mdc` | Job Finder chat — company careers discovery, ATS providers, orchestrator, `/api/v1/job-finder`, select → workflow |
 | `career-tools.mdc` | 6 tools, endpoints, rate limits, agent implementation pattern, output JSON schemas, copy button pattern, no-placeholder rules, UI CSS classes |
 | `caching-redis.mdc` | Cache TTLs, helpers, rate limiting, auth-specific Redis keys |
 | `websocket-patterns.mdc` | Endpoints, connection limits, broadcast helpers, WS-only JWT query-param exception, mock interview `speak_delta` + client session filter |

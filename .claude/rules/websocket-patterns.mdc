@@ -119,6 +119,17 @@ from api.websocket import (
 
 Frontend (`ui/src/hiring-outreach/websocket.ts`) listens via `window.addEventListener('rolemule:ws', ...)`.
 
+### Job Finder Broadcasts (called by `api/job_finder.py`)
+```python
+from api.websocket import (
+    broadcast_job_finder_status,
+    broadcast_job_finder_message,
+    broadcast_job_finder_error,
+)
+```
+
+Frontend (`ui/src/pages/job-finder.ts`) listens via `window.addEventListener('rolemule:ws', ...)` and filters on `session_id`.
+
 Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('rolemule:ws', ...)`.
 
 **Client filter:** only handle events for the open application — `isMockInterviewMessageForSession` in `ui/src/mock-interview/ws-guard.ts` (shared bus can deliver other sessions’ events).
@@ -153,6 +164,9 @@ Frontend (`ui/src/mock-interview/`) listens via `window.addEventListener('rolemu
 | `hiring_outreach_started` | `api/hiring_outreach.py` | _(empty)_ |
 | `hiring_outreach_complete` | `api/hiring_outreach.py` | _(empty)_ |
 | `hiring_outreach_error` | `api/hiring_outreach.py` | `error` |
+| `job_finder_status` | `api/job_finder.py` | `status`, optional progress fields |
+| `job_finder_message` | `api/job_finder.py` | assistant `message` (incl. picker meta) |
+| `job_finder_error` | `api/job_finder.py` | `error` |
 
 All messages share the same envelope:
 ```json
