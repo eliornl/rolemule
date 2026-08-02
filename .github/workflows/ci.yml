@@ -67,7 +67,10 @@ jobs:
             requirements-dev.txt
       - run: |
           python -m pip install --upgrade pip
-          pip install ruff
+          # Pin to the same major floor as requirements-dev.txt — unpinned
+          # `pip install ruff` can pull 0.16+ which enables thousands of new
+          # findings before the codebase is ready for that upgrade.
+          pip install 'ruff>=0.15.22,<0.16'
       - run: ruff check .
 
   python-tests:
