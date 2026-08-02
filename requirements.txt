@@ -19,7 +19,7 @@ defusedxml==0.7.1
 distro==1.9.0
 dnspython==2.8.0
 docx2txt==0.9
-email-validator==2.2.0
+email-validator==2.3.0
 fastapi==0.135.0
 frozenlist==1.8.0
 google-auth[requests]==2.55.1
@@ -50,7 +50,7 @@ ormsgpack==1.12.2
 packaging==26.2
 passlib[bcrypt]==1.7.4
 propcache==0.5.2
-pyasn1==0.6.3
+pyasn1==0.6.4
 pyasn1-modules==0.4.2
 pycparser==3.0
 pydantic==2.13.4
@@ -60,7 +60,7 @@ pyjwt==2.13.0
 pymupdf==1.26.3
 python-docx==1.2.0
 python-dotenv==1.2.2
-python-multipart==0.0.31
+python-multipart==0.0.32
 pyyaml==6.0.3
 redis==6.2.0
 requests==2.34.2
