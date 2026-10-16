@@ -6,7 +6,7 @@ jinja2>=3.1.0
 uvicorn[standard]==0.35.0
 pydantic-settings==2.14.2
 SQLAlchemy==2.0.51
-greenlet>=3.0.0
+greenlet>=3.5.4
 alembic==1.18.5
 asyncpg==0.31.0
 redis==6.2.0
