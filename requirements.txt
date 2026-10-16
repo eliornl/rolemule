@@ -4,7 +4,7 @@ aiosignal==1.4.0
 alembic==1.18.5
 annotated-doc==0.0.4
 annotated-types==0.7.0
-anyio==4.14.1
+anyio==4.14.2
 asyncpg==0.31.0
 attrs==26.1.0
 bcrypt==4.3.0
