@@ -6,4 +6,4 @@ pytest-asyncio>=1.4.0
 pytest-cov>=7.1.0
 pip-audit>=2.10.1
 # Optional load testing: locust -f tests/load/locustfile.py --host=http://localhost:8000
-locust>=2.32.0
+locust>=2.46.2
