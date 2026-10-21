@@ -1,10 +1,10 @@
 {
-  "total_clones": 13930,
+  "total_clones": 14023,
   "baseline_clones": 8856,
-  "tracked_clones": 5074,
-  "last_14_days_clones": 614,
-  "last_14_days_uniques": 146,
-  "last_updated": "2026-10-20T11:35:46Z",
+  "tracked_clones": 5167,
+  "last_14_days_clones": 699,
+  "last_14_days_uniques": 164,
+  "last_updated": "2026-10-21T11:48:23Z",
   "baseline_note": "Estimated clones for ~82 days before Traffic history (avg 108.0/day from first captured window \u00d7 82). Not exact \u2014 GitHub only retains 14 days of Traffic.",
   "history": {
     "2026-07-03": {
@@ -442,6 +442,10 @@
     "2026-10-19": {
       "count": 39,
       "uniques": 13
+    },
+    "2026-10-20": {
+      "count": 93,
+      "uniques": 26
     }
   }
 }
